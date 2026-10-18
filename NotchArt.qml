@@ -25,7 +25,7 @@ Item {
     Image {
         id: art
         anchors.fill: parent
-        source: LyricsService.player?.trackArtUrl ?? ""
+        source: LyricsService.artUrl
         sourceSize: Qt.size(256, 256)
         fillMode: Image.PreserveAspectCrop
         asynchronous: true

@@ -17,6 +17,7 @@ Usage: islet <command>
   notch [media|focus|checklist]   Toggle the notch, or open it on a tab
   pomodoro [toggle|reset|skip|status]
   todo [text]                     Add a task, or list tasks without text
+  update                          Update Islet (git pull) and restart it
   config                          Print the path of the settings file
 USAGE
 }
@@ -68,6 +69,10 @@ case "$1" in
     todo)
         shift
         if [ $# -gt 0 ]; then call checklist add "$*"; else call checklist list; fi ;;
+    update)
+        # Islet is installed as a symlink to a git checkout: pull and restart.
+        dir="$(readlink -f "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/$CFG")"
+        git -C "$dir" pull --ff-only && { running && { stop; start; } || true; } ;;
     config) echo "${XDG_CONFIG_HOME:-$HOME/.config}/islet/config.json" ;;
     -h | --help | help | "") usage ;;
     *) usage >&2; exit 1 ;;

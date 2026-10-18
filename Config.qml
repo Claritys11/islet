@@ -9,9 +9,11 @@ Singleton {
     id: root
 
     readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config"
-    readonly property string dir: `${configHome}/islet`
-    // Where settings lived before the project was renamed.
-    readonly property string legacyDir: `${configHome}/lyrics-wheel`
+    // ISLET_CONFIG_DIR points Islet at another settings folder (tests, showcase).
+    readonly property string dir: Quickshell.env("ISLET_CONFIG_DIR") || `${configHome}/islet`
+    // Where settings lived before the project was renamed (not migrated into
+    // an ISLET_CONFIG_DIR override).
+    readonly property string legacyDir: Quickshell.env("ISLET_CONFIG_DIR") ? "" : `${configHome}/lyrics-wheel`
     readonly property string path: `${dir}/config.json`
     property alias opts: adapter
 
@@ -53,6 +55,7 @@ Singleton {
             // Karaoke
             karaoke: "sweep",
             unsungOpacity: 0.45,
+            fillSpeed: 1.0,
             feather: 28,
             glowColor: "#ffffff",
             glow: 0.7,
@@ -195,6 +198,7 @@ Singleton {
 
             property string karaoke: root.defaults.karaoke
             property real unsungOpacity: root.defaults.unsungOpacity
+            property real fillSpeed: root.defaults.fillSpeed
             property real feather: root.defaults.feather
             property string glowColor: root.defaults.glowColor
             property real glow: root.defaults.glow

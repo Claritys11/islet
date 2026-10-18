@@ -7,7 +7,7 @@ Item {
     id: root
 
     readonly property MprisPlayer player: LyricsService.player
-    readonly property real length: player?.length ?? 0
+    readonly property real length: LyricsService.length
     readonly property real position: Math.min(LyricsService.position, length)
     readonly property var line: LyricsService.status === "ready" && LyricsService.synced ? LyricsService.lines[LyricsService.currentIndex] : null
 
@@ -18,7 +18,7 @@ Item {
 
     Text {
         anchors.centerIn: parent
-        visible: !root.player
+        visible: !LyricsService.hasTrack
         text: "Nothing playing"
         color: Theme.subtext
         font.family: Theme.font
@@ -28,7 +28,7 @@ Item {
     RowLayout {
         anchors.fill: parent
         spacing: 18
-        visible: root.player !== null
+        visible: LyricsService.hasTrack
 
         NotchArt {
             Layout.preferredWidth: 132
@@ -153,20 +153,20 @@ Item {
                     icon: "skip_previous"
                     filled: true
                     enabled: root.player?.canGoPrevious ?? false
-                    onClicked: root.player.previous()
+                    onClicked: root.player?.previous()
                 }
                 NotchIconButton {
                     icon: LyricsService.isPlaying ? "pause" : "play_arrow"
                     filled: true
                     highlighted: true
                     size: 42
-                    onClicked: root.player.togglePlaying()
+                    onClicked: root.player?.togglePlaying()
                 }
                 NotchIconButton {
                     icon: "skip_next"
                     filled: true
                     enabled: root.player?.canGoNext ?? false
-                    onClicked: root.player.next()
+                    onClicked: root.player?.next()
                 }
                 NotchIconButton {
                     readonly property int loop: root.player?.loopState ?? MprisLoopState.None

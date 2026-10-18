@@ -1,0 +1,33 @@
+# Maintainer: Claritys11 <https://github.com/Claritys11>
+pkgname=islet-git
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Notchy-style dynamic island, synced karaoke lyrics, Pomodoro and Notion checklist for Quickshell"
+arch=('any')
+url="https://github.com/Claritys11/islet"
+license=('MIT')
+depends=('quickshell')
+makedepends=('git')
+optdepends=('cava: real audio visualizer in the notch'
+            'libnotify: Pomodoro notifications'
+            'pipewire: Pomodoro sound (pw-play)')
+provides=('islet')
+conflicts=('islet')
+source=("islet::git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd islet
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+package() {
+    cd islet
+    # Quickshell finds configs in $XDG_CONFIG_DIRS, so `qs -c islet` works system-wide.
+    install -d "$pkgdir/etc/xdg/quickshell/islet"
+    cp -r -- *.qml assets "$pkgdir/etc/xdg/quickshell/islet/"
+    install -Dm755 bin/islet "$pkgdir/usr/bin/islet"
+    install -Dm644 dist/islet.service "$pkgdir/usr/lib/systemd/user/islet.service"
+    install -Dm644 dist/islet-settings.desktop "$pkgdir/usr/share/applications/islet-settings.desktop"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

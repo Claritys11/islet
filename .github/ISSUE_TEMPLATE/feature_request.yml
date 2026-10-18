@@ -1,0 +1,11 @@
+name: Feature request
+description: Suggest an idea for Islet
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: Describe the feature and how you'd use it. If it's a Notchy feature, link it.
+    validations:
+      required: true

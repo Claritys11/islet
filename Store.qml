@@ -8,7 +8,7 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    readonly property string dir: `${Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state"}/islet`
+    readonly property string dir: Quickshell.env("ISLET_STATE_DIR") || `${Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state"}/islet`
     property alias db: adapter
 
     Timer {
@@ -22,7 +22,7 @@ Singleton {
     property bool _setupDone: false
     Process {
         id: setup
-        command: ["sh", "-c", 'mkdir -p "$0" && [ -e "$1/state.json" ] && [ ! -e "$0/state.json" ] && cp -p "$1/state.json" "$0/"; true', root.dir, root.dir.replace(/islet$/, "lyrics-wheel")]
+        command: ["sh", "-c", 'mkdir -p "$0" && [ -e "$1/state.json" ] && [ ! -e "$0/state.json" ] && cp -p "$1/state.json" "$0/"; true', root.dir, Quickshell.env("ISLET_STATE_DIR") ? "" : root.dir.replace(/islet$/, "lyrics-wheel")]
         onExited: {
             root._setupDone = true;
             file.reload();

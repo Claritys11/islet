@@ -8,6 +8,17 @@ import Quickshell.Wayland
 ShellRoot {
     id: shell
 
+    // ISLET_SHOWCASE=<dir> renders the README media instead of running.
+    readonly property string showcase: Quickshell.env("ISLET_SHOWCASE") ?? ""
+
+    LazyLoader {
+        active: shell.showcase !== ""
+        Showcase {
+            outDir: shell.showcase
+            visible: true
+        }
+    }
+
     property bool hidden: false
     property bool settingsOpen: false
 
@@ -68,6 +79,12 @@ ShellRoot {
         function status(): string {
             return `${LyricsService.status} · ${LyricsService.artist} — ${LyricsService.title}`;
         }
+        // Islet's playback clock next to what the player reports.
+        function debug(): string {
+            const p = LyricsService.player;
+            p?.positionChanged();
+            return `clock ${LyricsService.position.toFixed(2)}  player ${(p?.position ?? -1).toFixed(2)}  playing ${LyricsService.isPlaying}  demo ${LyricsService.demo}  line ${LyricsService.currentIndex}  pace ${LyricsService.pace.toFixed(2)}  fill ${(LyricsService.progress*100).toFixed(0)}%`;
+        }
     }
 
     IpcHandler {
@@ -124,7 +141,7 @@ ShellRoot {
 
     LazyLoader {
         id: notchLoader
-        active: Config.opts.notchEnabled && shell.notchScreen !== undefined
+        active: Config.opts.notchEnabled && shell.notchScreen !== undefined && shell.showcase === ""
 
         NotchWindow {
             modelData: shell.notchScreen
@@ -262,7 +279,7 @@ ShellRoot {
 
     Variants {
         model: {
-            if (!Config.opts.lyricsEnabled)
+            if (!Config.opts.lyricsEnabled || shell.showcase !== "")
                 return [];
             const wanted = Config.opts.screens.split(",").map(s => s.trim()).filter(s => s !== "");
             const matching = Quickshell.screens.filter(s => wanted.includes(s.name));

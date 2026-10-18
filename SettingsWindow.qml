@@ -41,7 +41,7 @@ FloatingWindow {
     // Which settings belong to which page (for the change badges).
     readonly property var pages: [
         { icon: "dashboard", title: "Overview", subtitle: "Modules and quick looks", keys: [] },
-        { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "offsetMs", "lrclibUrl"] },
+        { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "fillSpeed", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "offsetMs", "lrclibUrl"] },
         { icon: "page_header", title: "Notch", subtitle: "Dynamic island at the top", keys: ["notchEnabled", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
@@ -718,6 +718,15 @@ FloatingWindow {
                                 { text: "Typewriter", value: "typewriter" },
                                 { text: "Off", value: "none" }
                             ]
+                        }
+                        SliderSetting {
+                            key: "fillSpeed"
+                            label: "Fill speed"
+                            hint: `Follows each song's singing pace automatically (this one: ${LyricsService.pace.toFixed(1)} letters/s). Fill finishes too early? Lower it.`
+                            from: 0.5
+                            to: 1.5
+                            stepSize: 0.05
+                            unit: "×"
                         }
                         SliderSetting {
                             key: "glow"

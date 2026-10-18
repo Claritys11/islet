@@ -22,6 +22,7 @@ Singleton {
     readonly property string title: demo ? "Sample Song" : player?.trackTitle ?? ""
     readonly property string artist: demo ? "Islet preview" : player?.trackArtist ?? ""
     readonly property real length: demo ? demoLength : player?.length ?? 0
+    readonly property string artUrl: demo ? Qt.resolvedUrl("assets/demo-cover.jpg") : player?.trackArtUrl ?? ""
     readonly property bool isPlaying: demo || (player?.isPlaying ?? false)
     readonly property bool hasTrack: title !== ""
 
@@ -70,12 +71,34 @@ Singleton {
         return lines[i + 1]?.time ?? (length > 0 ? length : (lines[i]?.time ?? 0) + 5);
     }
 
-    // Without word timings, assume a line is sung at a natural pace and then
-    // held, rather than stretched across a long instrumental gap.
+    // How fast this song is sung, in letters per second. LRC only says when
+    // each line starts, but for back-to-back lines the gap between two starts
+    // is about how long the first took to sing — so the median over those
+    // pairs is the song's pace. (A ballad is ~5, fast pop or rap 10+.)
+    readonly property real pace: {
+        const rates = [];
+        for (let i = 0; i < lines.length - 1; i++) {
+            const l = lines[i];
+            const gap = lines[i + 1].time - l.time;
+            if (!l.interlude && l.main.length >= 4 && gap > 0.5 && gap < 12)
+                rates.push(l.main.length / gap);
+        }
+        if (rates.length < 3)
+            return 7;
+        rates.sort((a, b) => a - b);
+        return rates[rates.length >> 1];
+    }
+
+    // Without word timings, a line is filled at the song's pace (adjustable
+    // with "Fill speed") and never runs past the next line. Lines before an
+    // instrumental break end when they'd naturally be sung, not at the break.
     function mainDuration(i) {
         const l = lines[i];
         const gap = nextTime(i) - l.time;
-        return l.interlude ? gap : Math.min(gap, 0.8 + l.main.length * 0.12);
+        if (l.interlude)
+            return gap;
+        const sung = l.main.length / (pace * Config.opts.fillSpeed) * 1.1 + 0.3;
+        return Math.max(0.3, Math.min(gap * 0.95, sung));
     }
 
     function lineProgress(i, t) {
