@@ -11,15 +11,47 @@ ShellRoot {
     property bool hidden: false
     property bool settingsOpen: false
 
-    // `qs -c lyrics-wheel ipc call lyrics <function>` (or the `lyrics-wheel` CLI)
+    property int settingsPage: 0
+
+    function openSettings(page) {
+        if (page !== undefined)
+            shell.settingsPage = page;
+        // Recreate in case the compositor closed the window behind our back.
+        shell.settingsOpen = false;
+        shell.settingsOpen = true;
+    }
+
+    // `qs -c islet ipc call <target> <function>` (or the `islet` CLI)
+    IpcHandler {
+        target: "islet"
+
+        function settings(): void {
+            shell.openSettings();
+        }
+        function open(page: string): void {
+            const i = ["overview", "lyrics", "notch", "focus", "checklist", "about"].indexOf(page.toLowerCase());
+            shell.openSettings(Math.max(0, i));
+        }
+        // Change one setting, e.g. `islet set glow 0.9`. The value is read
+        // according to the setting's type.
+        function set(key: string, value: string): string {
+            const def = Config.defaults[key];
+            if (def === undefined)
+                return `unknown setting: ${key}`;
+            const v = typeof def === "number" ? Number(value) : typeof def === "boolean" ? ["1", "true", "on", "yes"].includes(value.toLowerCase()) : value;
+            if (typeof v === "number" && isNaN(v))
+                return `${key} needs a number`;
+            Config.set(key, v, key);
+            return `${key} = ${Config.opts[key]}`;
+        }
+        function get(key: string): string {
+            return String(Config.opts[key]);
+        }
+    }
+
     IpcHandler {
         target: "lyrics"
 
-        function settings(): void {
-            // Recreate in case the compositor closed the window behind our back.
-            shell.settingsOpen = false;
-            shell.settingsOpen = true;
-        }
         function toggle(): void {
             shell.hidden = !shell.hidden;
         }
@@ -96,10 +128,7 @@ ShellRoot {
 
         NotchWindow {
             modelData: shell.notchScreen
-            onSettingsRequested: {
-                shell.settingsOpen = false;
-                shell.settingsOpen = true;
-            }
+            onSettingsRequested: shell.openSettings()
         }
     }
 
@@ -108,14 +137,133 @@ ShellRoot {
 
         SettingsWindow {
             visible: true
+            page: shell.settingsPage
             shellNotch: shell.notch
             onVisibleChanged: if (!visible)
                 shell.settingsOpen = false
         }
     }
 
+    // ── Feedback while configuring ────────────────────────────────
+    // Notch edits preview themselves: size changes open the island, anything
+    // else shows the pill.
+    Connections {
+        target: Config
+        function onEdited(key) {
+            if (!shell.notch || !key.startsWith("notch"))
+                return;
+            if (key === "notchWidth" || key === "notchHeight")
+                shell.notch.open();
+            else
+                shell.notch.close();
+        }
+    }
+
+    // A toast naming each change, so you always see what you just did.
+    PanelWindow {
+        id: toast
+
+        property string message
+        property string detail
+
+        screen: shell.notchScreen
+        anchors.bottom: true
+        margins.bottom: 48
+        implicitWidth: toastBox.implicitWidth + 40
+        implicitHeight: 76
+        color: "transparent"
+        exclusionMode: ExclusionMode.Ignore
+        visible: toastBox.opacity > 0
+        mask: Region {}
+        WlrLayershell.namespace: "islet-toast"
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+        function format(v) {
+            if (typeof v === "boolean")
+                return v ? "On" : "Off";
+            if (typeof v === "number")
+                return Number.isInteger(v) ? String(v) : v.toFixed(2);
+            return String(v);
+        }
+
+        Connections {
+            target: Config
+            function onEdited(key, label, value) {
+                // Choices, presets, resets and module switches already say
+                // what happened in their label.
+                const self = key === "" || label.includes(":") || /\b(look|reset|on|off)$/.test(label);
+                toast.message = label;
+                toast.detail = self ? "" : toast.format(value);
+                toastBox.opacity = 1;
+                toastTimer.restart();
+            }
+        }
+
+        Timer {
+            id: toastTimer
+            interval: 1600
+            onTriggered: toastBox.opacity = 0
+        }
+
+        Rectangle {
+            id: toastBox
+            anchors.centerIn: parent
+            implicitWidth: toastRow.implicitWidth + 36
+            height: 44
+            radius: 22
+            color: "#e6101114"
+            border.color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.5)
+            border.width: 1
+            opacity: 0
+            scale: opacity > 0.5 ? 1 : 0.92
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 180
+                }
+            }
+            Behavior on scale {
+                NumberAnimation {
+                    duration: 180
+                    easing.type: Easing.OutBack
+                }
+            }
+
+            Row {
+                id: toastRow
+                anchors.centerIn: parent
+                spacing: 10
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "tune"
+                    color: Theme.primary
+                    font.family: Theme.iconFont
+                    font.pixelSize: 18
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: toast.message
+                    color: "#e4e4e8"
+                    font.family: "Google Sans Flex"
+                    font.pixelSize: 14
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: toast.detail !== ""
+                    text: toast.detail
+                    color: Theme.primary
+                    font.family: "Google Sans Flex"
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                }
+            }
+        }
+    }
+
     Variants {
         model: {
+            if (!Config.opts.lyricsEnabled)
+                return [];
             const wanted = Config.opts.screens.split(",").map(s => s.trim()).filter(s => s !== "");
             const matching = Quickshell.screens.filter(s => wanted.includes(s.name));
             return wanted.length === 0 || matching.length === 0 ? Quickshell.screens : matching;
@@ -141,7 +289,7 @@ ShellRoot {
                     return "";
                 }
             }
-            readonly property bool shown: !shell.hidden && LyricsService.player !== null && LyricsService.title !== ""
+            readonly property bool shown: !shell.hidden && LyricsService.hasTrack
                 && !(o.hideWhenPaused && !LyricsService.isPlaying)
                 && !(o.hideWhenNoLyrics && LyricsService.status !== "ready")
 
@@ -162,7 +310,7 @@ ShellRoot {
             visible: content.opacity > 0
 
             exclusionMode: ExclusionMode.Ignore
-            WlrLayershell.namespace: "lyrics-wheel"
+            WlrLayershell.namespace: "islet-lyrics"
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
             WlrLayershell.layer: o.layer === "overlay" ? WlrLayer.Overlay : o.layer === "bottom" ? WlrLayer.Bottom : WlrLayer.Top
 
@@ -280,7 +428,7 @@ ShellRoot {
                         anchors.top: parent.top
                         anchors.left: parent.left
                         anchors.margins: 10
-                        text: "Lyrics area"
+                        text: `Lyrics area · ${win.o.width} × ${Math.round(viewport.height)} px`
                         color: Qt.rgba(0.66, 0.78, 0.98, 1)
                         font.pixelSize: 12
                     }

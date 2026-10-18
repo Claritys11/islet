@@ -5,880 +5,1446 @@ import QtQuick.Controls.Material
 import Quickshell
 import Quickshell.Services.Mpris
 
-// Settings panel. Every change is applied live to the overlay and saved to
-// ~/.config/lyrics-wheel/config.json.
+// Islet settings. Every change applies live, is saved to
+// ~/.config/islet/config.json, and is called out: the row lights up, changed
+// rows get a dot and a reset button, the sidebar counts changes per module,
+// and a toast on screen names what changed.
 FloatingWindow {
     id: win
 
-    // The notch window, if enabled (for the "Open notch now" button).
-    property var shellNotch: null
+    title: "Islet Settings"
+    implicitWidth: 900
+    implicitHeight: 700
+    color: bg
 
-    title: "Lyrics Wheel — Settings"
-    implicitWidth: 500
-    implicitHeight: 780
-    color: "#16161a"
+    // The notch window, if enabled (for preview buttons).
+    property var shellNotch: null
+    // Show sample lyrics while configuring (automatic when nothing plays).
+    property bool samplePreview: false
+    property int page: 0
 
     readonly property var o: Config.opts
+    readonly property color bg: "#121316"
+    readonly property color card: "#1b1c20"
+    readonly property color text: "#e4e4e8"
+    readonly property color subtext: "#9a9ca5"
+    readonly property color accent: Theme.primary
+    readonly property string font: "Google Sans Flex"
 
-    // Quick looks that change several settings at once.
-    readonly property var presets: [
-        { name: "Spicy", values: { karaoke: "sweep", glow: 0.7, glowColor: "#ffffff", activeColor: "#ffffff", textColor: "#a6a6a6", unsungOpacity: 0.45, feather: 28, blur: 2 } },
-        { name: "Neon", values: { karaoke: "sweep", glow: 1, glowColor: "#ff4fd8", activeColor: "#ffe3fa", textColor: "#9a86a8", unsungOpacity: 0.35, feather: 18, blur: 2.5 } },
-        { name: "Cyber", values: { karaoke: "sweep", glow: 1, glowColor: "#3ee6ff", activeColor: "#e0fbff", textColor: "#7d97a3", unsungOpacity: 0.35, feather: 18, blur: 2.5 } },
-        { name: "Typewriter", values: { karaoke: "typewriter", glow: 0.6, glowColor: "#ffffff", activeColor: "#ffffff", textColor: "#a6a6a6", unsungOpacity: 0, feather: 0, blur: 2 } },
-        { name: "Minimal", values: { karaoke: "none", glow: 0, activeColor: "#ffffff", textColor: "#a6a6a6", blur: 1.5 } }
+    Binding {
+        target: LyricsService
+        property: "demo"
+        value: win.visible && (win.samplePreview || (LyricsService.player?.trackTitle ?? "") === "")
+        restoreMode: Binding.RestoreValue
+    }
+
+    // Which settings belong to which page (for the change badges).
+    readonly property var pages: [
+        { icon: "dashboard", title: "Overview", subtitle: "Modules and quick looks", keys: [] },
+        { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "offsetMs", "lrclibUrl"] },
+        { icon: "page_header", title: "Notch", subtitle: "Dynamic island at the top", keys: ["notchEnabled", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose"] },
+        { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound"] },
+        { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
+        { icon: "info", title: "About", subtitle: "Files, shortcuts, reset", keys: [] }
     ]
 
-    function applyPreset(values) {
-        for (const key in values)
-            Config.set(key, values[key]);
+    // Bumped on every edit so the change badges recount.
+    property int _revision: 0
+    Connections {
+        target: Config
+        function onEdited() {
+            win._revision++;
+        }
+    }
+
+    function changedCount(keys, revision) {
+        return keys.filter(k => Config.opts[k] !== Config.defaults[k]).length;
+    }
+
+    // Quick looks for the lyrics that change several settings at once.
+    readonly property var presets: [
+        { name: "Spicy", color: "#ffffff", values: { karaoke: "sweep", glow: 0.7, glowColor: "#ffffff", activeColor: "#ffffff", textColor: "#a6a6a6", unsungOpacity: 0.45, feather: 28, blur: 2 } },
+        { name: "Neon", color: "#ff4fd8", values: { karaoke: "sweep", glow: 1, glowColor: "#ff4fd8", activeColor: "#ffe3fa", textColor: "#9a86a8", unsungOpacity: 0.35, feather: 18, blur: 2.5 } },
+        { name: "Cyber", color: "#3ee6ff", values: { karaoke: "sweep", glow: 1, glowColor: "#3ee6ff", activeColor: "#e0fbff", textColor: "#7d97a3", unsungOpacity: 0.35, feather: 18, blur: 2.5 } },
+        { name: "Typewriter", color: "#ffd166", values: { karaoke: "typewriter", glow: 0.6, glowColor: "#ffffff", activeColor: "#ffffff", textColor: "#a6a6a6", unsungOpacity: 0, feather: 0, blur: 2 } },
+        { name: "Minimal", color: "#a6a6a6", values: { karaoke: "none", glow: 0, activeColor: "#ffffff", textColor: "#a6a6a6", blur: 1.5 } }
+    ]
+
+    function applyPreset(p) {
+        for (const key in p.values)
+            Config.set(key, p.values[key], `${p.name} look`);
+    }
+
+    function fmtTime(s) {
+        s = Math.max(0, Math.round(s));
+        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
     }
 
     // ── Building blocks ───────────────────────────────────────────
-    component Heading: Label {
-        Layout.fillWidth: true
-        Layout.topMargin: 14
-        font.pixelSize: 13
-        font.weight: Font.DemiBold
-        font.letterSpacing: 1
-        color: Material.accent
+    component Icon: Text {
+        property real size: 20
+        font.family: Theme.iconFont
+        font.pixelSize: size
+        font.hintingPreference: Font.PreferNoHinting
+        font.variableAxes: ({ FILL: 0, GRAD: 0, opsz: 24, wght: 400 })
+        color: win.subtext
     }
 
-    component Hint: Label {
+    component Card: Rectangle {
+        id: cardRoot
+        property string title
+        property string hint
+        default property alias content: cardCol.data
         Layout.fillWidth: true
-        wrapMode: Text.WordWrap
-        font.pixelSize: 12
-        opacity: 0.6
+        implicitHeight: cardCol.implicitHeight + 32
+        radius: 18
+        color: win.card
+
+        ColumnLayout {
+            id: cardCol
+            x: 18
+            y: 16
+            width: parent.width - 36
+            spacing: 4
+
+            Label {
+                visible: cardRoot.title !== ""
+                text: cardRoot.title
+                color: win.text
+                font.family: win.font
+                font.pixelSize: 15
+                font.weight: Font.DemiBold
+                Layout.bottomMargin: cardRoot.hint === "" ? 6 : 0
+            }
+            Label {
+                visible: cardRoot.hint !== ""
+                Layout.fillWidth: true
+                Layout.bottomMargin: 6
+                text: cardRoot.hint
+                color: win.subtext
+                wrapMode: Text.WordWrap
+                font.family: win.font
+                font.pixelSize: 12
+            }
+        }
     }
 
-    component SliderRow: ColumnLayout {
-        id: sr
+    // A setting row: label (+ hint) on the left, control on the right. Rows
+    // whose value differs from the default get an accent dot and a reset
+    // button, and every change makes the row glow briefly.
+    component Row_: Rectangle {
+        id: row
         property string key
         property string label
+        property string hint
+        property bool stacked: false
+        default property alias control: slot.data
+        readonly property bool changed: key !== "" && win.o[key] !== Config.defaults[key]
+
+        Layout.fillWidth: true
+        implicitHeight: body.implicitHeight + 12
+        radius: 10
+        color: Qt.rgba(win.accent.r, win.accent.g, win.accent.b, flash.value)
+
+        QtObject {
+            id: flash
+            property real value: 0
+        }
+        NumberAnimation {
+            id: flashAnim
+            target: flash
+            property: "value"
+            from: 0.22
+            to: 0
+            duration: 900
+            easing.type: Easing.OutCubic
+        }
+        Connections {
+            target: Config
+            function onEdited(k) {
+                if (k === row.key)
+                    flashAnim.restart();
+            }
+        }
+
+        GridLayout {
+            id: body
+            x: 8
+            y: 6
+            width: parent.width - 16
+            columns: row.stacked ? 1 : 2
+            columnSpacing: 12
+            rowSpacing: 2
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+                RowLayout {
+                    spacing: 6
+                    Rectangle {
+                        visible: row.changed
+                        width: 6
+                        height: 6
+                        radius: 3
+                        color: win.accent
+                    }
+                    Label {
+                        text: row.label
+                        color: row.changed ? win.accent : win.text
+                        font.family: win.font
+                        font.pixelSize: 14
+                    }
+                    Icon {
+                        visible: row.changed
+                        text: "undo"
+                        size: 16
+                        color: resetMouse.containsMouse ? win.accent : win.subtext
+                        MouseArea {
+                            id: resetMouse
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Config.resetKey(row.key, `${row.label} reset`)
+                        }
+                        ToolTip.visible: resetMouse.containsMouse
+                        ToolTip.text: `Reset to ${Config.defaults[row.key]}`
+                    }
+                }
+                Label {
+                    visible: row.hint !== ""
+                    Layout.fillWidth: true
+                    text: row.hint
+                    color: win.subtext
+                    wrapMode: Text.WordWrap
+                    font.family: win.font
+                    font.pixelSize: 12
+                }
+            }
+            Item {
+                id: slot
+                Layout.fillWidth: row.stacked
+                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                implicitWidth: childrenRect.width
+                implicitHeight: childrenRect.height
+            }
+        }
+    }
+
+    component SliderSetting: Row_ {
+        id: ss
         property real from: 0
         property real to: 1
         property real stepSize: 0.05
         property int decimals: 2
         property string unit: ""
-
-        Layout.fillWidth: true
-        spacing: -6
+        property real scale: 1 // display multiplier (e.g. 100 for %)
+        stacked: true
 
         RowLayout {
-            Layout.fillWidth: true
-            Label {
-                text: sr.label
+            width: ss.width - 16
+            Slider {
                 Layout.fillWidth: true
+                from: ss.from
+                to: ss.to
+                stepSize: ss.stepSize
+                value: win.o[ss.key]
+                onMoved: Config.set(ss.key, ss.decimals === 0 ? Math.round(value) : Number(value.toFixed(ss.decimals)), ss.label)
             }
             Label {
-                text: Number(win.o[sr.key]).toFixed(sr.decimals) + sr.unit
-                opacity: 0.7
-                font.family: "monospace"
+                Layout.preferredWidth: 72
+                horizontalAlignment: Text.AlignRight
+                text: Number(win.o[ss.key] * ss.scale).toFixed(ss.scale === 1 ? ss.decimals : 0) + ss.unit
+                color: ss.changed ? win.accent : win.subtext
+                font.family: win.font
+                font.pixelSize: 13
+                font.features: ({ tnum: 1 })
             }
-        }
-        Slider {
-            Layout.fillWidth: true
-            from: sr.from
-            to: sr.to
-            stepSize: sr.stepSize
-            value: win.o[sr.key]
-            onMoved: Config.set(sr.key, sr.decimals === 0 ? Math.round(value) : Number(value.toFixed(sr.decimals)))
         }
     }
 
-    component SwitchRow: RowLayout {
+    component SwitchSetting: Row_ {
         id: sw
-        property string key
-        property string label
-        Layout.fillWidth: true
-        Label {
-            text: sw.label
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-        }
         Switch {
             checked: win.o[sw.key]
-            onToggled: Config.set(sw.key, checked)
+            onToggled: Config.set(sw.key, checked, sw.label)
         }
     }
 
-    component ChoiceRow: RowLayout {
+    // Segmented buttons: every option visible at once.
+    component ChoiceSetting: Row_ {
         id: ch
-        property string key
-        property string label
         property var choices: [] // [{ text, value }]
-        Layout.fillWidth: true
-        Label {
-            text: ch.label
-            Layout.fillWidth: true
-        }
-        ComboBox {
-            Layout.preferredWidth: 200
-            model: ch.choices
-            textRole: "text"
-            valueRole: "value"
-            currentIndex: ch.choices.findIndex(c => c.value === win.o[ch.key])
-            onActivated: Config.set(ch.key, currentValue)
-        }
-    }
-
-    component TextRow: RowLayout {
-        id: tr
-        property string key
-        property string label
-        property string placeholder
-        Layout.fillWidth: true
-        Label {
-            text: tr.label
-            Layout.fillWidth: true
-        }
-        TextField {
-            Layout.preferredWidth: 200
-            text: win.o[tr.key]
-            placeholderText: tr.placeholder
-            onEditingFinished: Config.set(tr.key, text.trim())
-        }
-    }
-
-    component ColorRow: ColumnLayout {
-        id: cr
-        property string key
-        property string label
-        property var swatches: ["#ffffff", "#a6a6a6", "#ff4fd8", "#3ee6ff", "#a8ff60", "#ffd166", "#ff6b6b", "#b388ff"]
-        Layout.fillWidth: true
-        spacing: 4
-
-        RowLayout {
-            Layout.fillWidth: true
-            Label {
-                text: cr.label
-                Layout.fillWidth: true
-            }
-            Rectangle {
-                width: 22
-                height: 22
-                radius: 11
-                color: win.o[cr.key]
-                border.color: "#55ffffff"
-            }
-            TextField {
-                id: hex
-                Layout.preferredWidth: 110
-                text: win.o[cr.key]
-                font.family: "monospace"
-                validator: RegularExpressionValidator {
-                    regularExpression: /#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?/
-                }
-                onEditingFinished: Config.set(cr.key, text.toLowerCase())
-            }
-        }
-        Flow {
-            Layout.fillWidth: true
-            spacing: 6
+        Row {
+            spacing: 0
             Repeater {
-                model: cr.swatches
+                model: ch.choices
                 Rectangle {
-                    required property string modelData
-                    width: 24
-                    height: 24
-                    radius: 12
-                    color: modelData
-                    border.width: win.o[cr.key] === modelData ? 2 : 1
-                    border.color: win.o[cr.key] === modelData ? Material.accent : "#33ffffff"
+                    required property var modelData
+                    required property int index
+                    readonly property bool current: win.o[ch.key] === modelData.value
+                    width: choiceLabel.implicitWidth + 24
+                    height: 32
+                    color: current ? win.accent : choiceMouse.containsMouse ? "#2c2e34" : "#24262b"
+                    topLeftRadius: index === 0 ? 16 : 0
+                    bottomLeftRadius: index === 0 ? 16 : 0
+                    topRightRadius: index === ch.choices.length - 1 ? 16 : 0
+                    bottomRightRadius: index === ch.choices.length - 1 ? 16 : 0
+                    Label {
+                        id: choiceLabel
+                        anchors.centerIn: parent
+                        text: modelData.text
+                        color: parent.current ? Theme.onPrimary : win.text
+                        font.family: win.font
+                        font.pixelSize: 13
+                        font.weight: parent.current ? Font.DemiBold : Font.Normal
+                    }
                     MouseArea {
+                        id: choiceMouse
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: Config.set(cr.key, parent.modelData)
+                        onClicked: Config.set(ch.key, modelData.value, `${ch.label}: ${modelData.text}`)
                     }
                 }
             }
         }
     }
 
+    component TextSetting: Row_ {
+        id: tr
+        property string placeholder
+        TextField {
+            width: 240
+            text: win.o[tr.key]
+            placeholderText: tr.placeholder
+            font.family: win.font
+            onEditingFinished: Config.set(tr.key, text.trim(), tr.label)
+        }
+    }
+
+    component ColorSetting: Row_ {
+        id: cr
+        property var swatches: ["#ffffff", "#a6a6a6", "#ff4fd8", "#3ee6ff", "#a8ff60", "#ffd166", "#ff6b6b", "#b388ff"]
+        stacked: true
+        Row {
+            spacing: 6
+            Repeater {
+                model: cr.swatches
+                Rectangle {
+                    required property string modelData
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: modelData
+                    border.width: win.o[cr.key] === modelData ? 3 : 1
+                    border.color: win.o[cr.key] === modelData ? win.accent : "#40ffffff"
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Config.set(cr.key, parent.modelData, cr.label)
+                    }
+                }
+            }
+            TextField {
+                width: 110
+                text: win.o[cr.key]
+                font.family: "monospace"
+                font.pixelSize: 13
+                validator: RegularExpressionValidator {
+                    regularExpression: /#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?/
+                }
+                onEditingFinished: Config.set(cr.key, text.toLowerCase(), cr.label)
+            }
+        }
+    }
+
     component Page: ScrollView {
-        id: page
+        id: pg
         default property alias content: col.data
         contentWidth: availableWidth
+        clip: true
         ColumnLayout {
             id: col
-            width: page.availableWidth - 32
-            x: 16
+            width: pg.availableWidth - 48
+            x: 24
+            spacing: 14
+            Item {
+                implicitHeight: 4
+            }
+        }
+    }
+
+    component PresetChip: Rectangle {
+        required property var modelData
+        width: chipRow.implicitWidth + 28
+        height: 36
+        radius: 18
+        color: chipMouse.containsMouse ? "#2c2e34" : "#24262b"
+        border.width: 1
+        border.color: "#33ffffff"
+        Row {
+            id: chipRow
+            anchors.centerIn: parent
             spacing: 8
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 12
+                height: 12
+                radius: 6
+                color: modelData.color
+            }
+            Label {
+                text: modelData.name
+                color: win.text
+                font.family: win.font
+                font.pixelSize: 13
+            }
+        }
+        MouseArea {
+            id: chipMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: win.applyPreset(modelData)
         }
     }
 
     // ── Layout ────────────────────────────────────────────────────
-    ColumnLayout {
+    Rectangle {
+        anchors.fill: parent
+        color: win.bg
+
+    RowLayout {
         anchors.fill: parent
         spacing: 0
 
         // Attached Material properties don't cross the window boundary, so
         // the theme is set on the root item and inherited from here.
         Material.theme: Material.Dark
-        Material.accent: "#a8c7fa"
-        Material.background: "#16161a"
+        Material.accent: win.accent
+        Material.background: win.card
 
+        // Sidebar
+        Rectangle {
+            Layout.fillHeight: true
+            Layout.preferredWidth: 230
+            color: "#0e0f12"
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 14
+                spacing: 4
+
+                RowLayout {
+                    Layout.bottomMargin: 14
+                    Layout.topMargin: 6
+                    spacing: 10
+                    Rectangle {
+                        width: 36
+                        height: 20
+                        radius: 10
+                        color: "#000000"
+                        border.color: win.accent
+                        border.width: 2
+                    }
+                    Label {
+                        text: "Islet"
+                        color: win.text
+                        font.family: win.font
+                        font.pixelSize: 22
+                        font.weight: Font.Bold
+                    }
+                }
+
+                Repeater {
+                    model: win.pages
+                    Rectangle {
+                        id: nav
+                        required property var modelData
+                        required property int index
+                        readonly property bool current: win.page === index
+                        readonly property int changes: win.changedCount(modelData.keys, win._revision)
+                        Layout.fillWidth: true
+                        implicitHeight: 52
+                        radius: 14
+                        color: current ? Qt.rgba(win.accent.r, win.accent.g, win.accent.b, 0.16) : navMouse.containsMouse ? "#1a1b1f" : "transparent"
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 12
+                            spacing: 12
+                            Icon {
+                                text: nav.modelData.icon
+                                size: 22
+                                color: nav.current ? win.accent : win.subtext
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 0
+                                Label {
+                                    text: nav.modelData.title
+                                    color: nav.current ? win.text : "#c9cad0"
+                                    font.family: win.font
+                                    font.pixelSize: 14
+                                    font.weight: nav.current ? Font.DemiBold : Font.Normal
+                                }
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: nav.modelData.subtitle
+                                    color: win.subtext
+                                    elide: Text.ElideRight
+                                    font.family: win.font
+                                    font.pixelSize: 11
+                                }
+                            }
+                            // How many settings in this module differ from the defaults.
+                            Rectangle {
+                                visible: nav.changes > 0
+                                implicitWidth: Math.max(20, badge.implicitWidth + 10)
+                                implicitHeight: 20
+                                radius: 10
+                                color: win.accent
+                                Label {
+                                    id: badge
+                                    anchors.centerIn: parent
+                                    text: nav.changes
+                                    color: Theme.onPrimary
+                                    font.pixelSize: 11
+                                    font.weight: Font.Bold
+                                }
+                            }
+                        }
+                        MouseArea {
+                            id: navMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: win.page = nav.index
+                        }
+                        ToolTip.visible: navMouse.containsMouse && changes > 0
+                        ToolTip.text: `${changes} setting${changes === 1 ? "" : "s"} changed from default`
+                    }
+                }
+
+                Item {
+                    Layout.fillHeight: true
+                }
+
+                // What's playing, so you know what the preview shows.
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: nowCol.implicitHeight + 20
+                    radius: 14
+                    color: "#17181c"
+                    ColumnLayout {
+                        id: nowCol
+                        x: 12
+                        y: 10
+                        width: parent.width - 24
+                        spacing: 2
+                        Label {
+                            text: LyricsService.demo ? "PREVIEWING SAMPLE" : "NOW PLAYING"
+                            color: win.accent
+                            font.family: win.font
+                            font.pixelSize: 10
+                            font.letterSpacing: 1
+                            font.weight: Font.DemiBold
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            text: LyricsService.title || "Nothing playing"
+                            color: win.text
+                            elide: Text.ElideRight
+                            font.family: win.font
+                            font.pixelSize: 13
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            text: LyricsService.artist
+                            color: win.subtext
+                            elide: Text.ElideRight
+                            font.family: win.font
+                            font.pixelSize: 11
+                        }
+                    }
+                }
+
+                Button {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 6
+                    text: "Done"
+                    highlighted: true
+                    onClicked: win.visible = false
+                }
+            }
+        }
+
+        // Content
         ColumnLayout {
             Layout.fillWidth: true
-            Layout.margins: 16
-            spacing: 2
-            Label {
-                text: "Lyrics Wheel"
-                font.pixelSize: 22
-                font.weight: Font.DemiBold
-            }
-            Label {
-                text: LyricsService.title !== "" ? `♪  ${LyricsService.title} — ${LyricsService.artist}` : "Nothing playing"
-                opacity: 0.6
-                elide: Text.ElideRight
-                Layout.fillWidth: true
-            }
-        }
-
-        TabBar {
-            id: tabs
-            Layout.fillWidth: true
-            Repeater {
-                model: ["Karaoke", "Look", "Placement", "Lyrics", "Notch", "Focus"]
-                TabButton {
-                    required property string modelData
-                    text: modelData
-                }
-            }
-        }
-
-        StackLayout {
-            Layout.fillWidth: true
             Layout.fillHeight: true
-            currentIndex: tabs.currentIndex
+            spacing: 0
 
-            Page {
-                Heading {
-                    text: "PRESETS"
-                }
-                Flow {
-                    Layout.fillWidth: true
-                    spacing: 6
-                    Repeater {
-                        model: win.presets
-                        Button {
-                            required property var modelData
-                            text: modelData.name
-                            flat: false
-                            onClicked: win.applyPreset(modelData.values)
-                        }
-                    }
-                }
-
-                Heading {
-                    text: "FILL EFFECT"
-                }
-                ChoiceRow {
-                    key: "karaoke"
-                    label: "Style"
-                    choices: [
-                        { text: "Sweep (Spicy Lyrics)", value: "sweep" },
-                        { text: "Typewriter", value: "typewriter" },
-                        { text: "Off", value: "none" }
-                    ]
-                }
-                SliderRow {
-                    key: "unsungOpacity"
-                    label: "Unsung text opacity"
-                }
-                SliderRow {
-                    key: "feather"
-                    label: "Sweep edge softness"
-                    to: 80
-                    stepSize: 1
-                    decimals: 0
-                    unit: " px"
-                }
-
-                Heading {
-                    text: "GLOW / NEON"
-                }
-                SliderRow {
-                    key: "glow"
-                    label: "Glow strength"
-                }
-                ColorRow {
-                    key: "glowColor"
-                    label: "Glow colour"
-                }
-
-                Heading {
-                    text: "BACKGROUND VOCALS  ( … )"
-                }
-                Hint {
-                    text: "Parts of a line inside parentheses are usually a second voice. Show them smaller, under the main line — like Spicy Lyrics."
-                }
-                ChoiceRow {
-                    key: "bgVocals"
-                    label: "Display"
-                    choices: [
-                        { text: "Smaller, below", value: "below" },
-                        { text: "Same as lyrics", value: "same" },
-                        { text: "Hidden", value: "hidden" }
-                    ]
-                }
-                SliderRow {
-                    key: "bgScale"
-                    label: "Size"
-                    from: 0.3
-                    to: 1
-                    unit: "×"
-                }
-                SliderRow {
-                    key: "bgOpacity"
-                    label: "Opacity"
-                }
-                SwitchRow {
-                    key: "bgItalic"
-                    label: "Italic"
-                }
-            }
-
-            Page {
-                Heading {
-                    text: "COLOURS"
-                }
-                ColorRow {
-                    key: "activeColor"
-                    label: "Active line"
-                }
-                ColorRow {
-                    key: "textColor"
-                    label: "Other lines"
-                }
-
-                Heading {
-                    text: "FONT"
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    Label {
-                        text: "Family"
-                        Layout.fillWidth: true
-                    }
-                    ComboBox {
-                        Layout.preferredWidth: 240
-                        editable: true
-                        model: Qt.fontFamilies()
-                        currentIndex: Qt.fontFamilies().indexOf(win.o.fontFamily)
-                        onActivated: Config.set("fontFamily", currentText)
-                        onAccepted: Config.set("fontFamily", editText)
-                    }
-                }
-                SliderRow {
-                    key: "fontSize"
-                    label: "Size"
-                    from: 14
-                    to: 72
-                    stepSize: 1
-                    decimals: 0
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "minFontSize"
-                    label: "Shrink long lines down to"
-                    from: 8
-                    to: 40
-                    stepSize: 1
-                    decimals: 0
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "restingWeight"
-                    label: "Weight — other lines"
-                    from: 100
-                    to: 900
-                    stepSize: 100
-                    decimals: 0
-                }
-                SliderRow {
-                    key: "activeWeight"
-                    label: "Weight — active line"
-                    from: 100
-                    to: 900
-                    stepSize: 100
-                    decimals: 0
-                }
-
-                Heading {
-                    text: "WHEEL"
-                }
-                SliderRow {
-                    key: "spacing"
-                    label: "Line spacing"
-                    from: 1
-                    to: 3
-                    unit: "×"
-                }
-                SliderRow {
-                    key: "curve"
-                    label: "Curve"
-                    to: 2
-                }
-                SliderRow {
-                    key: "tilt"
-                    label: "Tilt"
-                    to: 20
-                    stepSize: 0.5
-                    decimals: 1
-                    unit: "°"
-                }
-                SliderRow {
-                    key: "blur"
-                    label: "Blur per line"
-                    to: 8
-                    stepSize: 0.1
-                    decimals: 1
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "fade"
-                    label: "Fade per line"
-                }
-                SliderRow {
-                    key: "visibleLines"
-                    label: "Visible lines around active"
-                    from: 1
-                    to: 12
-                    stepSize: 1
-                    decimals: 0
-                }
-                SliderRow {
-                    key: "smoothing"
-                    label: "Scroll smoothing"
-                    from: 30
-                    to: 800
-                    stepSize: 10
-                    decimals: 0
-                    unit: " ms"
-                }
-
-                Heading {
-                    text: "READABILITY"
-                }
-                SwitchRow {
-                    key: "shadow"
-                    label: "Text shadow"
-                }
-                SliderRow {
-                    key: "backdrop"
-                    label: "Backdrop darkness"
-                }
-                SwitchRow {
-                    key: "showTrackInfo"
-                    label: "Show song title & artist"
-                }
-            }
-
-            Page {
-                Heading {
-                    text: "POSITION"
-                }
-                ChoiceRow {
-                    key: "side"
-                    label: "Screen edge"
-                    choices: [
-                        { text: "Right", value: "right" },
-                        { text: "Left", value: "left" }
-                    ]
-                }
-                ChoiceRow {
-                    key: "layer"
-                    label: "Layer"
-                    choices: [
-                        { text: "Above windows", value: "top" },
-                        { text: "Above everything", value: "overlay" },
-                        { text: "Behind windows", value: "bottom" }
-                    ]
-                }
-                TextRow {
-                    key: "screens"
-                    label: "Monitors"
-                    placeholder: "all  (e.g. HDMI-A-1,DP-1)"
-                }
-                Hint {
-                    text: "Monitors on this machine: " + Quickshell.screens.map(s => s.name).join(", ")
-                }
-                SliderRow {
-                    key: "width"
-                    label: "Panel width"
-                    from: 250
-                    to: 1400
-                    stepSize: 10
-                    decimals: 0
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "inset"
-                    label: "Distance from edge"
-                    to: 400
-                    stepSize: 2
-                    decimals: 0
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "marginTop"
-                    label: "Top margin"
-                    to: 500
-                    stepSize: 5
-                    decimals: 0
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "marginBottom"
-                    label: "Bottom margin"
-                    to: 500
-                    stepSize: 5
-                    decimals: 0
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "marginSide"
-                    label: "Side margin"
-                    to: 300
-                    stepSize: 2
-                    decimals: 0
-                    unit: " px"
-                }
-
-                Heading {
-                    text: "VISIBLE AREA"
-                }
-                Hint {
-                    text: "Limit where lyrics appear on screen. Lines fade out softly at the edges instead of being cut off. The area is outlined on screen while this panel is open."
-                }
-                SliderRow {
-                    key: "viewHeight"
-                    label: "Area height"
-                    from: 0.1
-                    to: 1
-                    stepSize: 0.01
-                    decimals: 2
-                    unit: "×"
-                }
-                SliderRow {
-                    key: "viewOffset"
-                    label: "Move area up / down"
-                    from: -500
-                    to: 500
-                    stepSize: 5
-                    decimals: 0
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "edgeFade"
-                    label: "Edge fade"
-                    to: 300
-                    stepSize: 2
-                    decimals: 0
-                    unit: " px"
-                }
-
-                Heading {
-                    text: "BEHAVIOUR"
-                }
-                SwitchRow {
-                    key: "clickThrough"
-                    label: "Click-through (off = click a line to seek)"
-                }
-                SwitchRow {
-                    key: "hideWhenPaused"
-                    label: "Hide when paused"
-                }
-                SwitchRow {
-                    key: "hideWhenNoLyrics"
-                    label: "Hide when no lyrics are found"
-                }
-            }
-
-            Page {
-                Heading {
-                    text: "SOURCE"
-                }
-                TextRow {
-                    key: "player"
-                    label: "Player"
-                    placeholder: "any player"
-                }
-                Hint {
-                    text: "Players now: " + (Mpris.players.values.map(p => p.identity).join(", ") || "none")
-                }
-                SliderRow {
-                    key: "offsetMs"
-                    label: "Timing offset (+ = earlier)"
-                    from: -2000
-                    to: 2000
-                    stepSize: 50
-                    decimals: 0
-                    unit: " ms"
-                }
-                TextRow {
-                    key: "lrclibUrl"
-                    label: "LRCLIB server"
-                }
-                Button {
-                    text: "Re-fetch lyrics for this song"
-                    onClicked: LyricsService.refetch()
-                }
-                Hint {
-                    text: `Status: ${LyricsService.status}${LyricsService.status === "ready" ? (LyricsService.synced ? " · synced" : " · unsynced") + ` · ${LyricsService.lines.length} lines` : ""}`
-                }
-                Hint {
-                    text: "Missing or wrong lyrics? Anyone can add them at lrclib.net — the whole community benefits."
-                }
-            }
-
-            Page {
-                Heading {
-                    text: "NOTCH"
-                }
-                Hint {
-                    text: "A dynamic island at the top of the screen. Hover it for now playing, click it for Media, Focus and Checklist."
-                }
-                SwitchRow {
-                    key: "notchEnabled"
-                    label: "Show the notch"
-                }
-                ChoiceRow {
-                    key: "notchShape"
-                    label: "Shape"
-                    choices: [
-                        { text: "Floating island", value: "island" },
-                        { text: "Notch (attached to top)", value: "notch" }
-                    ]
-                }
-                ChoiceRow {
-                    key: "notchStyle"
-                    label: "Colour"
-                    choices: [
-                        { text: "Black", value: "black" },
-                        { text: "DMS theme", value: "dms" }
-                    ]
-                }
-                ChoiceRow {
-                    key: "notchPillText"
-                    label: "Pill shows"
-                    choices: [
-                        { text: "Current lyric", value: "lyrics" },
-                        { text: "Song title", value: "title" }
-                    ]
-                }
-                ChoiceRow {
-                    key: "notchIdle"
-                    label: "When nothing is happening"
-                    choices: [
-                        { text: "Small handle", value: "handle" },
-                        { text: "Invisible (hover top)", value: "hidden" }
-                    ]
-                }
-                TextRow {
-                    key: "notchScreen"
-                    label: "Monitor"
-                    placeholder: "first  (e.g. HDMI-A-1)"
-                }
-                SliderRow {
-                    key: "notchMarginTop"
-                    label: "Distance from top"
-                    to: 120
-                    stepSize: 1
-                    decimals: 0
-                    unit: " px"
-                }
-                Hint {
-                    text: "Tip: 0 with the Notch shape sits on the screen edge (over the bar); ~44 floats just under the DMS bar."
-                }
-                SliderRow {
-                    key: "notchPillWidth"
-                    label: "Pill width"
-                    from: 180
-                    to: 600
-                    stepSize: 5
-                    decimals: 0
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "notchWidth"
-                    label: "Expanded width"
-                    from: 440
-                    to: 1000
-                    stepSize: 10
-                    decimals: 0
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "notchHeight"
-                    label: "Expanded height"
-                    from: 200
-                    to: 600
-                    stepSize: 10
-                    decimals: 0
-                    unit: " px"
-                }
-                SliderRow {
-                    key: "notchHoverDelay"
-                    label: "Hover delay"
-                    to: 1000
-                    stepSize: 10
-                    decimals: 0
-                    unit: " ms"
-                }
-                SwitchRow {
-                    key: "notchAutoClose"
-                    label: "Close when the mouse leaves"
-                }
-                Button {
-                    text: "Open notch now"
-                    onClicked: shellNotch?.open()
-                }
-            }
-
-            Page {
-                Heading {
-                    text: "POMODORO"
-                }
-                SliderRow {
-                    key: "focusMinutes"
-                    label: "Focus"
-                    from: 5
-                    to: 90
-                    stepSize: 1
-                    decimals: 0
-                    unit: " min"
-                }
-                SliderRow {
-                    key: "shortBreakMinutes"
-                    label: "Short break"
-                    from: 1
-                    to: 30
-                    stepSize: 1
-                    decimals: 0
-                    unit: " min"
-                }
-                SliderRow {
-                    key: "longBreakMinutes"
-                    label: "Long break"
-                    from: 5
-                    to: 60
-                    stepSize: 1
-                    decimals: 0
-                    unit: " min"
-                }
-                SliderRow {
-                    key: "longBreakEvery"
-                    label: "Long break after"
-                    from: 2
-                    to: 8
-                    stepSize: 1
-                    decimals: 0
-                    unit: " sessions"
-                }
-                SwitchRow {
-                    key: "autoStartBreaks"
-                    label: "Start breaks automatically"
-                }
-                SwitchRow {
-                    key: "autoStartFocus"
-                    label: "Start focus automatically after a break"
-                }
-                SwitchRow {
-                    key: "pomodoroSound"
-                    label: "Play a sound when time is up"
-                }
-
-                Heading {
-                    text: "CHECKLIST"
-                }
-                ChoiceRow {
-                    key: "checklistSource"
-                    label: "Save tasks in"
-                    choices: [
-                        { text: "This computer", value: "local" },
-                        { text: "Notion", value: "notion" }
-                    ]
-                }
-
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 24
+                Layout.rightMargin: 24
+                Layout.topMargin: 20
+                Layout.bottomMargin: 8
                 ColumnLayout {
                     Layout.fillWidth: true
-                    visible: win.o.checklistSource === "notion"
-                    spacing: 8
-
-                    Hint {
-                        text: "1. Go to notion.so/profile/integrations → New integration → copy the Internal Integration Secret.\n2. Open your checklist page in Notion → ••• → Connections → add your integration.\n3. Paste the secret and the page link below. To-do blocks on that page become your checklist."
+                    spacing: 2
+                    Label {
+                        text: win.pages[win.page].title
+                        color: win.text
+                        font.family: win.font
+                        font.pixelSize: 26
+                        font.weight: Font.Bold
                     }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Label {
-                            text: "Integration secret"
+                    Label {
+                        text: win.pages[win.page].subtitle
+                        color: win.subtext
+                        font.family: win.font
+                        font.pixelSize: 13
+                    }
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+                // Module on/off right in the header.
+                Switch {
+                    visible: win.page === 1 || win.page === 2
+                    text: checked ? "On" : "Off"
+                    checked: win.page === 1 ? win.o.lyricsEnabled : win.o.notchEnabled
+                    onToggled: win.page === 1 ? Config.set("lyricsEnabled", checked, checked ? "Lyrics overlay on" : "Lyrics overlay off") : Config.set("notchEnabled", checked, checked ? "Notch on" : "Notch off")
+                }
+            }
+
+            StackLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                currentIndex: win.page
+
+                // ── Overview ──────────────────────────────────────
+                Page {
+                    Card {
+                        title: "Modules"
+                        hint: "Turn on what you want. Lyrics can show on the screen edge, inside the notch, or both."
+                        SwitchSetting {
+                            key: "lyricsEnabled"
+                            label: "Lyrics overlay"
+                            hint: "Curved, glowing lyrics on the edge of the screen"
+                        }
+                        SwitchSetting {
+                            key: "notchEnabled"
+                            label: "Notch"
+                            hint: "Music, Focus timer and Checklist in a dynamic island"
+                        }
+                        ChoiceSetting {
+                            key: "notchPillText"
+                            label: "Notch pill shows"
+                            choices: [
+                                { text: "Current lyric", value: "lyrics" },
+                                { text: "Song title", value: "title" }
+                            ]
+                        }
+                    }
+                    Card {
+                        title: "Lyrics look"
+                        hint: "One click sets colours, glow and fill together."
+                        Flow {
                             Layout.fillWidth: true
-                        }
-                        TextField {
-                            id: tokenField
-                            Layout.preferredWidth: 200
-                            echoMode: TextInput.Password
-                            placeholderText: ChecklistService.token !== "" ? "saved ✓  (paste to replace)" : "ntn_…"
-                            onAccepted: saveToken.clicked()
-                        }
-                        Button {
-                            id: saveToken
-                            text: "Save"
-                            enabled: tokenField.text.trim() !== ""
-                            onClicked: {
-                                ChecklistService.saveToken(tokenField.text);
-                                tokenField.text = "";
+                            spacing: 8
+                            Repeater {
+                                model: win.presets
+                                PresetChip {}
                             }
                         }
                     }
-                    TextRow {
-                        key: "notionPage"
-                        label: "Checklist page"
-                        placeholder: "https://www.notion.so/…"
-                    }
-                    RowLayout {
-                        Button {
-                            text: "Test connection"
-                            onClicked: ChecklistService.refresh()
+                    Card {
+                        title: "Notch colour"
+                        ChoiceSetting {
+                            key: "notchStyle"
+                            label: "Background"
+                            choices: [
+                                { text: "Black", value: "black" },
+                                { text: "Wallpaper (DMS)", value: "dms" }
+                            ]
                         }
+                    }
+                }
+
+                // ── Lyrics ────────────────────────────────────────
+                Page {
+                    Card {
+                        title: "Preview"
+                        hint: LyricsService.demo ? "Showing sample lyrics on screen so you can see every change." : "Changes show on the song that's playing."
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Label {
+                                Layout.fillWidth: true
+                                text: "Use sample lyrics"
+                                color: win.text
+                                font.family: win.font
+                                font.pixelSize: 14
+                            }
+                            Switch {
+                                checked: LyricsService.demo
+                                onToggled: win.samplePreview = checked
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Look"
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Repeater {
+                                model: win.presets
+                                PresetChip {}
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Karaoke fill & glow"
+                        ChoiceSetting {
+                            key: "karaoke"
+                            label: "Fill"
+                            choices: [
+                                { text: "Sweep", value: "sweep" },
+                                { text: "Typewriter", value: "typewriter" },
+                                { text: "Off", value: "none" }
+                            ]
+                        }
+                        SliderSetting {
+                            key: "glow"
+                            label: "Glow strength"
+                            scale: 100
+                            unit: "%"
+                        }
+                        ColorSetting {
+                            key: "glowColor"
+                            label: "Glow colour"
+                        }
+                        SliderSetting {
+                            key: "unsungOpacity"
+                            label: "Not-yet-sung text"
+                            hint: "How visible the rest of the line is before it's sung"
+                            scale: 100
+                            unit: "%"
+                        }
+                        SliderSetting {
+                            key: "feather"
+                            label: "Fill edge softness"
+                            to: 80
+                            stepSize: 1
+                            decimals: 0
+                            unit: " px"
+                        }
+                    }
+                    Card {
+                        title: "Background vocals  ( … )"
+                        hint: "Parts in parentheses are usually a second voice. They glow while they're sung — even after the main line has moved on."
+                        ChoiceSetting {
+                            key: "bgVocals"
+                            label: "Show"
+                            choices: [
+                                { text: "Small, below", value: "below" },
+                                { text: "Same as lyrics", value: "same" },
+                                { text: "Hidden", value: "hidden" }
+                            ]
+                        }
+                        SliderSetting {
+                            key: "bgScale"
+                            label: "Size"
+                            from: 0.3
+                            scale: 100
+                            unit: "%"
+                        }
+                        SliderSetting {
+                            key: "bgOpacity"
+                            label: "Opacity"
+                            scale: 100
+                            unit: "%"
+                        }
+                        SliderSetting {
+                            key: "bgLinger"
+                            label: "Keep glowing after"
+                            hint: "How long the echo stays lit once it's been sung"
+                            to: 4
+                            stepSize: 0.1
+                            decimals: 1
+                            unit: " s"
+                        }
+                        SwitchSetting {
+                            key: "bgItalic"
+                            label: "Italic"
+                        }
+                    }
+                    Card {
+                        title: "Text"
+                        ColorSetting {
+                            key: "activeColor"
+                            label: "Active line"
+                        }
+                        ColorSetting {
+                            key: "textColor"
+                            label: "Other lines"
+                        }
+                        Row_ {
+                            key: "fontFamily"
+                            label: "Font"
+                            ComboBox {
+                                width: 240
+                                editable: true
+                                model: Qt.fontFamilies()
+                                currentIndex: Qt.fontFamilies().indexOf(win.o.fontFamily)
+                                onActivated: Config.set("fontFamily", currentText, "Font")
+                                onAccepted: Config.set("fontFamily", editText, "Font")
+                            }
+                        }
+                        SliderSetting {
+                            key: "fontSize"
+                            label: "Size"
+                            from: 14
+                            to: 72
+                            stepSize: 1
+                            decimals: 0
+                            unit: " px"
+                        }
+                        ChoiceSetting {
+                            key: "longLines"
+                            label: "Long lines"
+                            hint: "Wrap onto the next row, or shrink to fit the area width"
+                            choices: [
+                                { text: "Wrap below", value: "wrap" },
+                                { text: "Shrink", value: "shrink" }
+                            ]
+                        }
+                        SliderSetting {
+                            key: "minFontSize"
+                            label: "Smallest size when shrinking"
+                            from: 8
+                            to: 40
+                            stepSize: 1
+                            decimals: 0
+                            unit: " px"
+                        }
+                        SliderSetting {
+                            key: "restingWeight"
+                            label: "Weight — other lines"
+                            from: 100
+                            to: 900
+                            stepSize: 100
+                            decimals: 0
+                        }
+                        SliderSetting {
+                            key: "activeWeight"
+                            label: "Weight — active line"
+                            from: 100
+                            to: 900
+                            stepSize: 100
+                            decimals: 0
+                        }
+                    }
+                    Card {
+                        title: "Area"
+                        hint: "Where lyrics may appear. While this window is open the area is outlined on screen; lines fade out at its edges instead of being cut."
+                        ChoiceSetting {
+                            key: "side"
+                            label: "Screen edge"
+                            choices: [
+                                { text: "Left", value: "left" },
+                                { text: "Right", value: "right" }
+                            ]
+                        }
+                        SliderSetting {
+                            key: "width"
+                            label: "Width"
+                            hint: "Long lines wrap to fit this width"
+                            from: 250
+                            to: 1400
+                            stepSize: 10
+                            decimals: 0
+                            unit: " px"
+                        }
+                        SliderSetting {
+                            key: "viewHeight"
+                            label: "Height"
+                            from: 0.1
+                            stepSize: 0.01
+                            scale: 100
+                            unit: "%"
+                        }
+                        SliderSetting {
+                            key: "viewOffset"
+                            label: "Move up / down"
+                            from: -500
+                            to: 500
+                            stepSize: 5
+                            decimals: 0
+                            unit: " px"
+                        }
+                        SliderSetting {
+                            key: "edgeFade"
+                            label: "Edge fade"
+                            to: 300
+                            stepSize: 2
+                            decimals: 0
+                            unit: " px"
+                        }
+                        SliderSetting {
+                            key: "inset"
+                            label: "Distance from screen edge"
+                            to: 400
+                            stepSize: 2
+                            decimals: 0
+                            unit: " px"
+                        }
+                        SliderSetting {
+                            key: "marginTop"
+                            label: "Top margin"
+                            to: 500
+                            stepSize: 5
+                            decimals: 0
+                            unit: " px"
+                        }
+                        SliderSetting {
+                            key: "marginBottom"
+                            label: "Bottom margin"
+                            to: 500
+                            stepSize: 5
+                            decimals: 0
+                            unit: " px"
+                        }
+                        ChoiceSetting {
+                            key: "layer"
+                            label: "Layer"
+                            choices: [
+                                { text: "Behind windows", value: "bottom" },
+                                { text: "Above windows", value: "top" },
+                                { text: "Above all", value: "overlay" }
+                            ]
+                        }
+                        TextSetting {
+                            key: "screens"
+                            label: "Monitors"
+                            hint: "Available: " + Quickshell.screens.map(s => s.name).join(", ")
+                            placeholder: "all"
+                        }
+                    }
+                    Card {
+                        title: "Wheel"
+                        SliderSetting {
+                            key: "spacing"
+                            label: "Line spacing"
+                            from: 1
+                            to: 3
+                            unit: "×"
+                        }
+                        SliderSetting {
+                            key: "curve"
+                            label: "Curve"
+                            to: 2
+                        }
+                        SliderSetting {
+                            key: "tilt"
+                            label: "Tilt"
+                            to: 20
+                            stepSize: 0.5
+                            decimals: 1
+                            unit: "°"
+                        }
+                        SliderSetting {
+                            key: "blur"
+                            label: "Blur per line"
+                            to: 8
+                            stepSize: 0.1
+                            decimals: 1
+                            unit: " px"
+                        }
+                        SliderSetting {
+                            key: "fade"
+                            label: "Fade per line"
+                            scale: 100
+                            unit: "%"
+                        }
+                        SliderSetting {
+                            key: "visibleLines"
+                            label: "Lines around the active one"
+                            from: 1
+                            to: 12
+                            stepSize: 1
+                            decimals: 0
+                        }
+                        SliderSetting {
+                            key: "smoothing"
+                            label: "Scroll smoothing"
+                            from: 30
+                            to: 800
+                            stepSize: 10
+                            decimals: 0
+                            unit: " ms"
+                        }
+                    }
+                    Card {
+                        title: "Readability & behaviour"
+                        SwitchSetting {
+                            key: "shadow"
+                            label: "Text shadow"
+                        }
+                        SliderSetting {
+                            key: "backdrop"
+                            label: "Backdrop darkness"
+                            scale: 100
+                            unit: "%"
+                        }
+                        SwitchSetting {
+                            key: "showTrackInfo"
+                            label: "Song title & artist"
+                        }
+                        SwitchSetting {
+                            key: "clickThrough"
+                            label: "Click-through"
+                            hint: "Off: click a line to jump to it"
+                        }
+                        SwitchSetting {
+                            key: "hideWhenPaused"
+                            label: "Hide when paused"
+                        }
+                        SwitchSetting {
+                            key: "hideWhenNoLyrics"
+                            label: "Hide when no lyrics are found"
+                        }
+                    }
+                    Card {
+                        title: "Source & timing"
+                        TextSetting {
+                            key: "player"
+                            label: "Player"
+                            hint: "Running now: " + (Mpris.players.values.map(p => p.identity).join(", ") || "none")
+                            placeholder: "any"
+                        }
+                        SliderSetting {
+                            key: "offsetMs"
+                            label: "Timing offset"
+                            hint: "Positive shows lines earlier"
+                            from: -2000
+                            to: 2000
+                            stepSize: 50
+                            decimals: 0
+                            unit: " ms"
+                        }
+                        TextSetting {
+                            key: "lrclibUrl"
+                            label: "LRCLIB server"
+                        }
+                    }
+                    Card {
+                        title: "Lyrics version for this song"
+                        hint: "Out of sync? LRCLIB often has several versions (album, live, radio edit). Pick the one whose length matches the song."
+                        visible: !LyricsService.demo && LyricsService.title !== ""
+
                         Label {
                             Layout.fillWidth: true
+                            visible: LyricsService.timingMismatch
+                            text: "⚠  The lyrics in use are for a recording of a different length — timing may drift."
+                            color: Theme.danger
                             wrapMode: Text.WordWrap
+                            font.family: win.font
+                            font.pixelSize: 13
+                        }
+                        Label {
+                            text: `Song length ${win.fmtTime(LyricsService.length)} · status: ${LyricsService.status}`
+                            color: win.subtext
+                            font.family: win.font
                             font.pixelSize: 12
-                            color: ChecklistService.status === "error" ? "#ffb4ab" : ChecklistService.status === "ready" ? "#a5d6a7" : "#c4c6cf"
-                            text: ChecklistService.status === "ready" ? `Connected ✓ · ${ChecklistService.items.length} to-dos` : ChecklistService.status === "loading" ? "Connecting…" : ChecklistService.error
+                        }
+                        RowLayout {
+                            Button {
+                                text: "Find versions"
+                                onClicked: LyricsService.loadCandidates()
+                            }
+                            Button {
+                                text: "Re-fetch"
+                                flat: true
+                                onClicked: LyricsService.refetch()
+                            }
+                        }
+                        Repeater {
+                            model: LyricsService.candidates
+                            Rectangle {
+                                id: cand
+                                required property var modelData
+                                readonly property bool inUse: LyricsService.chosenId === modelData.id
+                                readonly property real diff: Math.abs(modelData.duration - LyricsService.length)
+                                Layout.fillWidth: true
+                                implicitHeight: 44
+                                radius: 10
+                                color: inUse ? Qt.rgba(win.accent.r, win.accent.g, win.accent.b, 0.15) : candMouse.containsMouse ? "#24262b" : "transparent"
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 10
+                                    anchors.rightMargin: 10
+                                    spacing: 10
+                                    Icon {
+                                        text: cand.inUse ? "radio_button_checked" : "radio_button_unchecked"
+                                        color: cand.inUse ? win.accent : win.subtext
+                                    }
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: cand.modelData.label
+                                        elide: Text.ElideRight
+                                        color: win.text
+                                        font.family: win.font
+                                        font.pixelSize: 13
+                                    }
+                                    Label {
+                                        text: cand.modelData.synced ? "synced" : "plain"
+                                        color: cand.modelData.synced ? win.accent : win.subtext
+                                        font.pixelSize: 11
+                                    }
+                                    Label {
+                                        text: win.fmtTime(cand.modelData.duration)
+                                        color: cand.diff <= 3 ? "#a5d6a7" : Theme.danger
+                                        font.pixelSize: 12
+                                        font.features: ({ tnum: 1 })
+                                    }
+                                }
+                                MouseArea {
+                                    id: candMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: LyricsService.choose(cand.modelData.id)
+                                }
+                            }
                         }
                     }
-                    Hint {
-                        text: "The secret is stored only on this computer, in ~/.config/lyrics-wheel/notion-token (readable by you only)."
+                }
+
+                // ── Notch ─────────────────────────────────────────
+                Page {
+                    Card {
+                        title: "Preview"
+                        hint: "Size changes open the notch so you can see them; other changes show the closed pill."
+                        RowLayout {
+                            Button {
+                                text: "Open notch"
+                                onClicked: win.shellNotch?.open()
+                            }
+                            Button {
+                                text: "Show pill"
+                                flat: true
+                                onClicked: win.shellNotch?.close()
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Look"
+                        ChoiceSetting {
+                            key: "notchShape"
+                            label: "Shape"
+                            choices: [
+                                { text: "Floating island", value: "island" },
+                                { text: "Attached notch", value: "notch" }
+                            ]
+                        }
+                        ChoiceSetting {
+                            key: "notchStyle"
+                            label: "Background"
+                            choices: [
+                                { text: "Black", value: "black" },
+                                { text: "Wallpaper (DMS)", value: "dms" }
+                            ]
+                        }
+                        ChoiceSetting {
+                            key: "notchPillText"
+                            label: "Pill shows"
+                            choices: [
+                                { text: "Current lyric", value: "lyrics" },
+                                { text: "Song title", value: "title" }
+                            ]
+                        }
+                        ChoiceSetting {
+                            key: "notchIdle"
+                            label: "When idle"
+                            choices: [
+                                { text: "Small handle", value: "handle" },
+                                { text: "Invisible", value: "hidden" }
+                            ]
+                        }
+                    }
+                    Card {
+                        title: "Size & position"
+                        SliderSetting {
+                            key: "notchMarginTop"
+                            label: "Distance from top"
+                            hint: "0 with the attached shape sits on the screen edge; ~44 floats under the DMS bar"
+                            to: 120
+                            stepSize: 1
+                            decimals: 0
+                            unit: " px"
+                        }
+                        SliderSetting {
+                            key: "notchPillWidth"
+                            label: "Pill width"
+                            from: 180
+                            to: 600
+                            stepSize: 5
+                            decimals: 0
+                            unit: " px"
+                        }
+                        SliderSetting {
+                            key: "notchWidth"
+                            label: "Open width"
+                            from: 440
+                            to: 1000
+                            stepSize: 10
+                            decimals: 0
+                            unit: " px"
+                        }
+                        SliderSetting {
+                            key: "notchHeight"
+                            label: "Open height"
+                            from: 200
+                            to: 600
+                            stepSize: 10
+                            decimals: 0
+                            unit: " px"
+                        }
+                        TextSetting {
+                            key: "notchScreen"
+                            label: "Monitor"
+                            hint: "Available: " + Quickshell.screens.map(s => s.name).join(", ")
+                            placeholder: "first"
+                        }
+                    }
+                    Card {
+                        title: "Behaviour"
+                        SliderSetting {
+                            key: "notchHoverDelay"
+                            label: "Hover delay"
+                            to: 1000
+                            stepSize: 10
+                            decimals: 0
+                            unit: " ms"
+                        }
+                        SwitchSetting {
+                            key: "notchAutoClose"
+                            label: "Close when the mouse leaves"
+                        }
+                    }
+                }
+
+                // ── Focus ─────────────────────────────────────────
+                Page {
+                    Card {
+                        title: `${PomodoroService.label} · ${PomodoroService.clock}`
+                        hint: `${PomodoroService.todayCount} focus session${PomodoroService.todayCount === 1 ? "" : "s"} today`
+                        RowLayout {
+                            Button {
+                                text: PomodoroService.running ? "Pause" : "Start"
+                                highlighted: true
+                                onClicked: PomodoroService.toggle()
+                            }
+                            Button {
+                                text: "Reset"
+                                flat: true
+                                onClicked: PomodoroService.reset()
+                            }
+                            Button {
+                                text: "Skip"
+                                flat: true
+                                onClicked: PomodoroService.skip()
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Timer"
+                        SliderSetting {
+                            key: "focusMinutes"
+                            label: "Focus"
+                            from: 5
+                            to: 90
+                            stepSize: 1
+                            decimals: 0
+                            unit: " min"
+                        }
+                        SliderSetting {
+                            key: "shortBreakMinutes"
+                            label: "Short break"
+                            from: 1
+                            to: 30
+                            stepSize: 1
+                            decimals: 0
+                            unit: " min"
+                        }
+                        SliderSetting {
+                            key: "longBreakMinutes"
+                            label: "Long break"
+                            from: 5
+                            to: 60
+                            stepSize: 1
+                            decimals: 0
+                            unit: " min"
+                        }
+                        SliderSetting {
+                            key: "longBreakEvery"
+                            label: "Long break after"
+                            from: 2
+                            to: 8
+                            stepSize: 1
+                            decimals: 0
+                            unit: " sessions"
+                        }
+                    }
+                    Card {
+                        title: "Behaviour"
+                        SwitchSetting {
+                            key: "autoStartBreaks"
+                            label: "Start breaks automatically"
+                        }
+                        SwitchSetting {
+                            key: "autoStartFocus"
+                            label: "Start focus automatically after a break"
+                        }
+                        SwitchSetting {
+                            key: "pomodoroSound"
+                            label: "Sound when time is up"
+                        }
+                    }
+                }
+
+                // ── Checklist ─────────────────────────────────────
+                Page {
+                    Card {
+                        title: "Where tasks are saved"
+                        ChoiceSetting {
+                            key: "checklistSource"
+                            label: "Save in"
+                            choices: [
+                                { text: "This computer", value: "local" },
+                                { text: "Notion", value: "notion" }
+                            ]
+                        }
+                        Label {
+                            text: `${ChecklistService.items.length} task${ChecklistService.items.length === 1 ? "" : "s"}, ${ChecklistService.doneCount} done`
+                            color: win.subtext
+                            font.family: win.font
+                            font.pixelSize: 12
+                        }
+                    }
+                    Card {
+                        title: "Notion"
+                        visible: win.o.checklistSource === "notion"
+                        hint: "1. notion.so/profile/integrations → New integration → copy the Internal Integration Secret.\n2. Open your checklist page → ••• → Connections → add the integration.\n3. Paste both below. To-do blocks on that page become your checklist."
+
+                        Row_ {
+                            label: "Integration secret"
+                            hint: ChecklistService.token !== "" ? "Saved on this computer only ✓" : "Stored only on this computer, readable by you"
+                            RowLayout {
+                                TextField {
+                                    id: tokenField
+                                    Layout.preferredWidth: 180
+                                    echoMode: TextInput.Password
+                                    placeholderText: ChecklistService.token !== "" ? "paste to replace" : "ntn_…"
+                                    onAccepted: saveToken.clicked()
+                                }
+                                Button {
+                                    id: saveToken
+                                    text: "Save"
+                                    enabled: tokenField.text.trim() !== ""
+                                    onClicked: {
+                                        ChecklistService.saveToken(tokenField.text);
+                                        tokenField.text = "";
+                                    }
+                                }
+                            }
+                        }
+                        TextSetting {
+                            key: "notionPage"
+                            label: "Checklist page"
+                            placeholder: "https://www.notion.so/…"
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Button {
+                                text: "Test connection"
+                                onClicked: ChecklistService.refresh()
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                font.family: win.font
+                                font.pixelSize: 12
+                                color: ChecklistService.status === "error" ? Theme.danger : ChecklistService.status === "ready" ? "#a5d6a7" : win.subtext
+                                text: ChecklistService.status === "ready" ? `Connected ✓ · ${ChecklistService.items.length} to-dos` : ChecklistService.status === "loading" ? "Connecting…" : ChecklistService.error
+                            }
+                        }
+                    }
+                }
+
+                // ── About ─────────────────────────────────────────
+                Page {
+                    Card {
+                        title: "Islet"
+                        hint: "Lyrics, music, focus and to-dos for your Linux desktop. Built on Quickshell."
+                        RowLayout {
+                            Button {
+                                text: "GitHub"
+                                onClicked: Qt.openUrlExternally("https://github.com/Claritys11/islet")
+                            }
+                            Button {
+                                text: "Open config folder"
+                                flat: true
+                                onClicked: Qt.openUrlExternally(`file://${Config.dir}`)
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Command line"
+                        hint: "Bind these to keys in niri (see README)."
+                        Repeater {
+                            model: ["islet settings", "islet toggle  ·  show / hide lyrics", "islet notch [media|focus|checklist]", "islet pomodoro [toggle|reset|skip]", "islet todo \"Buy milk\""]
+                            Label {
+                                required property string modelData
+                                text: modelData
+                                color: win.text
+                                font.family: "monospace"
+                                font.pixelSize: 13
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Files"
+                        Repeater {
+                            model: [`Settings  ${Config.path}`, `Data  ${Store.dir}/state.json`]
+                            Label {
+                                required property string modelData
+                                Layout.fillWidth: true
+                                text: modelData
+                                color: win.subtext
+                                elide: Text.ElideMiddle
+                                font.family: "monospace"
+                                font.pixelSize: 12
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Reset"
+                        hint: "Puts every setting back to its default. Your tasks and focus history are kept."
+                        Button {
+                            text: "Reset all settings"
+                            onClicked: Config.reset()
+                        }
                     }
                 }
             }
         }
-
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.margins: 12
-            Button {
-                text: "Reset all"
-                flat: true
-                onClicked: Config.reset()
-            }
-            Button {
-                text: "Open config file"
-                flat: true
-                onClicked: Quickshell.execDetached(["xdg-open", Config.path])
-            }
-            Item {
-                Layout.fillWidth: true
-            }
-            Button {
-                text: "Done"
-                highlighted: true
-                onClicked: win.visible = false
-            }
-        }
+    }
     }
 }

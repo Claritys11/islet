@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install lyrics-wheel for the current user.
+# Install Islet for the current user.
 #   ./install.sh           link files, install service + launcher entry
 #   ./install.sh --enable  …and start it now and on every login
 set -e
@@ -20,23 +20,36 @@ link() {
     echo "  linked $2"
 }
 
-echo "Installing lyrics-wheel from $src"
-link "$src" "$config/quickshell/lyrics-wheel"
-link "$src/bin/lyrics-wheel" "$bindir/lyrics-wheel"
-link "$src/dist/lyrics-wheel.service" "$config/systemd/user/lyrics-wheel.service"
-link "$src/dist/lyrics-wheel-settings.desktop" "$data/applications/lyrics-wheel-settings.desktop"
+# Islet used to be called lyrics-wheel: retire the old install. Settings are
+# carried over automatically on first start.
+was_enabled=false
+if systemctl --user is-enabled lyrics-wheel.service >/dev/null 2>&1; then
+    was_enabled=true
+fi
+systemctl --user disable --now lyrics-wheel.service >/dev/null 2>&1 || true
+qs kill -c lyrics-wheel >/dev/null 2>&1 || true
+for old in "$config/quickshell/lyrics-wheel" "$bindir/lyrics-wheel" \
+    "$config/systemd/user/lyrics-wheel.service" "$data/applications/lyrics-wheel-settings.desktop"; do
+    [ -L "$old" ] && rm "$old" && echo "  removed old $old"
+done
+
+echo "Installing Islet from $src"
+link "$src" "$config/quickshell/islet"
+link "$src/bin/islet" "$bindir/islet"
+link "$src/dist/islet.service" "$config/systemd/user/islet.service"
+link "$src/dist/islet-settings.desktop" "$data/applications/islet-settings.desktop"
 systemctl --user daemon-reload
 
-if [ "$1" = "--enable" ]; then
-    systemctl --user enable --now lyrics-wheel.service
-    echo "Enabled: lyrics-wheel starts with your session."
+if [ "$1" = "--enable" ] || $was_enabled; then
+    systemctl --user enable --now islet.service
+    echo "Enabled: Islet starts with your session."
 else
     echo
-    echo "Start now and on every login:   systemctl --user enable --now lyrics-wheel"
+    echo "Start now and on every login:   systemctl --user enable --now islet"
 fi
 
 case ":$PATH:" in
     *":$bindir:"*) ;;
     *) echo "note: $bindir is not in your PATH" ;;
 esac
-echo "Open settings:   lyrics-wheel settings   (or 'Lyrics Wheel Settings' in your launcher)"
+echo "Open settings:   islet settings   (or 'Islet Settings' in your launcher)"

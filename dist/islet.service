@@ -1,11 +1,11 @@
 [Unit]
-Description=Lyrics Wheel — synced lyrics overlay
+Description=Islet — lyrics overlay, notch, focus timer and checklist
 PartOf=graphical-session.target
 After=graphical-session.target
 Requisite=graphical-session.target
 
 [Service]
-ExecStart=/usr/bin/qs -c lyrics-wheel
+ExecStart=/usr/bin/qs -c islet
 Restart=on-failure
 RestartSec=2
 

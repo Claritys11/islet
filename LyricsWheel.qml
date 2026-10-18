@@ -4,8 +4,9 @@ import QtQuick.Effects
 // The React Bits <OptionWheel /> layout, ported to QML and adapted to lyrics:
 // lines sit on a circle whose radius keeps the arc length between neighbours
 // equal to their row height, eased toward `selected` with frame-rate
-// independent exponential smoothing. Lines with background vocals are taller,
-// so positions are measured along the arc by accumulated row heights.
+// independent exponential smoothing. Rows differ in height (wrapped lines,
+// background vocals), so positions are measured along the arc by
+// accumulating the heights each row reports.
 Item {
     id: root
 
@@ -22,7 +23,9 @@ Item {
 
     readonly property bool onRight: o.side === "right"
     readonly property real mirror: onRight ? -1 : 1
+    readonly property real textH: o.fontSize * 1.3
     readonly property real rowH: Math.max(o.fontSize * o.spacing, 1)
+    readonly property real spacingFactor: rowH / textH
     readonly property real tiltRad: o.tilt * Math.PI / 180
     readonly property real radius: tiltRad > 0.0005 ? rowH / tiltRad : 0
     readonly property real lineWidth: Math.max(0, width - o.inset - 24)
@@ -37,18 +40,32 @@ Item {
         return { main: item.main, bg: mode === "below" ? (item.bg ?? "") : "", small: item.bgOnly ?? false };
     }
 
-    function units(item) {
-        const d = display(item);
-        return d.small ? o.bgScale : 1 + (d.bg !== "" ? o.bgScale : 0);
+    // Row heights as measured by the delegates. Collected in a plain array
+    // and published once per frame, so a re-layout costs one recalculation.
+    property var heights: []
+    property var _pending: []
+    function reportHeight(i, h) {
+        if (_pending[i] === h)
+            return;
+        _pending[i] = h;
+        Qt.callLater(commitHeights);
+    }
+    function commitHeights() {
+        heights = _pending.slice();
+    }
+    onItemsChanged: {
+        _pending = [];
+        heights = [];
     }
 
     // Arc-length position (in px) of each line's centre.
     readonly property var centers: {
         const out = [];
         let s = 0;
+        const h = i => heights[i] ?? textH;
         for (let i = 0; i < items.length; i++) {
             if (i > 0)
-                s += rowH * (units(items[i - 1]) + units(items[i])) / 2;
+                s += (h(i - 1) + h(i)) / 2 * spacingFactor;
             out.push(s);
         }
         return out;
@@ -101,10 +118,14 @@ Item {
             readonly property real offY: root.radius > 0 ? root.radius * Math.sin(ang) : ds
             readonly property real sweep: index < root.selected ? 1 : index === root.selected ? root.progress : 0
             readonly property real mainSize: o.fontSize * (shown.small ? o.bgScale : 1)
+            // Only lines near the middle can still have a voice singing.
+            readonly property var bg: shown.bg !== "" && dist < 3 ? LyricsService.bgState(index, LyricsService.time) : { progress: index < root.selected ? 1 : 0, glow: 0 }
 
             visible: dist <= o.visibleLines + 0.5
             width: root.lineWidth
-            height: o.fontSize * 1.3 * root.units(modelData)
+            height: mainPart.implicitHeight + (bgPart.visible ? bgPart.implicitHeight : 0)
+            onHeightChanged: root.reportHeight(index, height)
+            Component.onCompleted: root.reportHeight(index, height)
             x: (root.onRight ? root.width - o.inset - width : o.inset) + offX
             y: root.height / 2 + offY - height / 2
 
@@ -116,7 +137,8 @@ Item {
             layer.effect: MultiEffect {
                 blurEnabled: line.o.blur > 0
                 blurMax: 32
-                blur: Math.min(1, line.dist * line.o.blur / 32)
+                // A background voice still singing keeps its line sharp.
+                blur: Math.min(1, line.dist * line.o.blur * (1 - line.bg.glow * 0.7) / 32)
                 shadowEnabled: line.o.shadow
                 shadowColor: "#000000"
                 shadowOpacity: 0.55
@@ -128,36 +150,46 @@ Item {
             component Part: SweepText {
                 width: line.width
                 family: line.o.fontFamily
+                wrap: line.o.longLines === "wrap"
                 minPixelSize: line.o.minFontSize
                 alignment: root.onRight ? Text.AlignRight : Text.AlignLeft
                 weight: line.index === root.selected ? line.o.activeWeight : line.o.restingWeight
-                baseColor: root.karaoke ? line.o.textColor : root.mix(root.activeColor, root.textColor, line.p)
+                measureWeight: Math.max(line.o.activeWeight, line.o.restingWeight)
                 fillColor: line.o.activeColor
                 glowColor: line.o.glowColor
-                glow: line.o.glow * line.p
-                fill: root.karaoke ? line.p : 0
-                progress: line.sweep
                 feather: line.o.feather
                 typewriter: line.o.karaoke === "typewriter"
-                baseOpacity: !root.karaoke ? 1 : typewriter ? 1 - line.p : 1 - line.p * (1 - line.o.unsungOpacity)
             }
 
             Part {
                 id: mainPart
-                anchors.top: parent.top
                 text: line.shown.main
                 pixelSize: line.mainSize
                 italic: line.shown.small && line.o.bgItalic
                 opacity: line.shown.small ? line.o.bgOpacity : 1
+                baseColor: root.karaoke ? line.o.textColor : root.mix(root.activeColor, root.textColor, line.p)
+                glow: line.o.glow * line.p
+                fill: root.karaoke ? line.p : 0
+                progress: line.sweep
+                baseOpacity: !root.karaoke ? 1 : typewriter ? 1 - line.p : 1 - line.p * (1 - line.o.unsungOpacity)
             }
 
             Part {
+                id: bgPart
+                // A background voice stays lit while it's still being sung,
+                // even after the wheel has moved on to the next line.
+                readonly property real live: Math.max(line.p, line.bg.glow)
                 anchors.top: mainPart.bottom
                 visible: line.shown.bg !== ""
                 text: line.shown.bg
                 pixelSize: line.o.fontSize * line.o.bgScale
                 italic: line.o.bgItalic
                 opacity: line.o.bgOpacity
+                baseColor: root.karaoke ? line.o.textColor : root.mix(root.activeColor, root.textColor, live)
+                glow: line.o.glow * live
+                fill: root.karaoke ? live : 0
+                progress: line.bg.progress
+                baseOpacity: !root.karaoke ? 1 : typewriter ? 1 - live : 1 - live * (1 - line.o.unsungOpacity)
             }
 
             MouseArea {

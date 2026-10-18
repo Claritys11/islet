@@ -32,7 +32,7 @@ Singleton {
 
     Process {
         running: root.active && root.hasCava
-        command: ["sh", "-c", 'cfg="${XDG_RUNTIME_DIR:-/tmp}/lyrics-wheel-cava.conf"; printf "%s\\n" "$0" > "$cfg"; exec cava -p "$cfg"', root.config]
+        command: ["sh", "-c", 'cfg="${XDG_RUNTIME_DIR:-/tmp}/islet-cava.conf"; printf "%s\\n" "$0" > "$cfg"; exec cava -p "$cfg"', root.config]
         stdout: SplitParser {
             onRead: line => {
                 const v = line.split(";").filter(s => s !== "").map(s => Math.min(1, parseInt(s) / 100));

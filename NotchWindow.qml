@@ -21,7 +21,7 @@ PanelWindow {
     property int tab: 0
     signal settingsRequested
 
-    readonly property bool hasMusic: LyricsService.player !== null && LyricsService.title !== ""
+    readonly property bool hasMusic: LyricsService.hasTrack
     readonly property bool hasTimer: PomodoroService.active
     readonly property bool idle: !hasMusic && !hasTimer
     readonly property bool island: o.notchShape === "island"
@@ -66,7 +66,7 @@ PanelWindow {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
 
-    WlrLayershell.namespace: "lyrics-wheel-notch"
+    WlrLayershell.namespace: "islet-notch"
     WlrLayershell.layer: island ? WlrLayer.Top : WlrLayer.Overlay
     WlrLayershell.keyboardFocus: mode === "open" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 

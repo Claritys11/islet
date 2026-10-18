@@ -66,6 +66,7 @@ Item {
                 Layout.topMargin: 6
                 visible: root.line !== null
                 text: root.line?.main ?? ""
+                maxRows: 2
                 pixelSize: 15
                 minPixelSize: 10
                 family: Theme.font

@@ -1,0 +1,74 @@
+#!/bin/sh
+# islet — control Islet: lyrics overlay, notch, focus timer and checklist.
+CFG=islet
+
+usage() {
+    cat <<USAGE
+Usage: islet <command>
+
+  settings [page]                 Open settings (overview|lyrics|notch|focus|checklist|about)
+  set <key> <value>, get <key>    Change or read one setting, e.g. islet set glow 0.9
+  start | stop | restart          Run Islet (via systemd if the service is installed)
+  status                          What's playing and the lyrics status
+
+  toggle | show | hide            Show or hide the lyrics overlay
+  refetch                         Fetch lyrics for the current song again
+
+  notch [media|focus|checklist]   Toggle the notch, or open it on a tab
+  pomodoro [toggle|reset|skip|status]
+  todo [text]                     Add a task, or list tasks without text
+  config                          Print the path of the settings file
+USAGE
+}
+
+running() { qs -c "$CFG" ipc show >/dev/null 2>&1; }
+has_service() { systemctl --user cat islet.service >/dev/null 2>&1; }
+
+start() {
+    running && return 0
+    if has_service; then
+        systemctl --user start islet.service
+    else
+        qs -c "$CFG" -d >/dev/null
+    fi
+    # Wait until the instance answers IPC.
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        running && return 0
+        sleep 0.3
+    done
+    echo "islet: failed to start (try: qs -c $CFG)" >&2
+    return 1
+}
+
+stop() {
+    if has_service; then
+        systemctl --user stop islet.service
+    fi
+    qs kill -c "$CFG" >/dev/null 2>&1
+    return 0
+}
+
+call() { start && qs -c "$CFG" ipc call "$@"; }
+
+case "$1" in
+    settings)
+        if [ -n "$2" ]; then call islet open "$2"; else call islet settings; fi ;;
+    set) call islet set "$2" "$3" ;;
+    get) call islet get "$2" ;;
+    start) start ;;
+    stop) stop ;;
+    restart) stop; start ;;
+    status) running && qs -c "$CFG" ipc call lyrics status || echo "not running" ;;
+    toggle | hide | refetch) call lyrics "$1" ;;
+    # `show` is a reserved word for qs ipc, so the function is named unhide.
+    show) call lyrics unhide ;;
+    notch)
+        if [ -n "$2" ]; then call notch open "$2"; else call notch toggle; fi ;;
+    pomodoro) call pomodoro "${2:-toggle}" ;;
+    todo)
+        shift
+        if [ $# -gt 0 ]; then call checklist add "$*"; else call checklist list; fi ;;
+    config) echo "${XDG_CONFIG_HOME:-$HOME/.config}/islet/config.json" ;;
+    -h | --help | help | "") usage ;;
+    *) usage >&2; exit 1 ;;
+esac

@@ -3,17 +3,22 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Settings live in ~/.config/lyrics-wheel/config.json. They are edited from
-// the settings panel (`lyrics-wheel settings`) or by hand — both hot-reload.
+// Settings live in ~/.config/islet/config.json. They are edited from the
+// settings panel (`islet settings`) or by hand — both hot-reload.
 Singleton {
     id: root
 
-    readonly property string dir: `${Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config"}/lyrics-wheel`
+    readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config"
+    readonly property string dir: `${configHome}/islet`
+    // Where settings lived before the project was renamed.
+    readonly property string legacyDir: `${configHome}/lyrics-wheel`
     readonly property string path: `${dir}/config.json`
     property alias opts: adapter
 
     // Single source of truth for default values (also used by "Reset").
     readonly property var defaults: ({
+            // Modules
+            lyricsEnabled: true,
             // Source
             player: "spotify",
             offsetMs: 250,
@@ -33,6 +38,7 @@ Singleton {
             fontFamily: "Google Sans Flex",
             fontSize: 30,
             minFontSize: 14,
+            longLines: "wrap",
             spacing: 1.5,
             curve: 1,
             tilt: 6,
@@ -55,6 +61,7 @@ Singleton {
             bgScale: 0.62,
             bgOpacity: 0.7,
             bgItalic: true,
+            bgLinger: 1.5,
             // Lyrics visible area: a soft-edged window the wheel shows through
             viewHeight: 1.0,
             viewOffset: 0,
@@ -95,11 +102,26 @@ Singleton {
     function reset() {
         for (const key in defaults)
             adapter[key] = defaults[key];
+        edited("", "All settings reset", "");
     }
 
-    function set(key, value) {
-        if (adapter[key] !== value)
-            adapter[key] = value;
+    // Emitted for every change made through the settings panel, so the UI
+    // can show what just changed.
+    signal edited(string key, string label, var value)
+
+    function set(key, value, label) {
+        if (adapter[key] === value)
+            return;
+        adapter[key] = value;
+        edited(key, label ?? key, value);
+    }
+
+    function isDefault(key) {
+        return adapter[key] === defaults[key];
+    }
+
+    function resetKey(key, label) {
+        set(key, defaults[key], label);
     }
 
     // Writing on every slider tick would thrash the disk; batch them.
@@ -109,10 +131,16 @@ Singleton {
         onTriggered: file.writeAdapter()
     }
 
+    // First run: create the folder and bring over settings from the old
+    // lyrics-wheel location, then load whatever is there.
+    property bool _setupDone: false
     Process {
-        id: mkdir
-        command: ["mkdir", "-p", root.dir]
-        onExited: file.writeAdapter()
+        id: setup
+        command: ["sh", "-c", 'mkdir -p "$0" && for f in config.json notion-token; do [ -e "$1/$f" ] && [ ! -e "$0/$f" ] && cp -p "$1/$f" "$0/$f"; done; true', root.dir, root.legacyDir]
+        onExited: {
+            root._setupDone = true;
+            file.reload();
+        }
     }
 
     FileView {
@@ -122,13 +150,18 @@ Singleton {
         onFileChanged: reload()
         onAdapterUpdated: saveTimer.restart()
         onLoadFailed: err => {
-            if (err === FileViewError.FileNotFound)
-                mkdir.running = true;
+            if (err !== FileViewError.FileNotFound)
+                return;
+            if (root._setupDone)
+                writeAdapter();
+            else
+                setup.running = true;
         }
 
         JsonAdapter {
             id: adapter
 
+            property bool lyricsEnabled: root.defaults.lyricsEnabled
             property string player: root.defaults.player
             property int offsetMs: root.defaults.offsetMs
             property string lrclibUrl: root.defaults.lrclibUrl
@@ -147,6 +180,7 @@ Singleton {
             property string fontFamily: root.defaults.fontFamily
             property real fontSize: root.defaults.fontSize
             property real minFontSize: root.defaults.minFontSize
+            property string longLines: root.defaults.longLines
             property real spacing: root.defaults.spacing
             property real curve: root.defaults.curve
             property real tilt: root.defaults.tilt
@@ -169,6 +203,7 @@ Singleton {
             property real bgScale: root.defaults.bgScale
             property real bgOpacity: root.defaults.bgOpacity
             property bool bgItalic: root.defaults.bgItalic
+            property real bgLinger: root.defaults.bgLinger
 
             property real viewHeight: root.defaults.viewHeight
             property int viewOffset: root.defaults.viewOffset

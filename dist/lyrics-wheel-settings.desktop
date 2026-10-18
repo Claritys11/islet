@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Lyrics Wheel Settings
-Comment=Configure the synced lyrics overlay
-Exec=lyrics-wheel settings
-Icon=preferences-desktop-font
-Categories=Settings;
-Keywords=lyrics;spotify;karaoke;music;
-Terminal=false

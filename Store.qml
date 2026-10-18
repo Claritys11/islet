@@ -4,11 +4,11 @@ import Quickshell
 import Quickshell.Io
 
 // Data the app produces (not settings): pomodoro history and the local
-// checklist. Kept in ~/.local/state/lyrics-wheel/state.json.
+// checklist. Kept in ~/.local/state/islet/state.json.
 Singleton {
     id: root
 
-    readonly property string dir: `${Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state"}/lyrics-wheel`
+    readonly property string dir: `${Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state"}/islet`
     property alias db: adapter
 
     Timer {
@@ -17,10 +17,16 @@ Singleton {
         onTriggered: file.writeAdapter()
     }
 
+    // First run: create the folder and bring over data from the old
+    // lyrics-wheel location, then load whatever is there.
+    property bool _setupDone: false
     Process {
-        id: mkdir
-        command: ["mkdir", "-p", root.dir]
-        onExited: file.writeAdapter()
+        id: setup
+        command: ["sh", "-c", 'mkdir -p "$0" && [ -e "$1/state.json" ] && [ ! -e "$0/state.json" ] && cp -p "$1/state.json" "$0/"; true', root.dir, root.dir.replace(/islet$/, "lyrics-wheel")]
+        onExited: {
+            root._setupDone = true;
+            file.reload();
+        }
     }
 
     FileView {
@@ -30,8 +36,12 @@ Singleton {
         onFileChanged: reload()
         onAdapterUpdated: saveTimer.restart()
         onLoadFailed: err => {
-            if (err === FileViewError.FileNotFound)
-                mkdir.running = true;
+            if (err !== FileViewError.FileNotFound)
+                return;
+            if (root._setupDone)
+                writeAdapter();
+            else
+                setup.running = true;
         }
 
         JsonAdapter {
@@ -41,6 +51,8 @@ Singleton {
             property var focusLog: ({})
             // Local checklist: [{ id, text, checked }]
             property var checklist: []
+            // LRCLIB version picked by hand per song: { "artist\ntitle": id }
+            property var lyricsChoice: ({})
         }
     }
 }

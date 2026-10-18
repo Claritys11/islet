@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Islet Settings
+Comment=Lyrics overlay, notch, focus timer and checklist
+Exec=islet settings
+Icon=preferences-desktop
+Categories=Settings;
+Keywords=lyrics;spotify;karaoke;music;notch;pomodoro;todo;notion;
+Terminal=false
