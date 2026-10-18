@@ -27,7 +27,7 @@ package() {
     cd islet
     # Quickshell finds configs in $XDG_CONFIG_DIRS, so `qs -c islet` works system-wide.
     install -d "$pkgdir/etc/xdg/quickshell/islet"
-    cp -r -- *.qml assets bridge spicetify "$pkgdir/etc/xdg/quickshell/islet/"
+    cp -r -- *.qml assets bridge spicetify integrations "$pkgdir/etc/xdg/quickshell/islet/"
     install -Dm755 bin/islet "$pkgdir/usr/bin/islet"
     install -Dm644 dist/islet.service "$pkgdir/usr/lib/systemd/user/islet.service"
     install -Dm644 dist/islet-settings.desktop "$pkgdir/usr/share/applications/islet-settings.desktop"

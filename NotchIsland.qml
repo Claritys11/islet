@@ -23,7 +23,10 @@ Item {
     readonly property bool hasMusic: LyricsService.hasTrack
     readonly property bool hasTimer: PomodoroService.active
     readonly property bool idle: !hasMusic && !hasTimer
-    readonly property bool island: o.notchShape === "island"
+    readonly property bool island: o.notchShape === "island" || barMode
+    // "bar": no pill of its own — a bar widget (e.g. in DankMaterialShell)
+    // shows the activities and opens the island as a dropdown.
+    readonly property bool barMode: o.notchMode === "bar"
     readonly property string pillText: {
         const l = LyricsService.lines[LyricsService.currentIndex];
         if (o.notchPillText === "lyrics" && LyricsService.status === "ready" && LyricsService.synced && l && !l.interlude)
@@ -68,6 +71,16 @@ Item {
             win.mode = win.hasMusic ? "peek" : "open"
     }
 
+    // Opened from a bar widget but never visited: tidy it away, like a
+    // popout would when you click elsewhere.
+    Timer {
+        id: unvisitedTimer
+        interval: 5000
+        running: win.barMode && win.mode === "open" && !hover.hovered
+        onTriggered: if (!checklist.inputFocused)
+            win.close()
+    }
+
     Timer {
         id: leaveTimer
         interval: 450
@@ -103,7 +116,12 @@ Item {
             width: win.target.width
             height: win.target.height
             color: Theme.surface
-            opacity: win.idle && win.mode === "closed" && win.o.notchIdle === "hidden" ? 0 : 1
+            opacity: win.mode === "closed" && (win.barMode || (win.idle && win.o.notchIdle === "hidden")) ? 0 : 1
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 180
+                }
+            }
             clip: true
 
             topLeftRadius: win.island ? r : 0
@@ -131,7 +149,7 @@ Item {
                 onHoveredChanged: {
                     if (hovered) {
                         leaveTimer.stop();
-                        if (win.mode === "closed")
+                        if (win.mode === "closed" && !win.barMode)
                             hoverTimer.restart();
                     } else {
                         hoverTimer.stop();

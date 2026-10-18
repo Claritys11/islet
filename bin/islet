@@ -17,6 +17,7 @@ Usage: islet <command>
   notch [media|focus|checklist]   Toggle the notch, or open it on a tab
   pomodoro [toggle|reset|skip|status]
   todo [text]                     Add a task, or list tasks without text
+  dms [install|uninstall|status]  Islet in the DankMaterialShell bar instead of DMS's media widget
   spicetify [install|uninstall|status]
                                   Get lyrics + timing from Spicy Lyrics (needs Spicetify)
   update                          Update Islet (git pull) and restart it
@@ -95,6 +96,65 @@ case "$1" in
                 if grep -q "islet-bridge.js" "$(spicetify -c)"; then echo "extension: installed"; else echo "extension: not installed (run: islet spicetify)"; fi
                 running && qs -c "$CFG" ipc call lyrics status ;;
             *) echo "usage: islet spicetify [install|uninstall|status]" >&2; exit 1 ;;
+        esac ;;
+    dms)
+        # Put Islet in the DankMaterialShell bar in place of DMS's media widget.
+        command -v dms >/dev/null || { echo "DankMaterialShell (dms) isn't installed" >&2; exit 1; }
+        plugins="${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/plugins"
+        settings="${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/settings.json"
+        src=""
+        for d in "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/$CFG" /etc/xdg/quickshell/$CFG; do
+            [ -d "$d/integrations/dms/IsletMedia" ] && src="$d/integrations/dms/IsletMedia" && break
+        done
+        # Swap one bar widget id for another in every bar, keeping its place.
+        swap() {
+            python3 - "$settings" "$1" "$2" <<'PY'
+import json, sys
+path, old, new = sys.argv[1:]
+with open(path) as f:
+    data = json.load(f)
+changed = 0
+for bar in data.get("barConfigs", []):
+    for key in ("leftWidgets", "centerWidgets", "rightWidgets"):
+        items = bar.get(key, [])
+        for i, w in enumerate(items):
+            if w == old:
+                items[i] = new; changed += 1
+            elif isinstance(w, dict) and w.get("id") == old:
+                w["id"] = new; changed += 1
+with open(path + ".tmp", "w") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+import os; os.replace(path + ".tmp", path)
+print(changed)
+PY
+        }
+        case "${2:-install}" in
+            install)
+                [ -n "$src" ] || { echo "Islet's DMS plugin wasn't found" >&2; exit 1; }
+                mkdir -p "$plugins"
+                ln -sfn "$src" "$plugins/isletMedia"
+                dms ipc call plugin-scan scan >/dev/null 2>&1
+                sleep 1
+                dms ipc call plugins enable isletMedia >/dev/null 2>&1
+                [ -f "$settings.islet-backup" ] || cp "$settings" "$settings.islet-backup"
+                n="$(swap music isletMedia)"
+                if [ "$n" = "0" ] && ! grep -q '"isletMedia"' "$settings"; then
+                    echo "No DMS media widget to replace — add 'Islet Media' in DMS Settings → DankBar."
+                fi
+                call islet set notchMode bar >/dev/null
+                echo "Islet is now in your DMS bar (left click: open, right click: play/pause)."
+                echo "Your previous DMS settings are saved in $settings.islet-backup" ;;
+            uninstall)
+                swap isletMedia music >/dev/null
+                dms ipc call plugins disable isletMedia >/dev/null 2>&1
+                rm -f "$plugins/isletMedia"
+                running && call islet set notchMode island >/dev/null
+                echo "Restored DMS's media widget." ;;
+            status)
+                [ -L "$plugins/isletMedia" ] && echo "plugin: installed" || echo "plugin: not installed (run: islet dms)"
+                echo "DMS: $(dms ipc call plugins status isletMedia 2>/dev/null)"
+                grep -q '"isletMedia"' "$settings" && echo "bar: Islet Media is in the bar" || echo "bar: not in the bar" ;;
+            *) echo "usage: islet dms [install|uninstall|status]" >&2; exit 1 ;;
         esac ;;
     update)
         # Islet is installed as a symlink to a git checkout: pull and restart.

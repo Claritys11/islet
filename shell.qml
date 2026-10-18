@@ -138,6 +138,30 @@ ShellRoot {
         }
     }
 
+    // Bar widgets (DankMaterialShell) talk to Islet over IsletLink.
+    Binding {
+        target: IsletLink
+        property: "notchOpen"
+        value: shell.notch?.mode === "open"
+    }
+
+    Connections {
+        target: IsletLink
+        function onNotchCommand(msg) {
+            const n = shell.notch;
+            if (!n)
+                return;
+            if (msg.cmd === "toggle") {
+                if (n.mode === "open")
+                    n.close();
+                else
+                    n.openAt(["media", "focus", "checklist"].indexOf(msg.tab ?? "media"), msg.x >= 0 ? msg.x + (msg.width ?? 0) / 2 : -1, msg.y ?? -1);
+            } else if (msg.cmd === "close") {
+                n.close();
+            }
+        }
+    }
+
     // The notch lives on one monitor: the configured one, else the first.
     readonly property var notchScreen: Quickshell.screens.find(s => s.name === Config.opts.notchScreen) ?? Quickshell.screens[0]
     property var notch: notchLoader.item

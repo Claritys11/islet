@@ -84,7 +84,14 @@ If `spicetify apply` reports *"Preprocessed Spotify data is outdated"*, run
 `spicetify restore backup apply` (Spicetify's standard fix after a Spotify update). Play a song and check
 `islet status` mentions "Spicy Lyrics" (songs Spicy Lyrics lacks use LRCLIB).
 
-## 6. Optional: configure
+## 6. Optional: DankMaterialShell bar
+
+If the user runs DankMaterialShell (`command -v dms`) and would rather have Islet in the bar than as a
+floating notch, run `islet dms` (it replaces DMS's media widget; a backup of DMS's settings is kept) and
+check `islet dms status` shows the plugin as `loaded`. If DMS reports the plugin failed to load after an
+Islet update, `systemctl --user restart dms` clears DMS's QML cache.
+
+## 7. Optional: configure
 
 Prefer the GUI (`islet settings`). For scripted changes use `islet set <key> <value>`; every key and its default
 is in the `defaults` block of `Config.qml`. Don't hand-edit `~/.config/islet/config.json` while Islet is

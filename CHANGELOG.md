@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0 — 2026-10-18
+
+### Added
+- **DankMaterialShell bar widget**: `islet dms` installs the *Islet Media* DMS plugin in place of DMS's
+  media widget — artwork, the lyric being sung with karaoke fill, visualizer and focus timer in a native
+  DMS pill. Left click drops Islet's island right under it; right click plays/pauses.
+- Notch *bar mode*: no floating pill; the island opens as a dropdown at the bar widget and tidies itself
+  away if you don't move into it
+- `IsletLink`: Islet's state as JSON lines over `$XDG_RUNTIME_DIR/islet.sock`, plus commands, so any
+  shell can show Islet
+
+### Fixed
+- Spicy Lyrics lines no longer carry invisible zero-width spaces
+
 ## 1.1.1 — 2026-10-18
 
 ### Fixed

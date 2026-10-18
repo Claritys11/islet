@@ -161,7 +161,8 @@ Singleton {
         for (let i = 0; i < syllables.length; i++) {
             const syl = syllables[i];
             const from = text.length;
-            text += syl.Text;
+            // Spicy Lyrics' data carries zero-width spaces between syllables.
+            text += (syl.Text ?? "").replace(/[\u200b-\u200d\ufeff]/g, "");
             ranges.push({ s: syl.StartTime, e: syl.EndTime, from, to: text.length });
             if (!syl.IsPartOfWord && i < syllables.length - 1)
                 text += " ";

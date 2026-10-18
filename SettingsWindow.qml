@@ -42,7 +42,7 @@ FloatingWindow {
     readonly property var pages: [
         { icon: "dashboard", title: "Overview", subtitle: "Modules and quick looks", keys: [] },
         { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "fillSpeed", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "lyricsSource", "spicyOffsetMs", "offsetMs", "lrclibUrl"] },
-        { icon: "page_header", title: "Notch", subtitle: "Dynamic island at the top", keys: ["notchEnabled", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose"] },
+        { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
         { icon: "info", title: "About", subtitle: "Files, shortcuts, reset", keys: [] }
@@ -1166,6 +1166,56 @@ FloatingWindow {
 
                 // ── Notch ─────────────────────────────────────────
                 Page {
+                    Card {
+                        title: "Where it lives"
+                        hint: "As a floating island at the top of the screen, or as a widget in your DankMaterialShell bar (in place of DMS's media widget). In the bar, clicking the widget drops Islet down right under it."
+                        ChoiceSetting {
+                            key: "notchMode"
+                            label: "Show as"
+                            choices: [
+                                { text: "Floating island", value: "island" },
+                                { text: "In the DMS bar", value: "bar" }
+                            ]
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            visible: win.o.notchMode === "bar"
+                            Button {
+                                text: "Set up DMS bar widget"
+                                onClicked: Quickshell.execDetached([Qt.resolvedUrl("bin/islet").toString().replace(/^file:\/\//, ""), "dms", "install"])
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: IsletLink.hasClients ? "● Connected to the DMS bar" : "○ Not in the bar yet — press the button (or run: islet dms)"
+                                color: IsletLink.hasClients ? "#a5d6a7" : win.subtext
+                                font.family: win.font
+                                font.pixelSize: 12
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Bar widget"
+                        visible: win.o.notchMode === "bar"
+                        SliderSetting {
+                            key: "barPillWidth"
+                            label: "Lyric width"
+                            hint: "Longer lines are cut off and slide along as they're sung"
+                            from: 120
+                            to: 600
+                            stepSize: 10
+                            decimals: 0
+                            unit: " px"
+                        }
+                        SwitchSetting {
+                            key: "barShowVisualizer"
+                            label: "Visualizer"
+                        }
+                        SwitchSetting {
+                            key: "barShowTimer"
+                            label: "Focus timer"
+                        }
+                    }
                     Card {
                         title: "Preview"
                         hint: "Size changes open the notch so you can see them; other changes show the closed pill."

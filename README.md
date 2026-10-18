@@ -129,6 +129,7 @@ islet toggle | show | hide                      the lyrics overlay
 islet pomodoro [toggle|reset|skip|status]
 islet todo "Buy milk"                           add a task (no text = list them)
 islet set <key> <value> · islet get <key>
+islet dms [install|uninstall|status]            Islet in the DankMaterialShell bar
 islet spicetify [install|uninstall|status]      Spicy Lyrics lyrics & timing
 islet status · islet refetch · islet update · islet start|stop|restart
 ```
@@ -179,6 +180,24 @@ System Settings → Keyboard → Shortcuts → **Add New → Command or Script**
 </details>
 
 ---
+
+## 🧩 DankMaterialShell bar
+
+Prefer Islet in your bar instead of a floating notch? On DankMaterialShell:
+
+```sh
+islet dms
+```
+
+This adds the **Islet Media** plugin to DMS and puts it where DMS's own media widget was (your old
+settings are backed up to `settings.json.islet-backup`). The bar pill shows the artwork, the lyric being
+sung with its karaoke fill, the visualizer and your focus timer, all in your DMS theme.
+**Left click** drops Islet's Media / Focus / Checklist island right under it; **right click** plays/pauses.
+Islet's own floating pill goes away.
+
+Undo with `islet dms uninstall`. Width, visualizer and timer are under **Settings → Notch → Bar widget**.
+Works with top bars; the widget talks to Islet over `$XDG_RUNTIME_DIR/islet.sock`, so other shells can
+integrate the same way (see `IsletLink.qml`).
 
 ## 🌶 Spicy Lyrics integration
 

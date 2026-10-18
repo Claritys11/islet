@@ -74,6 +74,10 @@ Singleton {
             edgeFade: 80,
             // Notch
             notchEnabled: true,
+            notchMode: "island",
+            barPillWidth: 300,
+            barShowVisualizer: true,
+            barShowTimer: true,
             notchShape: "island",
             notchStyle: "black",
             notchScreen: "",
@@ -220,6 +224,10 @@ Singleton {
             property int edgeFade: root.defaults.edgeFade
 
             property bool notchEnabled: root.defaults.notchEnabled
+            property string notchMode: root.defaults.notchMode
+            property int barPillWidth: root.defaults.barPillWidth
+            property bool barShowVisualizer: root.defaults.barShowVisualizer
+            property bool barShowTimer: root.defaults.barShowTimer
             property string notchShape: root.defaults.notchShape
             property string notchStyle: root.defaults.notchStyle
             property string notchScreen: root.defaults.notchScreen
