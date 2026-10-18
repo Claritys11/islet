@@ -108,7 +108,7 @@ case "$1" in
         done
         # Swap one bar widget id for another in every bar, keeping its place.
         swap() {
-            python3 - "$settings" "$1" "$2" <<'PY'
+            python3 -I - "$settings" "$1" "$2" <<'PY'
 import json, sys
 path, old, new = sys.argv[1:]
 with open(path) as f:

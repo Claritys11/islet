@@ -44,7 +44,7 @@ Singleton {
     Process {
         id: server
         running: root.enabled
-        command: ["python3", root.script, String(Config.opts.bridgePort)]
+        command: ["python3", "-I", root.script, String(Config.opts.bridgePort)]
         stdout: SplitParser {
             onRead: line => {
                 let msg;
