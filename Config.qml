@@ -55,6 +55,34 @@ Singleton {
             bgScale: 0.62,
             bgOpacity: 0.7,
             bgItalic: true,
+            // Lyrics visible area: a soft-edged window the wheel shows through
+            viewHeight: 1.0,
+            viewOffset: 0,
+            edgeFade: 80,
+            // Notch
+            notchEnabled: true,
+            notchShape: "island",
+            notchStyle: "black",
+            notchScreen: "",
+            notchMarginTop: 44,
+            notchWidth: 600,
+            notchHeight: 250,
+            notchPillWidth: 300,
+            notchIdle: "handle",
+            notchPillText: "lyrics",
+            notchHoverDelay: 150,
+            notchAutoClose: true,
+            // Pomodoro
+            focusMinutes: 25,
+            shortBreakMinutes: 5,
+            longBreakMinutes: 15,
+            longBreakEvery: 4,
+            autoStartBreaks: true,
+            autoStartFocus: false,
+            pomodoroSound: true,
+            // Checklist
+            checklistSource: "local",
+            notionPage: "",
             // Readability & behaviour
             shadow: true,
             backdrop: 0.35,
@@ -141,6 +169,34 @@ Singleton {
             property real bgScale: root.defaults.bgScale
             property real bgOpacity: root.defaults.bgOpacity
             property bool bgItalic: root.defaults.bgItalic
+
+            property real viewHeight: root.defaults.viewHeight
+            property int viewOffset: root.defaults.viewOffset
+            property int edgeFade: root.defaults.edgeFade
+
+            property bool notchEnabled: root.defaults.notchEnabled
+            property string notchShape: root.defaults.notchShape
+            property string notchStyle: root.defaults.notchStyle
+            property string notchScreen: root.defaults.notchScreen
+            property int notchMarginTop: root.defaults.notchMarginTop
+            property int notchWidth: root.defaults.notchWidth
+            property int notchHeight: root.defaults.notchHeight
+            property int notchPillWidth: root.defaults.notchPillWidth
+            property string notchIdle: root.defaults.notchIdle
+            property string notchPillText: root.defaults.notchPillText
+            property int notchHoverDelay: root.defaults.notchHoverDelay
+            property bool notchAutoClose: root.defaults.notchAutoClose
+
+            property real focusMinutes: root.defaults.focusMinutes
+            property real shortBreakMinutes: root.defaults.shortBreakMinutes
+            property real longBreakMinutes: root.defaults.longBreakMinutes
+            property int longBreakEvery: root.defaults.longBreakEvery
+            property bool autoStartBreaks: root.defaults.autoStartBreaks
+            property bool autoStartFocus: root.defaults.autoStartFocus
+            property bool pomodoroSound: root.defaults.pomodoroSound
+
+            property string checklistSource: root.defaults.checklistSource
+            property string notionPage: root.defaults.notionPage
 
             property bool shadow: root.defaults.shadow
             property real backdrop: root.defaults.backdrop

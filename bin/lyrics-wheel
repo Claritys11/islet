@@ -15,6 +15,10 @@ Usage: lyrics-wheel <command>
   refetch     Fetch lyrics for the current song again
   status      Print what is playing and the lyrics status
   config      Print the path of the config file
+
+  notch [media|focus|checklist]   Toggle the notch, or open it on a tab
+  pomodoro [toggle|reset|skip|status]
+  todo [text]                     Add a task, or list tasks without text
 USAGE
 }
 
@@ -46,6 +50,7 @@ stop() {
 }
 
 ipc() { start && qs -c "$CFG" ipc call lyrics "$@"; }
+ipc_to() { start && qs -c "$CFG" ipc call "$@"; }
 
 case "$1" in
     start) start ;;
@@ -54,6 +59,12 @@ case "$1" in
     toggle | hide | settings | refetch) ipc "$1" ;;
     show) ipc unhide ;;
     status) running && qs -c "$CFG" ipc call lyrics status || echo "not running" ;;
+    notch)
+        if [ -n "$2" ]; then ipc_to notch open "$2"; else ipc_to notch toggle; fi ;;
+    pomodoro) ipc_to pomodoro "${2:-toggle}" ;;
+    todo)
+        shift
+        if [ $# -gt 0 ]; then ipc_to checklist add "$*"; else ipc_to checklist list; fi ;;
     config) echo "${XDG_CONFIG_HOME:-$HOME/.config}/lyrics-wheel/config.json" ;;
     -h | --help | help | "") usage ;;
     *) usage >&2; exit 1 ;;

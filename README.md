@@ -16,7 +16,21 @@ Built with [Quickshell](https://quickshell.org), so it sits naturally next to
 - **Background vocals** — `(…)` parts are shown smaller, dimmer and italic under the main line
 - **Word-level timing** when the lyrics have it (enhanced LRC), estimated otherwise
 - **Settings panel** with presets (Spicy · Neon · Cyber · Typewriter · Minimal) and live preview
+- **Visible area** — limit where lyrics appear, with soft fading edges instead of a hard crop
 - Visible on every workspace, click-through, multi-monitor, left or right edge
+
+### 🏝️ Notch — a dynamic island for Linux
+
+Inspired by [Notchy](https://notchy.dev) for macOS:
+
+- **Pill** shows live activities side by side: artwork + current lyric + audio visualizer, and a running Pomodoro timer
+- **Hover** for a now-playing peek with play/pause/next
+- **Click** for the full island:
+  - **Media** — artwork, scrubber, shuffle / previous / play / next / repeat, and the current lyric with karaoke fill
+  - **Focus** — Pomodoro with focus/short/long breaks, auto-advance, notifications and a daily session count
+  - **Checklist** — tasks saved locally, or synced with the to-dos on a **Notion** page
+- Follows your DankMaterialShell / Matugen colours (or pure black), springy animations
+- Real audio spectrum when [`cava`](https://github.com/karlstav/cava) is installed (`pacman -S cava`)
 
 ## Install
 
@@ -43,6 +57,10 @@ lyrics-wheel show|hide
 lyrics-wheel refetch    re-download lyrics for the current song
 lyrics-wheel status     what's playing + lyrics status
 lyrics-wheel start|stop|restart
+
+lyrics-wheel notch [media|focus|checklist]   toggle the notch / open a tab
+lyrics-wheel pomodoro [toggle|reset|skip|status]
+lyrics-wheel todo "Buy milk"                 add a task (no text = list tasks)
 ```
 
 ### niri
@@ -53,6 +71,8 @@ Add to `~/.config/niri/config.kdl`:
 binds {
     Mod+Shift+L { spawn "lyrics-wheel" "toggle"; }
     Mod+Ctrl+L  { spawn "lyrics-wheel" "settings"; }
+    Mod+N       { spawn "lyrics-wheel" "notch"; }
+    Mod+P       { spawn "lyrics-wheel" "pomodoro" "toggle"; }
 }
 
 // Open the settings panel as a floating window instead of a tile.
@@ -73,6 +93,15 @@ pick *Behind windows* in **Settings → Placement → Layer** to show them only 
 
 Hyprland: `bind = SUPER SHIFT, L, exec, lyrics-wheel toggle` and
 `windowrulev2 = float, title:^(Lyrics Wheel)`.
+
+## Notion checklist
+
+1. Create an integration at [notion.so/profile/integrations](https://www.notion.so/profile/integrations) and copy its **Internal Integration Secret**.
+2. Open the Notion page that holds your checklist → **•••** → **Connections** → add your integration.
+3. In **Settings → Focus**, choose *Save tasks in: Notion*, paste the secret and the page link, and press **Test connection**.
+
+Every to-do block on that page shows up in the notch; ticking, adding and deleting sync back to Notion.
+The secret is stored only in `~/.config/lyrics-wheel/notion-token` (mode 600).
 
 ## Configuration
 
@@ -104,6 +133,16 @@ by hand — it reloads live.
 | `smoothing`, `visibleLines` | `200`, `6` | Scroll easing (ms), lines drawn around the active one |
 | `shadow`, `backdrop`, `showTrackInfo` | `true`, `0.35`, `true` | Readability |
 | `hideWhenPaused`, `hideWhenNoLyrics`, `fadeDuration` | `false`, `false`, `400` | Auto-hide |
+| `viewHeight`, `viewOffset`, `edgeFade` | `1.0`, `0`, `80` | Lyrics visible area: height (fraction of the panel), vertical shift (px), soft edge size (px) |
+| `notchEnabled` | `true` | Show the notch |
+| `notchShape`, `notchStyle` | `"island"`, `"black"` | `"island"` / `"notch"` (attached to top); `"black"` / `"dms"` colours |
+| `notchScreen`, `notchMarginTop` | `""`, `44` | Monitor (empty = first) and distance from the top |
+| `notchPillWidth`, `notchWidth`, `notchHeight` | `300`, `600`, `250` | Pill and expanded sizes (px) |
+| `notchPillText`, `notchIdle` | `"lyrics"`, `"handle"` | Pill text (`"lyrics"`/`"title"`); idle look (`"handle"`/`"hidden"`) |
+| `notchHoverDelay`, `notchAutoClose` | `150`, `true` | Hover delay (ms); close when the mouse leaves |
+| `focusMinutes`, `shortBreakMinutes`, `longBreakMinutes`, `longBreakEvery` | `25`, `5`, `15`, `4` | Pomodoro timings |
+| `autoStartBreaks`, `autoStartFocus`, `pomodoroSound` | `true`, `false`, `true` | Pomodoro behaviour |
+| `checklistSource`, `notionPage` | `"local"`, `""` | `"local"` or `"notion"`; Notion page URL |
 
 ## How it works
 
@@ -115,6 +154,13 @@ by hand — it reloads live.
 | `SweepText.qml` | Karaoke text: dim base + bright glowing copy revealed through a moving gradient mask |
 | `SettingsWindow.qml` | The settings panel |
 | `Config.qml` | Defaults + `config.json` binding (`FileView` + `JsonAdapter`) |
+| `NotchWindow.qml` | The notch: closed pill, hover peek, open island |
+| `NotchMedia.qml`, `NotchFocus.qml`, `NotchChecklist.qml` | Notch tabs |
+| `PomodoroService.qml` | Timestamp-based Pomodoro timer |
+| `ChecklistService.qml` | Local / Notion checklist (Notion REST API) |
+| `CavaService.qml` | Audio spectrum via cava, with a fallback animation |
+| `Theme.qml` | Reads DMS's Matugen palette (`~/.cache/DankMaterialShell/dms-colors.json`) |
+| `Store.qml` | App data — Pomodoro history and local tasks (`~/.local/state/lyrics-wheel/state.json`) |
 
 ## Troubleshooting
 
@@ -125,7 +171,7 @@ by hand — it reloads live.
 
 ## Credits
 
-Wheel layout from [React Bits](https://reactbits.dev) (MIT). Karaoke look inspired by
+Wheel layout from [React Bits](https://reactbits.dev) (MIT). Notch inspired by [Notchy](https://notchy.dev). Karaoke look inspired by
 [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics). Lyrics by the [LRCLIB](https://lrclib.net) community.
 
 ## License

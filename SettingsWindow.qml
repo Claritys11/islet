@@ -10,6 +10,9 @@ import Quickshell.Services.Mpris
 FloatingWindow {
     id: win
 
+    // The notch window, if enabled (for the "Open notch now" button).
+    property var shellNotch: null
+
     title: "Lyrics Wheel — Settings"
     implicitWidth: 500
     implicitHeight: 780
@@ -236,7 +239,7 @@ FloatingWindow {
             id: tabs
             Layout.fillWidth: true
             Repeater {
-                model: ["Karaoke", "Look", "Placement", "Lyrics"]
+                model: ["Karaoke", "Look", "Placement", "Lyrics", "Notch", "Focus"]
                 TabButton {
                     required property string modelData
                     text: modelData
@@ -544,6 +547,39 @@ FloatingWindow {
                 }
 
                 Heading {
+                    text: "VISIBLE AREA"
+                }
+                Hint {
+                    text: "Limit where lyrics appear on screen. Lines fade out softly at the edges instead of being cut off. The area is outlined on screen while this panel is open."
+                }
+                SliderRow {
+                    key: "viewHeight"
+                    label: "Area height"
+                    from: 0.1
+                    to: 1
+                    stepSize: 0.01
+                    decimals: 2
+                    unit: "×"
+                }
+                SliderRow {
+                    key: "viewOffset"
+                    label: "Move area up / down"
+                    from: -500
+                    to: 500
+                    stepSize: 5
+                    decimals: 0
+                    unit: " px"
+                }
+                SliderRow {
+                    key: "edgeFade"
+                    label: "Edge fade"
+                    to: 300
+                    stepSize: 2
+                    decimals: 0
+                    unit: " px"
+                }
+
+                Heading {
                     text: "BEHAVIOUR"
                 }
                 SwitchRow {
@@ -594,6 +630,230 @@ FloatingWindow {
                 }
                 Hint {
                     text: "Missing or wrong lyrics? Anyone can add them at lrclib.net — the whole community benefits."
+                }
+            }
+
+            Page {
+                Heading {
+                    text: "NOTCH"
+                }
+                Hint {
+                    text: "A dynamic island at the top of the screen. Hover it for now playing, click it for Media, Focus and Checklist."
+                }
+                SwitchRow {
+                    key: "notchEnabled"
+                    label: "Show the notch"
+                }
+                ChoiceRow {
+                    key: "notchShape"
+                    label: "Shape"
+                    choices: [
+                        { text: "Floating island", value: "island" },
+                        { text: "Notch (attached to top)", value: "notch" }
+                    ]
+                }
+                ChoiceRow {
+                    key: "notchStyle"
+                    label: "Colour"
+                    choices: [
+                        { text: "Black", value: "black" },
+                        { text: "DMS theme", value: "dms" }
+                    ]
+                }
+                ChoiceRow {
+                    key: "notchPillText"
+                    label: "Pill shows"
+                    choices: [
+                        { text: "Current lyric", value: "lyrics" },
+                        { text: "Song title", value: "title" }
+                    ]
+                }
+                ChoiceRow {
+                    key: "notchIdle"
+                    label: "When nothing is happening"
+                    choices: [
+                        { text: "Small handle", value: "handle" },
+                        { text: "Invisible (hover top)", value: "hidden" }
+                    ]
+                }
+                TextRow {
+                    key: "notchScreen"
+                    label: "Monitor"
+                    placeholder: "first  (e.g. HDMI-A-1)"
+                }
+                SliderRow {
+                    key: "notchMarginTop"
+                    label: "Distance from top"
+                    to: 120
+                    stepSize: 1
+                    decimals: 0
+                    unit: " px"
+                }
+                Hint {
+                    text: "Tip: 0 with the Notch shape sits on the screen edge (over the bar); ~44 floats just under the DMS bar."
+                }
+                SliderRow {
+                    key: "notchPillWidth"
+                    label: "Pill width"
+                    from: 180
+                    to: 600
+                    stepSize: 5
+                    decimals: 0
+                    unit: " px"
+                }
+                SliderRow {
+                    key: "notchWidth"
+                    label: "Expanded width"
+                    from: 440
+                    to: 1000
+                    stepSize: 10
+                    decimals: 0
+                    unit: " px"
+                }
+                SliderRow {
+                    key: "notchHeight"
+                    label: "Expanded height"
+                    from: 200
+                    to: 600
+                    stepSize: 10
+                    decimals: 0
+                    unit: " px"
+                }
+                SliderRow {
+                    key: "notchHoverDelay"
+                    label: "Hover delay"
+                    to: 1000
+                    stepSize: 10
+                    decimals: 0
+                    unit: " ms"
+                }
+                SwitchRow {
+                    key: "notchAutoClose"
+                    label: "Close when the mouse leaves"
+                }
+                Button {
+                    text: "Open notch now"
+                    onClicked: shellNotch?.open()
+                }
+            }
+
+            Page {
+                Heading {
+                    text: "POMODORO"
+                }
+                SliderRow {
+                    key: "focusMinutes"
+                    label: "Focus"
+                    from: 5
+                    to: 90
+                    stepSize: 1
+                    decimals: 0
+                    unit: " min"
+                }
+                SliderRow {
+                    key: "shortBreakMinutes"
+                    label: "Short break"
+                    from: 1
+                    to: 30
+                    stepSize: 1
+                    decimals: 0
+                    unit: " min"
+                }
+                SliderRow {
+                    key: "longBreakMinutes"
+                    label: "Long break"
+                    from: 5
+                    to: 60
+                    stepSize: 1
+                    decimals: 0
+                    unit: " min"
+                }
+                SliderRow {
+                    key: "longBreakEvery"
+                    label: "Long break after"
+                    from: 2
+                    to: 8
+                    stepSize: 1
+                    decimals: 0
+                    unit: " sessions"
+                }
+                SwitchRow {
+                    key: "autoStartBreaks"
+                    label: "Start breaks automatically"
+                }
+                SwitchRow {
+                    key: "autoStartFocus"
+                    label: "Start focus automatically after a break"
+                }
+                SwitchRow {
+                    key: "pomodoroSound"
+                    label: "Play a sound when time is up"
+                }
+
+                Heading {
+                    text: "CHECKLIST"
+                }
+                ChoiceRow {
+                    key: "checklistSource"
+                    label: "Save tasks in"
+                    choices: [
+                        { text: "This computer", value: "local" },
+                        { text: "Notion", value: "notion" }
+                    ]
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: win.o.checklistSource === "notion"
+                    spacing: 8
+
+                    Hint {
+                        text: "1. Go to notion.so/profile/integrations → New integration → copy the Internal Integration Secret.\n2. Open your checklist page in Notion → ••• → Connections → add your integration.\n3. Paste the secret and the page link below. To-do blocks on that page become your checklist."
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Label {
+                            text: "Integration secret"
+                            Layout.fillWidth: true
+                        }
+                        TextField {
+                            id: tokenField
+                            Layout.preferredWidth: 200
+                            echoMode: TextInput.Password
+                            placeholderText: ChecklistService.token !== "" ? "saved ✓  (paste to replace)" : "ntn_…"
+                            onAccepted: saveToken.clicked()
+                        }
+                        Button {
+                            id: saveToken
+                            text: "Save"
+                            enabled: tokenField.text.trim() !== ""
+                            onClicked: {
+                                ChecklistService.saveToken(tokenField.text);
+                                tokenField.text = "";
+                            }
+                        }
+                    }
+                    TextRow {
+                        key: "notionPage"
+                        label: "Checklist page"
+                        placeholder: "https://www.notion.so/…"
+                    }
+                    RowLayout {
+                        Button {
+                            text: "Test connection"
+                            onClicked: ChecklistService.refresh()
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 12
+                            color: ChecklistService.status === "error" ? "#ffb4ab" : ChecklistService.status === "ready" ? "#a5d6a7" : "#c4c6cf"
+                            text: ChecklistService.status === "ready" ? `Connected ✓ · ${ChecklistService.items.length} to-dos` : ChecklistService.status === "loading" ? "Connecting…" : ChecklistService.error
+                        }
+                    }
+                    Hint {
+                        text: "The secret is stored only on this computer, in ~/.config/lyrics-wheel/notion-token (readable by you only)."
+                    }
                 }
             }
         }

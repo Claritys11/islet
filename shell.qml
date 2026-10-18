@@ -1,5 +1,6 @@
 //@ pragma Env QT_QUICK_CONTROLS_STYLE=Material
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -37,11 +38,77 @@ ShellRoot {
         }
     }
 
+    IpcHandler {
+        target: "notch"
+
+        function toggle(): void {
+            shell.notch?.toggle();
+        }
+        function open(tab: string): void {
+            shell.notch?.open(["media", "focus", "checklist"].indexOf(tab) >= 0 ? ["media", "focus", "checklist"].indexOf(tab) : undefined);
+        }
+        function close(): void {
+            shell.notch?.close();
+        }
+    }
+
+    IpcHandler {
+        target: "pomodoro"
+
+        function toggle(): void {
+            PomodoroService.toggle();
+        }
+        function reset(): void {
+            PomodoroService.reset();
+        }
+        function skip(): void {
+            PomodoroService.skip();
+        }
+        function status(): string {
+            return `${PomodoroService.label} ${PomodoroService.clock}${PomodoroService.running ? "" : " (paused)"} · ${PomodoroService.todayCount} today`;
+        }
+    }
+
+    IpcHandler {
+        target: "checklist"
+
+        function add(text: string): void {
+            ChecklistService.add(text);
+        }
+        function list(): string {
+            return ChecklistService.items.map(i => `${i.checked ? "[x]" : "[ ]"} ${i.text}`).join("\n");
+        }
+        function refresh(): void {
+            ChecklistService.refresh();
+        }
+        function status(): string {
+            return `${ChecklistService.useNotion ? "notion" : "local"} · ${ChecklistService.status}${ChecklistService.error && ChecklistService.status !== "ready" ? " · " + ChecklistService.error : ""}`;
+        }
+    }
+
+    // The notch lives on one monitor: the configured one, else the first.
+    readonly property var notchScreen: Quickshell.screens.find(s => s.name === Config.opts.notchScreen) ?? Quickshell.screens[0]
+    property var notch: notchLoader.item
+
+    LazyLoader {
+        id: notchLoader
+        active: Config.opts.notchEnabled && shell.notchScreen !== undefined
+
+        NotchWindow {
+            modelData: shell.notchScreen
+            onSettingsRequested: {
+                shell.settingsOpen = false;
+                shell.settingsOpen = true;
+            }
+        }
+    }
+
     LazyLoader {
         active: shell.settingsOpen
 
         SettingsWindow {
             visible: true
+            shellNotch: shell.notch
             onVisibleChanged: if (!visible)
                 shell.settingsOpen = false
         }
@@ -132,12 +199,91 @@ ShellRoot {
                     }
                 }
 
+                // The visible area: lyrics fade out softly at its top and
+                // bottom edges instead of being cut off.
+                Item {
+                    id: viewport
+                    width: parent.width
+                    height: parent.height * Math.max(0.1, Math.min(1, win.o.viewHeight))
+                    y: (parent.height - height) / 2 + win.o.viewOffset
+
+                    readonly property real fadeFrac: Math.min(0.5, win.o.edgeFade / Math.max(height, 1))
+
+                    layer.enabled: win.o.edgeFade > 0
+                    layer.effect: MultiEffect {
+                        maskEnabled: true
+                        maskSource: fadeMask
+                        maskThresholdMin: 0.5
+                        maskSpreadAtMin: 1
+                    }
+
+                    Rectangle {
+                        id: fadeMask
+                        anchors.fill: parent
+                        visible: false
+                        layer.enabled: true
+                        gradient: Gradient {
+                            GradientStop {
+                                position: 0
+                                color: "transparent"
+                            }
+                            GradientStop {
+                                position: viewport.fadeFrac
+                                color: "white"
+                            }
+                            GradientStop {
+                                position: 1 - viewport.fadeFrac
+                                color: "white"
+                            }
+                            GradientStop {
+                                position: 1
+                                color: "transparent"
+                            }
+                        }
+                    }
+
                 LyricsWheel {
                     anchors.fill: parent
                     items: LyricsService.status === "ready" ? LyricsService.lines : [{ main: win.message || "♪", bg: "", bgOnly: false }]
                     selected: LyricsService.status === "ready" ? LyricsService.currentIndex : 0
                     progress: LyricsService.status === "ready" ? LyricsService.progress : 0
                     onItemClicked: index => LyricsService.seek(index)
+                }
+                }
+
+                // While the settings panel is open, outline the visible area
+                // and its fade bands so you can see what you're adjusting.
+                Rectangle {
+                    visible: shell.settingsOpen
+                    x: viewport.x + 6
+                    y: viewport.y
+                    width: viewport.width - 12
+                    height: viewport.height
+                    color: "transparent"
+                    radius: 10
+                    border.width: 2
+                    border.color: Qt.rgba(0.66, 0.78, 0.98, 0.8)
+
+                    Repeater {
+                        model: 2
+                        Rectangle {
+                            required property int index
+                            width: parent.width
+                            height: Math.min(win.o.edgeFade, parent.height / 2)
+                            y: index === 0 ? 0 : parent.height - height
+                            radius: 10
+                            color: Qt.rgba(0.66, 0.78, 0.98, 0.12)
+                        }
+                    }
+
+                    Text {
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.margins: 10
+                        text: "Lyrics area"
+                        color: Qt.rgba(0.66, 0.78, 0.98, 1)
+                        font.pixelSize: 12
+                    }
                 }
 
                 Column {
