@@ -16,6 +16,7 @@ Singleton {
     // Converted lyrics per Spotify track id (only the last few are kept).
     property var lyrics: ({})
     property var _order: []
+    property var _raw: ({})
     // Latest position sample: { id, position (s), at (ms epoch), playing, received (ms) }
     property var sample: null
     property real now: Date.now()
@@ -56,14 +57,23 @@ Singleton {
                     msg.received = Date.now();
                     root.sample = msg;
                 } else if (msg.kind === "lyrics" && msg.id) {
+                    // The extension re-sends every 15 s; an unchanged copy
+                    // must not rebuild the lyrics (that would flash).
+                    const raw = JSON.stringify(msg.lyrics);
+                    if (root._raw[msg.id] === raw)
+                        return;
+                    root._raw[msg.id] = raw;
                     const converted = root.convert(msg.lyrics);
                     if (!converted)
                         return;
                     const next = Object.assign({}, root.lyrics);
                     next[msg.id] = converted;
                     root._order = root._order.filter(i => i !== msg.id).concat([msg.id]);
-                    while (root._order.length > 8)
-                        delete next[root._order.shift()];
+                    while (root._order.length > 8) {
+                        const old = root._order.shift();
+                        delete next[old];
+                        delete root._raw[old];
+                    }
                     root.lyrics = next;
                     root.lyricsArrived(msg.id);
                 }

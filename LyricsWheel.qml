@@ -18,8 +18,14 @@ Item {
 
     readonly property var o: Config.opts
 
-    // Eased wheel position, chasing `selected`.
-    property real pos: selected
+    // Wheel position, chasing `selected` on a critically damped spring: it
+    // starts gently, glides, and settles without overshoot — a scroll, not a
+    // jump. `smoothing` sets how long that takes.
+    // Not `pos: selected` — that would be a binding, snapping pos to every
+    // new line instantly and leaving the spring nothing to animate.
+    property real pos: 0
+    property real _velocity: 0
+    Component.onCompleted: pos = selected
 
     readonly property bool onRight: o.side === "right"
     readonly property real mirror: onRight ? -1 : 1
@@ -40,23 +46,19 @@ Item {
         return { main: item.main, bg: mode === "below" ? (item.bg ?? "") : "", small: item.bgOnly ?? false };
     }
 
-    // Row heights as measured by the delegates. Collected in a plain array
-    // and published once per frame, so a re-layout costs one recalculation.
+    // Row heights, read from the rows themselves whenever any of them (or the
+    // list) changes. Reading beats collecting reports: reports sent while the
+    // list was being rebuilt could be lost, leaving tall rows (wrapped lines,
+    // background vocals) counted as short ones and overlapping.
     property var heights: []
-    property var _pending: []
-    function reportHeight(i, h) {
-        if (_pending[i] === h)
-            return;
-        _pending[i] = h;
-        Qt.callLater(commitHeights);
+    function collectHeights() {
+        const out = [];
+        for (let i = 0; i < rows.count; i++)
+            out.push(rows.itemAt(i)?.height ?? textH);
+        if (JSON.stringify(out) !== JSON.stringify(heights))
+            heights = out;
     }
-    function commitHeights() {
-        heights = _pending.slice();
-    }
-    onItemsChanged: {
-        _pending = [];
-        heights = [];
-    }
+    onItemsChanged: Qt.callLater(collectHeights)
 
     // Arc-length position (in px) of each line's centre.
     readonly property var centers: {
@@ -84,13 +86,31 @@ Item {
 
     clip: true
 
+    // A list swap (new song) jumps straight to the current line instead of
+    // spinning through the whole song.
+    onSelectedChanged: if (Math.abs(selected - pos) > 8) {
+        pos = selected;
+        _velocity = 0;
+    }
+
     FrameAnimation {
-        running: root.pos !== root.selected
+        running: root.pos !== root.selected || root._velocity !== 0
         onTriggered: {
-            const dt = Math.min(frameTime, 0.05);
-            const k = 1 - Math.exp(-dt / (Math.max(root.o.smoothing, 1) / 1000));
-            const next = root.pos + (root.selected - root.pos) * k;
-            root.pos = Math.abs(root.selected - next) < 0.001 ? root.selected : next;
+            // Settles in ~2.5 × smoothing (200 ms → about half a second).
+            const omega = 6.6 / (Math.max(root.o.smoothing, 20) * 2.5 / 1000);
+            let dt = Math.min(frameTime, 0.05);
+            // Small fixed steps keep the spring stable at any frame rate.
+            while (dt > 0) {
+                const h = Math.min(dt, 1 / 240);
+                const accel = -2 * omega * root._velocity - omega * omega * (root.pos - root.selected);
+                root._velocity += accel * h;
+                root.pos += root._velocity * h;
+                dt -= h;
+            }
+            if (Math.abs(root.selected - root.pos) < 0.001 && Math.abs(root._velocity) < 0.01) {
+                root.pos = root.selected;
+                root._velocity = 0;
+            }
         }
     }
 
@@ -99,7 +119,9 @@ Item {
     }
 
     Repeater {
+        id: rows
         model: root.items
+        onItemAdded: Qt.callLater(root.collectHeights)
 
         Item {
             id: line
@@ -124,8 +146,7 @@ Item {
             visible: dist <= o.visibleLines + 0.5
             width: root.lineWidth
             height: mainPart.implicitHeight + (bgPart.visible ? bgPart.implicitHeight : 0)
-            onHeightChanged: root.reportHeight(index, height)
-            Component.onCompleted: root.reportHeight(index, height)
+            onHeightChanged: Qt.callLater(root.collectHeights)
             x: (root.onRight ? root.width - o.inset - width : o.inset) + offX
             y: root.height / 2 + offY - height / 2
 
@@ -153,7 +174,8 @@ Item {
                 wrap: line.o.longLines === "wrap"
                 minPixelSize: line.o.minFontSize
                 alignment: root.onRight ? Text.AlignRight : Text.AlignLeft
-                weight: line.index === root.selected ? line.o.activeWeight : line.o.restingWeight
+                // Blend the weight as the line arrives instead of snapping.
+                weight: Math.round(line.o.restingWeight + (line.o.activeWeight - line.o.restingWeight) * line.p)
                 measureWeight: Math.max(line.o.activeWeight, line.o.restingWeight)
                 fillColor: line.o.activeColor
                 glowColor: line.o.glowColor

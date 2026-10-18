@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.1 — 2026-10-18
+
+### Fixed
+- Lyrics now **scroll** from line to line on a smooth spring instead of blinking: the wheel position was
+  bound to the current line, so it jumped instantly and the animation never ran
+- Rows could overlap (wrapped lines, background vocals) after the lyrics were reloaded: row heights are
+  now read from the rows themselves instead of reports that could be lost
+- Lyrics re-sent by the Spicy Lyrics bridge no longer rebuild every line (a visible flash every 15 s)
+- The active line's font weight blends in instead of snapping, and the glow layer is prepared before a
+  line becomes active
+
 ## 1.1.0 — 2026-10-18
 
 ### Added

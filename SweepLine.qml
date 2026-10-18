@@ -60,7 +60,9 @@ Item {
 
     Line {
         id: bright
-        visible: root.fill > 0.001 && root._progress > 0
+        // Built as soon as the line starts approaching (not when it becomes
+        // active), so creating the effect never shows up as a flash.
+        visible: root.fill > 0.001
         color: root.fillColor
         opacity: root.fill
         layer.enabled: visible
