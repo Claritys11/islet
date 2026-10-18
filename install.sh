@@ -57,6 +57,7 @@ if ! fc-list 2>/dev/null | grep -q "Material Symbols Rounded"; then
         warn "Couldn't download the icon font; icons may show as text."
 fi
 command -v cava >/dev/null || say "Tip: install 'cava' for a real audio visualizer in the notch."
+command -v spicetify >/dev/null && say "Using Spicy Lyrics? Run 'islet spicetify' for its syllable-exact lyrics and timing in Islet."
 
 link() {
     if [ -e "$2" ] && [ ! -L "$2" ]; then

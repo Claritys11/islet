@@ -77,13 +77,16 @@ ShellRoot {
             LyricsService.refetch();
         }
         function status(): string {
-            return `${LyricsService.status} · ${LyricsService.artist} — ${LyricsService.title}`;
+            const src = LyricsService.source === "spicy" ? " · Spicy Lyrics" : LyricsService.source === "lrclib" ? " · LRCLIB" : "";
+            return `${LyricsService.status}${src} · ${LyricsService.artist} — ${LyricsService.title}`;
         }
         // Islet's playback clock next to what the player reports.
         function debug(): string {
             const p = LyricsService.player;
             p?.positionChanged();
-            return `clock ${LyricsService.position.toFixed(2)}  player ${(p?.position ?? -1).toFixed(2)}  playing ${LyricsService.isPlaying}  demo ${LyricsService.demo}  line ${LyricsService.currentIndex}  pace ${LyricsService.pace.toFixed(2)}  fill ${(LyricsService.progress*100).toFixed(0)}%`;
+            const b = SpicyBridge.sampleFor(LyricsService.spotifyId);
+            const bridge = b ? (b.position + (b.playing ? (Date.now() - b.at) / 1000 : 0)).toFixed(2) : "-";
+            return `source ${LyricsService.source}  bridge ${SpicyBridge.connected ? "on" : "off"} ${bridge}  clock ${LyricsService.position.toFixed(2)}  player ${(p?.position ?? -1).toFixed(2)}  playing ${LyricsService.isPlaying}  demo ${LyricsService.demo}  line ${LyricsService.currentIndex}  pace ${LyricsService.pace.toFixed(2)}  fill ${(LyricsService.progress*100).toFixed(0)}%`;
         }
     }
 

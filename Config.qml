@@ -23,6 +23,9 @@ Singleton {
             lyricsEnabled: true,
             // Source
             player: "spotify",
+            lyricsSource: "auto",
+            spicyOffsetMs: 100,
+            bridgePort: 47821,
             offsetMs: 250,
             lrclibUrl: "https://lrclib.net",
             // Placement
@@ -166,6 +169,9 @@ Singleton {
 
             property bool lyricsEnabled: root.defaults.lyricsEnabled
             property string player: root.defaults.player
+            property string lyricsSource: root.defaults.lyricsSource
+            property int spicyOffsetMs: root.defaults.spicyOffsetMs
+            property int bridgePort: root.defaults.bridgePort
             property int offsetMs: root.defaults.offsetMs
             property string lrclibUrl: root.defaults.lrclibUrl
 

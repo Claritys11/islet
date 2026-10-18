@@ -93,7 +93,8 @@ Click the pill to open it. It follows your DankMaterialShell / Matugen wallpaper
 
 <img src="docs/media/hero.png" alt="Islet on a desktop: notch at the top, glowing lyrics wheel on the right" width="100%">
 
-- **Synced lyrics** for whatever is playing, from the free and open [LRCLIB](https://lrclib.net) — no API keys, no Spicetify
+- **Synced lyrics** for whatever is playing, from the free and open [LRCLIB](https://lrclib.net) — no API keys needed
+- **🌶️ Spicy Lyrics timing** — already using [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics)? One command makes Islet show the *same* syllable-by-syllable lyrics, on Spotify's exact clock ([details](#-spicy-lyrics-integration))
 - **Visible on every workspace** — it lives on the screen, not on a workspace
 - **Karaoke fill** that glows as each line is sung (sweep or typewriter), inspired by [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics)
 - **Follows the singer**: the fill speed is measured from each song's own timing, so ballads and rap both feel right
@@ -128,6 +129,7 @@ islet toggle | show | hide                      the lyrics overlay
 islet pomodoro [toggle|reset|skip|status]
 islet todo "Buy milk"                           add a task (no text = list them)
 islet set <key> <value> · islet get <key>
+islet spicetify [install|uninstall|status]      Spicy Lyrics lyrics & timing
 islet status · islet refetch · islet update · islet start|stop|restart
 ```
 
@@ -178,6 +180,26 @@ System Settings → Keyboard → Shortcuts → **Add New → Command or Script**
 
 ---
 
+## 🌶 Spicy Lyrics integration
+
+[Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics) looks perfectly in time because it has
+**syllable-synced lyrics** and reads **Spotify's own playback clock** from inside the app. If you use it
+with [Spicetify](https://spicetify.app), Islet can use exactly the same:
+
+```sh
+islet spicetify      # installs the Islet Bridge extension and runs `spicetify apply` (Spotify restarts)
+```
+
+The small **Islet Bridge** extension reads the lyrics Spicy Lyrics has *already* loaded and samples the
+playback position the same way Spicy Lyrics does, then hands both to Islet on `127.0.0.1`. It never
+contacts Spicy Lyrics' servers itself, and nothing leaves your computer. Islet applies Spicy Lyrics'
+clock smoothing and +100 ms latency lead, so the glow fills each syllable as it's sung — background vocals
+included.
+
+Songs Spicy Lyrics doesn't have fall back to LRCLIB automatically. See the status under
+**Settings → Lyrics → Source & timing**, or run `islet spicetify status`. Requires `python3` (used for the
+tiny local receiver). Remove with `islet spicetify uninstall`.
+
 ## 📝 Notion checklist
 
 1. Create an integration at [notion.so/profile/integrations](https://www.notion.so/profile/integrations) and copy its **Internal Integration Secret**.
@@ -198,7 +220,7 @@ Islet is young and focused. Here's what carries over today:
 | Live activities on the closed notch | ✅ Music + lyric + visualizer, focus timer |
 | Hover peek, click to open | ✅ |
 | Media controls, scrubbing, shuffle, repeat | ✅ |
-| Time-synced lyrics via LRCLIB | ✅ Plus a karaoke overlay on the screen edge |
+| Time-synced lyrics via LRCLIB | ✅ Plus syllable-synced lyrics from Spicy Lyrics, and a karaoke overlay on the screen edge |
 | Audio spectrum visualizer | ✅ via cava |
 | Pomodoro focus sessions | ✅ |
 | Quick notes / reminders | ✅ Checklist, local or Notion |
@@ -212,7 +234,8 @@ Islet is young and focused. Here's what carries over today:
 <details>
 <summary><b>Lyrics are out of sync</b></summary>
 
-LRCLIB often has several versions of a song. Open **Settings → Lyrics → Lyrics version for this song**,
+Using Spotify with Spicetify + Spicy Lyrics? Run `islet spicetify` — Islet then uses Spicy Lyrics'
+syllable timing and Spotify's own clock. Otherwise: LRCLIB often has several versions of a song. Open **Settings → Lyrics → Lyrics version for this song**,
 press **Find versions** and pick one whose length shows in green. If the *fill* runs ahead or behind the
 singer, adjust **Fill speed**; for a constant delay, use **Timing offset**.
 </details>

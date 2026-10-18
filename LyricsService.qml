@@ -39,12 +39,33 @@ Singleton {
     property var candidates: []
     property int chosenId: 0
 
-    // Playback clock in seconds, interpolated between MPRIS polls so the
-    // karaoke fill moves smoothly instead of in 100 ms steps.
+    // Where the current lyrics came from: "spicy" (Spicy Lyrics via the
+    // Spicetify bridge, syllable-synced) or "lrclib".
+    property string source: ""
+    readonly property bool useSpicy: Config.opts.lyricsSource !== "lrclib"
+
+    // Spotify's track id ("/com/spotify/track/<id>" in MPRIS), to match what
+    // the bridge sends.
+    readonly property string spotifyId: {
+        const tid = String(player?.metadata?.["mpris:trackid"] ?? "");
+        const m = tid.match(/track[:\/]([A-Za-z0-9]{22})$/);
+        return m ? m[1] : "";
+    }
+
+    // Playback clock in seconds. Measurements — from the bridge when it's
+    // connected (Spotify's own audio-side position), otherwise MPRIS polls —
+    // feed a clock that advances with real time. Real jumps snap; small
+    // disagreements are pulled in gently, the same filter Spicy Lyrics uses,
+    // so the lyrics never stutter.
     property real position: 0
-    property real _basePos: 0
-    property real _baseAt: 0
-    readonly property real time: position + Config.opts.offsetMs / 1000
+    property real _mPos: 0
+    property real _mAt: 0
+    property real _frameAt: 0
+    property real _demoStart: 0
+    // Spicy Lyrics leads its clock by 100 ms for audio latency; LRCLIB line
+    // stamps benefit from a little more.
+    readonly property real offset: (source === "spicy" ? Config.opts.spicyOffsetMs : Config.opts.offsetMs) / 1000
+    readonly property real time: position + offset
 
     readonly property int currentIndex: {
         const n = lines.length;
@@ -101,10 +122,27 @@ Singleton {
         return Math.max(0.3, Math.min(gap * 0.95, sung));
     }
 
+    // Fill through timed syllables: each one fills from its start to its end,
+    // and the fill holds between them. [{ s, e, from, to }] → 0..1
+    function sylProgress(syl, t) {
+        let p = 0;
+        for (const x of syl) {
+            if (t < x.s)
+                break;
+            p = t >= x.e ? x.to : x.from + (x.to - x.from) * (t - x.s) / Math.max(x.e - x.s, 0.01);
+        }
+        return p;
+    }
+
     function lineProgress(i, t) {
         const l = lines[i];
         if (!l)
             return 0;
+        if (l.syl)
+            return sylProgress(l.syl, t);
+        // Line-synced lyrics that know when the line ends.
+        if (l.end > l.time)
+            return Math.max(0, Math.min(1, (t - l.time) / (l.end - l.time)));
         if (l.words) {
             const w = l.words;
             if (t <= w[0].time)
@@ -127,6 +165,12 @@ Singleton {
         const l = lines[i];
         if (!synced || !l || l.bg === "")
             return { progress: 0, glow: 0 };
+        // Timed background syllables: lit exactly while they're sung.
+        if (l.bgSyl?.length) {
+            const hold = Math.min(Config.opts.bgLinger, 0.6);
+            const glow = t < l.bgStart - 0.1 ? 0 : t < l.bgEnd ? 1 : Math.max(0, 1 - (t - l.bgEnd) / Math.max(hold, 0.01));
+            return { progress: sylProgress(l.bgSyl, t), glow };
+        }
         const main = mainDuration(i);
         const start = l.time + main * 0.55;
         const sung = 0.6 + l.bg.length * 0.13;
@@ -140,7 +184,7 @@ Singleton {
     function seek(index) {
         if (demo || !player?.canSeek || !synced || !lines[index])
             return;
-        player.position = Math.max(0, lines[index].time - Config.opts.offsetMs / 1000 + 0.05);
+        player.position = Math.max(0, lines[index].time - offset + 0.05);
         resync(player.position);
     }
 
@@ -149,49 +193,93 @@ Singleton {
         fetchLyrics();
     }
 
+    // Record a measured position (seconds) taken at `at` (ms since epoch).
+    function measure(pos, at) {
+        _mPos = pos;
+        _mAt = at;
+    }
+
+    // Jump straight to a position (seeks, pauses, track changes).
     function resync(pos) {
-        _basePos = pos;
-        _baseAt = Date.now();
+        measure(pos, Date.now());
         position = pos;
+        _frameAt = Date.now();
+    }
+
+    function playerPosition() {
+        player?.positionChanged();
+        return player?.position ?? 0;
     }
 
     // ── Clock ─────────────────────────────────────────────────────
-    // MPRIS position isn't pushed continuously, so poll it and extrapolate.
+    // MPRIS doesn't push its position, so poll it — unless the bridge is
+    // already sending Spotify's own, better clock for this track.
     Timer {
         running: root.player !== null && !root.demo
         repeat: true
         interval: 250
         onTriggered: {
-            root.player.positionChanged();
-            const reported = root.player.position;
-            // Small disagreements are poll jitter; only resync on real jumps
-            // (seeks, pauses) so the clock never stutters backwards.
-            if (!root.isPlaying || Math.abs(reported - root.position) > 0.3)
-                root.resync(reported);
+            if (SpicyBridge.sampleFor(root.spotifyId))
+                return;
+            const reported = root.playerPosition();
+            root.measure(reported, Date.now());
+            if (!root.isPlaying)
+                root.position = reported;
+        }
+    }
+
+    Connections {
+        target: SpicyBridge
+        function onSampleChanged() {
+            const s = SpicyBridge.sample;
+            if (root.demo || !s || s.id !== root.spotifyId)
+                return;
+            root.measure(s.position, s.at);
+            if (!s.playing)
+                root.position = s.position;
+        }
+        function onLyricsArrived(id) {
+            // Spicy Lyrics' syllable timing beats LRCLIB's lines: switch over
+            // as soon as it shows up, even if LRCLIB answered first.
+            if (root.useSpicy && !root.demo && id === root.spotifyId && root.trackKey !== "") {
+                root._requestId++;
+                retry.stop();
+                root.apply(SpicyBridge.lyricsFor(id));
+            }
         }
     }
 
     FrameAnimation {
         running: root.isPlaying
         onTriggered: {
-            const t = root._basePos + (Date.now() - root._baseAt) / 1000;
-            root.position = root.demo ? t % root.demoLength : t;
+            const now = Date.now();
+            if (root.demo) {
+                root.position = ((now - root._demoStart) / 1000) % root.demoLength;
+                return;
+            }
+            const elapsed = Math.min(Math.max(0, now - root._frameAt), 1000);
+            root._frameAt = now;
+            const measured = root._mPos + (now - root._mAt) / 1000;
+            const predicted = root.position + elapsed / 1000;
+            const error = measured - predicted;
+            root.position = Math.abs(error) > 0.5 ? measured : predicted + error * (1 - Math.exp(-elapsed / 300));
         }
     }
 
     onIsPlayingChanged: if (player && !demo)
-        resync(player.position)
+        resync(playerPosition())
 
     onDemoChanged: {
         if (demo) {
             _requestId++;
             apply(parse({ syncedLyrics: demoLrc }));
-            resync(0);
+            _demoStart = Date.now();
+            position = 0;
         } else {
             lines = [];
             fetchDebounce.restart();
             if (player)
-                resync(player.position);
+                resync(playerPosition());
         }
     }
 
@@ -237,6 +325,11 @@ Singleton {
         const key = trackKey;
         if (key === "")
             return;
+        const spicy = useSpicy ? SpicyBridge.lyricsFor(spotifyId) : null;
+        if (spicy) {
+            apply(spicy);
+            return;
+        }
         if (_cache[key]) {
             apply(_cache[key]);
             return;
@@ -333,9 +426,11 @@ Singleton {
             synced = false;
             timingMismatch = false;
             chosenId = 0;
+            source = "";
             status = "notfound";
             return;
         }
+        source = parsed.source ?? "lrclib";
         synced = parsed.synced;
         lines = parsed.lines;
         timingMismatch = parsed.mismatch ?? false;

@@ -27,6 +27,7 @@ ISLET_CONFIG_DIR=/tmp/islet-cfg ISLET_STATE_DIR=/tmp/islet-state qs -p .
 | `LyricsWheel.qml`, `SweepText.qml`, `SweepLine.qml` | Lyrics overlay |
 | `NotchIsland.qml`, `NotchWindow.qml`, `Notch*.qml` | Notch |
 | `PomodoroService.qml`, `ChecklistService.qml`, `CavaService.qml`, `Theme.qml` | Services |
+| `SpicyBridge.qml`, `bridge/islet-bridge.py`, `spicetify/islet-bridge.js` | Spicy Lyrics bridge: Spicetify extension → local receiver → Islet |
 | `SettingsWindow.qml` | Settings |
 | `Showcase.qml`, `tools/make-media.sh` | README screenshots and GIF |
 

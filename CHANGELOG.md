@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0 — 2026-10-18
+
+### Added
+- **Spicy Lyrics integration**: `islet spicetify` installs the Islet Bridge Spicetify extension, which
+  shares the syllable-synced lyrics Spicy Lyrics already loaded and Spotify's own playback position with
+  Islet over localhost. The karaoke fill follows every syllable, background vocals included.
+- *Lyrics from* setting (Spicy Lyrics with LRCLIB fallback, or LRCLIB only) with a live connection status,
+  and a separate timing offset for Spicy Lyrics (+100 ms, like Spicy Lyrics itself)
+
+### Changed
+- The playback clock uses Spicy Lyrics' smoothing: real jumps snap, small jitter is pulled in with a
+  300 ms time constant, so lyrics never stutter or drift
+
 ## 1.0.0 — 2026-10-18
 
 First release as **Islet** (previously *lyrics-wheel*).

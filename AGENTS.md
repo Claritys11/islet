@@ -70,10 +70,24 @@ windowrulev2 = float, title:^(Islet Settings)$
 
 **Sway**: `bindsym $mod+Shift+l exec islet toggle` and `for_window [title="^Islet Settings$"] floating enable`.
 
-## 5. Optional: configure
+## 5. Optional: Spicy Lyrics timing (Spotify + Spicetify users)
 
-Prefer the GUI (`islet settings`). For scripted changes use `islet set <key> <value>`; keys are listed
-in the README's configuration table. Don't hand-edit `~/.config/islet/config.json` while Islet is
+If `command -v spicetify` succeeds, ask whether the user uses Spicy Lyrics. If so, and they agree to a
+Spotify restart:
+
+```sh
+islet spicetify            # copies the extension, runs `spicetify apply`
+islet spicetify status     # → "extension: installed", and a status line containing "Spicy Lyrics"
+```
+
+If `spicetify apply` reports *"Preprocessed Spotify data is outdated"*, run
+`spicetify restore backup apply` (Spicetify's standard fix after a Spotify update). Play a song and check
+`islet status` mentions "Spicy Lyrics" (songs Spicy Lyrics lacks use LRCLIB).
+
+## 6. Optional: configure
+
+Prefer the GUI (`islet settings`). For scripted changes use `islet set <key> <value>`; every key and its default
+is in the `defaults` block of `Config.qml`. Don't hand-edit `~/.config/islet/config.json` while Islet is
 running unless you write valid JSON — it reloads on save.
 
 Notion checklist: the user must create an integration and share a page with it themselves (see README).

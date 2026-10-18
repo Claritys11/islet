@@ -41,7 +41,7 @@ FloatingWindow {
     // Which settings belong to which page (for the change badges).
     readonly property var pages: [
         { icon: "dashboard", title: "Overview", subtitle: "Modules and quick looks", keys: [] },
-        { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "fillSpeed", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "offsetMs", "lrclibUrl"] },
+        { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "fillSpeed", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "lyricsSource", "spicyOffsetMs", "offsetMs", "lrclibUrl"] },
         { icon: "page_header", title: "Notch", subtitle: "Dynamic island at the top", keys: ["notchEnabled", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
@@ -1031,6 +1031,35 @@ FloatingWindow {
                     }
                     Card {
                         title: "Source & timing"
+                        ChoiceSetting {
+                            key: "lyricsSource"
+                            label: "Lyrics from"
+                            hint: "Spicy Lyrics has syllable-by-syllable timing and Spotify's exact clock. Needs Spicetify with Spicy Lyrics, plus the Islet Bridge extension (run: islet spicetify)."
+                            choices: [
+                                { text: "Spicy Lyrics, else LRCLIB", value: "auto" },
+                                { text: "LRCLIB only", value: "lrclib" }
+                            ]
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 8
+                            visible: win.o.lyricsSource !== "lrclib"
+                            wrapMode: Text.WordWrap
+                            font.family: win.font
+                            font.pixelSize: 12
+                            color: SpicyBridge.connected ? "#a5d6a7" : win.subtext
+                            text: SpicyBridge.connected ? (LyricsService.source === "spicy" ? "● Connected to Spicy Lyrics — this song is synced syllable by syllable" : "● Connected to Spicy Lyrics — no Spicy lyrics for this song, using LRCLIB") : "○ Spicy Lyrics bridge not connected. Install it with: islet spicetify"
+                        }
+                        SliderSetting {
+                            key: "spicyOffsetMs"
+                            label: "Timing offset — Spicy Lyrics"
+                            hint: "Spicy Lyrics itself uses +100 ms. Positive shows lyrics earlier."
+                            from: -1000
+                            to: 1000
+                            stepSize: 10
+                            decimals: 0
+                            unit: " ms"
+                        }
                         TextSetting {
                             key: "player"
                             label: "Player"
@@ -1039,7 +1068,7 @@ FloatingWindow {
                         }
                         SliderSetting {
                             key: "offsetMs"
-                            label: "Timing offset"
+                            label: "Timing offset — LRCLIB"
                             hint: "Positive shows lines earlier"
                             from: -2000
                             to: 2000

@@ -17,6 +17,8 @@ Usage: islet <command>
   notch [media|focus|checklist]   Toggle the notch, or open it on a tab
   pomodoro [toggle|reset|skip|status]
   todo [text]                     Add a task, or list tasks without text
+  spicetify [install|uninstall|status]
+                                  Get lyrics + timing from Spicy Lyrics (needs Spicetify)
   update                          Update Islet (git pull) and restart it
   config                          Print the path of the settings file
 USAGE
@@ -69,6 +71,31 @@ case "$1" in
     todo)
         shift
         if [ $# -gt 0 ]; then call checklist add "$*"; else call checklist list; fi ;;
+    spicetify)
+        # Install the Islet Bridge Spicetify extension: lyrics and timing
+        # straight from Spicy Lyrics.
+        command -v spicetify >/dev/null || { echo "Spicetify isn't installed — see https://spicetify.app" >&2; exit 1; }
+        ext="$(dirname "$(spicetify -c)")/Extensions"
+        src=""
+        for d in "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/$CFG" /etc/xdg/quickshell/$CFG; do
+            [ -f "$d/spicetify/islet-bridge.js" ] && src="$d/spicetify/islet-bridge.js" && break
+        done
+        case "${2:-install}" in
+            install)
+                [ -n "$src" ] || { echo "islet-bridge.js not found" >&2; exit 1; }
+                mkdir -p "$ext" && cp "$src" "$ext/islet-bridge.js"
+                spicetify config extensions islet-bridge.js >/dev/null
+                echo "Applying Spicetify (Spotify will restart)…"
+                spicetify apply ;;
+            uninstall)
+                spicetify config extensions islet-bridge.js- >/dev/null
+                rm -f "$ext/islet-bridge.js"
+                spicetify apply ;;
+            status)
+                if grep -q "islet-bridge.js" "$(spicetify -c)"; then echo "extension: installed"; else echo "extension: not installed (run: islet spicetify)"; fi
+                running && qs -c "$CFG" ipc call lyrics status ;;
+            *) echo "usage: islet spicetify [install|uninstall|status]" >&2; exit 1 ;;
+        esac ;;
     update)
         # Islet is installed as a symlink to a git checkout: pull and restart.
         dir="$(readlink -f "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/$CFG")"
