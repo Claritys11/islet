@@ -1,0 +1,13 @@
+[Unit]
+Description=Lyrics Wheel — synced lyrics overlay
+PartOf=graphical-session.target
+After=graphical-session.target
+Requisite=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/qs -c lyrics-wheel
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
