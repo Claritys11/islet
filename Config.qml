@@ -97,6 +97,7 @@ Singleton {
             autoStartBreaks: true,
             autoStartFocus: false,
             pomodoroSound: true,
+            pauseReminderMinutes: 10,
             // Checklist
             checklistSource: "local",
             notionPage: "",
@@ -247,6 +248,7 @@ Singleton {
             property bool autoStartBreaks: root.defaults.autoStartBreaks
             property bool autoStartFocus: root.defaults.autoStartFocus
             property bool pomodoroSound: root.defaults.pomodoroSound
+            property int pauseReminderMinutes: root.defaults.pauseReminderMinutes
 
             property string checklistSource: root.defaults.checklistSource
             property string notionPage: root.defaults.notionPage

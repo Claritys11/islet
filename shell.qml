@@ -117,7 +117,9 @@ ShellRoot {
             PomodoroService.skip();
         }
         function status(): string {
-            return `${PomodoroService.label} ${PomodoroService.clock}${PomodoroService.running ? "" : " (paused)"} · ${PomodoroService.todayCount} today`;
+            const P = PomodoroService;
+            const session = P.sessionStart > 0 ? ` · ${P.format(P.elapsed)} elapsed, ${P.formatShort(P.focused)} focus, ${P.formatShort(P.pausedTotal)} paused` : "";
+            return `${P.label} ${P.clock}${P.paused ? ` (paused ${P.format(P.pausedFor)})` : P.running ? "" : " (stopped)"} · ${P.todayCount} today${session}`;
         }
     }
 
@@ -164,14 +166,16 @@ ShellRoot {
 
     // The notch lives on one monitor: the configured one, else the first.
     readonly property var notchScreen: Quickshell.screens.find(s => s.name === Config.opts.notchScreen) ?? Quickshell.screens[0]
-    property var notch: notchLoader.item
+    property var notch: notchWindows.instances[0] ?? null
 
-    LazyLoader {
-        id: notchLoader
-        active: Config.opts.notchEnabled && shell.notchScreen !== undefined && shell.showcase === ""
+    // A Variants rather than a loader: when the monitor sleeps or is unplugged
+    // its screen object goes away, and a window left on it never shows again.
+    // Keyed by screen, the window is rebuilt on the screen that comes back.
+    Variants {
+        id: notchWindows
+        model: Config.opts.notchEnabled && shell.notchScreen && shell.showcase === "" ? [shell.notchScreen] : []
 
         NotchWindow {
-            modelData: shell.notchScreen
             onSettingsRequested: shell.openSettings()
         }
     }
@@ -204,101 +208,107 @@ ShellRoot {
     }
 
     // A toast naming each change, so you always see what you just did.
-    PanelWindow {
-        id: toast
+    // (In a Variants for the same reason as the notch.)
+    Variants {
+        model: shell.notchScreen ? [shell.notchScreen] : []
 
-        property string message
-        property string detail
+        PanelWindow {
+            id: toast
 
-        screen: shell.notchScreen
-        anchors.bottom: true
-        margins.bottom: 48
-        implicitWidth: toastBox.implicitWidth + 40
-        implicitHeight: 76
-        color: "transparent"
-        exclusionMode: ExclusionMode.Ignore
-        visible: toastBox.opacity > 0
-        mask: Region {}
-        WlrLayershell.namespace: "islet-toast"
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            required property var modelData
+            property string message
+            property string detail
 
-        function format(v) {
-            if (typeof v === "boolean")
-                return v ? "On" : "Off";
-            if (typeof v === "number")
-                return Number.isInteger(v) ? String(v) : v.toFixed(2);
-            return String(v);
-        }
+            screen: modelData
+            anchors.bottom: true
+            margins.bottom: 48
+            implicitWidth: toastBox.implicitWidth + 40
+            implicitHeight: 76
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            visible: toastBox.opacity > 0
+            mask: Region {}
+            WlrLayershell.namespace: "islet-toast"
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-        Connections {
-            target: Config
-            function onEdited(key, label, value) {
-                // Choices, presets, resets and module switches already say
-                // what happened in their label.
-                const self = key === "" || label.includes(":") || /\b(look|reset|on|off)$/.test(label);
-                toast.message = label;
-                toast.detail = self ? "" : toast.format(value);
-                toastBox.opacity = 1;
-                toastTimer.restart();
+            function format(v) {
+                if (typeof v === "boolean")
+                    return v ? "On" : "Off";
+                if (typeof v === "number")
+                    return Number.isInteger(v) ? String(v) : v.toFixed(2);
+                return String(v);
             }
-        }
 
-        Timer {
-            id: toastTimer
-            interval: 1600
-            onTriggered: toastBox.opacity = 0
-        }
-
-        Rectangle {
-            id: toastBox
-            anchors.centerIn: parent
-            implicitWidth: toastRow.implicitWidth + 36
-            height: 44
-            radius: 22
-            color: "#e6101114"
-            border.color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.5)
-            border.width: 1
-            opacity: 0
-            scale: opacity > 0.5 ? 1 : 0.92
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: 180
-                }
-            }
-            Behavior on scale {
-                NumberAnimation {
-                    duration: 180
-                    easing.type: Easing.OutBack
+            Connections {
+                target: Config
+                function onEdited(key, label, value) {
+                    // Choices, presets, resets and module switches already say
+                    // what happened in their label.
+                    const self = key === "" || label.includes(":") || /\b(look|reset|on|off)$/.test(label);
+                    toast.message = label;
+                    toast.detail = self ? "" : toast.format(value);
+                    toastBox.opacity = 1;
+                    toastTimer.restart();
                 }
             }
 
-            Row {
-                id: toastRow
+            Timer {
+                id: toastTimer
+                interval: 1600
+                onTriggered: toastBox.opacity = 0
+            }
+
+            Rectangle {
+                id: toastBox
                 anchors.centerIn: parent
-                spacing: 10
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "tune"
-                    color: Theme.primary
-                    font.family: Theme.iconFont
-                    font.pixelSize: 18
+                implicitWidth: toastRow.implicitWidth + 36
+                height: 44
+                radius: 22
+                color: "#e6101114"
+                border.color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.5)
+                border.width: 1
+                opacity: 0
+                scale: opacity > 0.5 ? 1 : 0.92
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 180
+                    }
                 }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: toast.message
-                    color: "#e4e4e8"
-                    font.family: "Google Sans Flex"
-                    font.pixelSize: 14
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: 180
+                        easing.type: Easing.OutBack
+                    }
                 }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: toast.detail !== ""
-                    text: toast.detail
-                    color: Theme.primary
-                    font.family: "Google Sans Flex"
-                    font.pixelSize: 14
-                    font.weight: Font.DemiBold
+
+                Row {
+                    id: toastRow
+                    anchors.centerIn: parent
+                    spacing: 10
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "tune"
+                        color: Theme.primary
+                        font.family: Theme.iconFont
+                        font.pixelSize: 18
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: toast.message
+                        color: "#e4e4e8"
+                        font.family: "Google Sans Flex"
+                        font.pixelSize: 14
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: toast.detail !== ""
+                        text: toast.detail
+                        color: Theme.primary
+                        font.family: "Google Sans Flex"
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                    }
                 }
             }
         }

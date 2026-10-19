@@ -43,7 +43,7 @@ FloatingWindow {
         { icon: "dashboard", title: "Overview", subtitle: "Modules and quick looks", keys: [] },
         { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "fillSpeed", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "lyricsSource", "spicyOffsetMs", "offsetMs", "lrclibUrl"] },
         { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose"] },
-        { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound"] },
+        { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
         { icon: "info", title: "About", subtitle: "Files, shortcuts, reset", keys: [] }
     ]
@@ -1332,7 +1332,11 @@ FloatingWindow {
                 Page {
                     Card {
                         title: `${PomodoroService.label} · ${PomodoroService.clock}`
-                        hint: `${PomodoroService.todayCount} focus session${PomodoroService.todayCount === 1 ? "" : "s"} today`
+                        hint: {
+                            const P = PomodoroService;
+                            const today = `${P.todayCount} focus session${P.todayCount === 1 ? "" : "s"} · ${P.formatShort(P.todayFocused)} focused today`;
+                            return P.sessionStart > 0 ? `${today}\nThis session: ${P.format(P.elapsed)} elapsed · ${P.formatShort(P.focused)} focus · ${P.formatShort(P.pausedTotal)} paused` : today;
+                        }
                         RowLayout {
                             Button {
                                 text: PomodoroService.running ? "Pause" : "Start"
@@ -1399,6 +1403,15 @@ FloatingWindow {
                         SwitchSetting {
                             key: "autoStartFocus"
                             label: "Start focus automatically after a break"
+                        }
+                        SliderSetting {
+                            key: "pauseReminderMinutes"
+                            label: "Pause reminder (0 = off)"
+                            from: 0
+                            to: 60
+                            stepSize: 1
+                            decimals: 0
+                            unit: " min"
                         }
                         SwitchSetting {
                             key: "pomodoroSound"

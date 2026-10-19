@@ -168,7 +168,7 @@ PluginComponent {
                 spacing: Theme.spacingXS
                 DankIcon {
                     anchors.verticalCenter: parent.verticalCenter
-                    name: "timer"
+                    name: root.st?.timer?.paused ? "pause_circle" : "timer"
                     size: Theme.iconSize - 6
                     color: root.st?.timer?.mode === "focus" ? Theme.primary : Theme.surfaceText
                 }

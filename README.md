@@ -85,7 +85,7 @@ A dynamic island at the top of your screen, in the spirit of [Notchy](https://no
 | 🎵 Media | ⏱️ Focus | ✅ Checklist |
 |:---:|:---:|:---:|
 | <img src="docs/media/notch-media.png" width="300" alt="Media tab"> | <img src="docs/media/notch-focus.png" width="300" alt="Focus tab"> | <img src="docs/media/notch-checklist.png" width="300" alt="Checklist tab"> |
-| Scrubber, shuffle, repeat, and the current lyric with karaoke fill | Pomodoro with short & long breaks, notifications and a daily count | Saved on your computer — or **synced with a Notion page** |
+| Scrubber, shuffle, repeat, and the current lyric with karaoke fill | Pomodoro with short & long breaks, a continuous mode, pause clock, elapsed and focused-time stats | Saved on your computer — or **synced with a Notion page** |
 
 Click the pill to open it. It follows your DankMaterialShell / Matugen wallpaper colours, or stays pure black.
 

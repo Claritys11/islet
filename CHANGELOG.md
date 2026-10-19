@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Focus: **continuous mode** (∞ button in the Focus tab) — focus and breaks roll on by themselves
+- Focus: session stats — time elapsed since you started, time actually focused and time paused — and
+  the minutes focused today
+- Focus: a pause clock that counts up while paused, a pause icon in the DMS pill, and a reminder when a
+  pause runs long (*Pause reminder*, 10 min by default, 0 turns it off)
+
+### Fixed
+- The notch (and the settings toast) vanished for good after the monitor slept or was unplugged, so
+  clicking the DMS pill did nothing until Islet was restarted. They're now rebuilt when the screen
+  comes back.
+
 ## 1.2.0 — 2026-10-18
 
 ### Added

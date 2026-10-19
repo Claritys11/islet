@@ -65,12 +65,14 @@ Item {
                     font.weight: Font.DemiBold
                     font.features: ({ tnum: 1 })
                 }
+                // While paused, how long you've been away instead.
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: root.pomo.label
-                    color: root.accent
+                    text: root.pomo.paused ? `Paused ${root.pomo.format(root.pomo.pausedFor)}` : root.pomo.label
+                    color: root.pomo.paused ? Theme.danger : root.accent
                     font.family: Theme.font
                     font.pixelSize: 12
+                    font.features: ({ tnum: 1 })
                 }
             }
         }
@@ -133,6 +135,13 @@ Item {
                     icon: "skip_next"
                     onClicked: root.pomo.skip()
                 }
+                // Continuous: focus and breaks roll on by themselves.
+                NotchIconButton {
+                    icon: "all_inclusive"
+                    filled: root.pomo.continuous
+                    tint: root.pomo.continuous ? root.accent : Theme.subtext
+                    onClicked: root.pomo.setContinuous(!root.pomo.continuous)
+                }
             }
 
             // Round progress towards the long break, and today's total.
@@ -151,11 +160,21 @@ Item {
                 }
                 Text {
                     leftPadding: 8
-                    text: `${root.pomo.todayCount} session${root.pomo.todayCount === 1 ? "" : "s"} today`
+                    text: `${root.pomo.todayCount} session${root.pomo.todayCount === 1 ? "" : "s"} · ${root.pomo.formatShort(root.pomo.todayFocused)} focused today`
                     color: Theme.subtext
                     font.family: Theme.font
                     font.pixelSize: 12
                 }
+            }
+
+            // This sitting: time since the first start, focus and pauses.
+            Text {
+                visible: root.pomo.sessionStart > 0
+                text: `${root.pomo.format(root.pomo.elapsed)} elapsed  ·  ${root.pomo.formatShort(root.pomo.focused)} focus  ·  ${root.pomo.formatShort(root.pomo.pausedTotal)} paused`
+                color: Theme.subtext
+                font.family: Theme.font
+                font.pixelSize: 12
+                font.features: ({ tnum: 1 })
             }
         }
     }

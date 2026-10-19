@@ -40,7 +40,7 @@ Singleton {
             progress: singing ? Math.round(L.progress * 1000) / 1000 : 0,
             source: L.source,
             viz: CavaService.values.map(v => Math.round(v * 100) / 100),
-            timer: P.active ? { clock: P.clock, mode: P.mode, running: P.running, progress: Math.round(P.progress * 1000) / 1000 } : null,
+            timer: P.active ? { clock: P.clock, mode: P.mode, running: P.running, paused: P.paused, pausedFor: P.paused ? P.format(P.pausedFor) : "", progress: Math.round(P.progress * 1000) / 1000 } : null,
             bar: { width: o.barPillWidth, text: o.notchPillText, viz: o.barShowVisualizer, timer: o.barShowTimer, accent: Theme.primary.toString() },
             notchOpen: root.notchOpen
         });

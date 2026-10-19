@@ -49,6 +49,8 @@ Singleton {
 
             // Completed focus sessions per day: { "2026-10-18": 3, … }
             property var focusLog: ({})
+            // Seconds spent in focus per day: { "2026-10-18": 5400, … }
+            property var focusTime: ({})
             // Local checklist: [{ id, text, checked }]
             property var checklist: []
             // LRCLIB version picked by hand per song: { "artist\ntitle": id }
