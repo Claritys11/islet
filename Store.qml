@@ -55,6 +55,8 @@ Singleton {
             property var checklist: []
             // LRCLIB version picked by hand per song: { "artist\ntitle": id }
             property var lyricsChoice: ({})
+            // Newest version we've already told you about.
+            property string updateNotified: ""
         }
     }
 }

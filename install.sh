@@ -5,6 +5,7 @@
 #   ./install.sh            from a clone: link files, service and launcher entry
 #   ./install.sh --enable   …and start Islet now and on every login
 #   ./install.sh --no-enable
+#   ./install.sh --update   used by 'islet update' after pulling
 set -e
 
 repo="https://github.com/Claritys11/islet.git"
@@ -56,8 +57,10 @@ if ! fc-list 2>/dev/null | grep -q "Material Symbols Rounded"; then
         fc-cache -f "$data/fonts" >/dev/null 2>&1 ||
         warn "Couldn't download the icon font; icons may show as text."
 fi
-command -v cava >/dev/null || say "Tip: install 'cava' for a real audio visualizer in the notch."
-command -v spicetify >/dev/null && say "Using Spicy Lyrics? Run 'islet spicetify' for its syllable-exact lyrics and timing in Islet."
+if [ "$1" != "--update" ]; then
+    command -v cava >/dev/null || say "Tip: install 'cava' for a real audio visualizer in the notch."
+    command -v spicetify >/dev/null && say "Using Spicy Lyrics? Run 'islet spicetify' for its syllable-exact lyrics and timing in Islet."
+fi
 
 link() {
     if [ -e "$2" ] && [ ! -L "$2" ]; then
@@ -87,6 +90,9 @@ link "$src/bin/islet" "$bindir/islet"
 link "$src/dist/islet.service" "$config/systemd/user/islet.service"
 link "$src/dist/islet-settings.desktop" "$data/applications/islet-settings.desktop"
 systemctl --user daemon-reload 2>/dev/null || true
+
+# Called by 'islet update': links refreshed, nothing else to say.
+[ "$1" = "--update" ] && exit 0
 
 if { [ "$1" = "--enable" ] || $was_enabled; } && [ "$1" != "--no-enable" ]; then
     if systemctl --user enable --now islet.service 2>/dev/null; then

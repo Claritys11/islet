@@ -20,7 +20,7 @@ Usage: islet <command>
   dms [install|uninstall|status]  Islet in the DankMaterialShell bar instead of DMS's media widget
   spicetify [install|uninstall|status]
                                   Get lyrics + timing from Spicy Lyrics (needs Spicetify)
-  update                          Update Islet (git pull) and restart it
+  update [--check]                Update Islet and restart it (--check: only show what's new)
   config                          Print the path of the settings file
 USAGE
 }
@@ -157,9 +157,44 @@ PY
             *) echo "usage: islet dms [install|uninstall|status]" >&2; exit 1 ;;
         esac ;;
     update)
-        # Islet is installed as a symlink to a git checkout: pull and restart.
+        # Islet is a git checkout linked into place: fetch, show what's new,
+        # pull, refresh the bits that live outside the checkout, restart.
         dir="$(readlink -f "${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/$CFG")"
-        git -C "$dir" pull --ff-only && { running && { stop; start; } || true; } ;;
+        git -C "$dir" rev-parse --git-dir >/dev/null 2>&1 ||
+            { echo "Islet at $dir isn't a git checkout; update it with your package manager." >&2; exit 1; }
+        git -C "$dir" fetch --quiet --tags || { echo "Couldn't reach GitHub — check your connection." >&2; exit 1; }
+        behind="$(git -C "$dir" rev-list --count HEAD..@{u} 2>/dev/null || echo 0)"
+        current="$(git -C "$dir" describe --tags --always 2>/dev/null)"
+        if [ "$behind" = 0 ]; then
+            echo "Islet is up to date ($current)."
+            exit 0
+        fi
+        latest="$(git -C "$dir" describe --tags --always @{u} 2>/dev/null)"
+        echo "Update available: $current → $latest"
+        git -C "$dir" log --format='  • %s' HEAD..@{u} | head -15
+        [ "${2:-}" = "--check" ] && exit 0
+        if [ -n "$(git -C "$dir" status --porcelain --untracked-files=no)" ]; then
+            echo "You have local changes in $dir; keep them with 'git -C $dir stash' first, then run 'islet update' again." >&2
+            exit 1
+        fi
+        old="$(git -C "$dir" rev-parse HEAD)"
+        git -C "$dir" pull --ff-only --quiet || exit 1
+        changed() { ! git -C "$dir" diff --quiet "$old" HEAD -- "$@"; }
+        # New files to link, a changed service file…
+        sh "$dir/install.sh" --update >/dev/null
+        # The Spicetify extension is a copy inside Spotify: refresh it.
+        if command -v spicetify >/dev/null && grep -q "islet-bridge.js" "$(spicetify -c)" 2>/dev/null &&
+            changed spicetify/islet-bridge.js; then
+            cp "$dir/spicetify/islet-bridge.js" "$(dirname "$(spicetify -c)")/Extensions/islet-bridge.js"
+            echo "The Spicy Lyrics bridge changed: run 'spicetify apply' when you're ready (Spotify restarts)."
+        fi
+        if running; then stop; start; fi
+        # DMS caches plugin code until it restarts.
+        if [ -L "${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/plugins/isletMedia" ] && changed integrations/dms &&
+            systemctl --user is-active --quiet dms 2>/dev/null; then
+            systemctl --user restart dms && echo "Restarted DankMaterialShell for the new bar widget."
+        fi
+        echo "Islet updated to $latest." ;;
     config) echo "${XDG_CONFIG_HOME:-$HOME/.config}/islet/config.json" ;;
     -h | --help | help | "") usage ;;
     *) usage >&2; exit 1 ;;

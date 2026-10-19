@@ -1,11 +1,15 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 — 2026-10-19
 
 ### Added
 - Focus: **continuous mode** (∞ button in the Focus tab) — focus and breaks roll on by themselves
 - Focus: session stats — time elapsed since you started, time actually focused and time paused — and
   the minutes focused today
+- **Easy updates**: Islet checks for new versions (every 6 h, can be turned off), notifies you once, and
+  Settings shows what's new with an *Update now* button. `islet update` now also refreshes links, the DMS
+  bar widget and the Spicy Lyrics bridge, and refuses to clobber local edits; `islet update --check`
+  only shows what's new
 - Focus: a pause clock that counts up while paused, a pause icon in the DMS pill, and a reminder when a
   pause runs long (*Pause reminder*, 10 min by default, 0 turns it off)
 

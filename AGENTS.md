@@ -101,6 +101,16 @@ Notion checklist: the user must create an integration and share a page with it t
 Never ask the user to paste their Notion secret into the chat; have them paste it into
 *Settings → Checklist*.
 
+## Update
+
+```sh
+islet update --check   # what's new, changes nothing
+islet update           # pull, refresh links, reload the DMS widget, restart Islet
+```
+
+If it reports local changes, ask the user before stashing them. If it says the Spicy Lyrics bridge
+changed, `spicetify apply` restarts Spotify — ask first.
+
 ## Uninstall
 
 ```sh

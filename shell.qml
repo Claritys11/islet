@@ -165,6 +165,9 @@ ShellRoot {
     }
 
     // The notch lives on one monitor: the configured one, else the first.
+    // Starts the background update check.
+    readonly property var updates: UpdateService
+
     readonly property var notchScreen: Quickshell.screens.find(s => s.name === Config.opts.notchScreen) ?? Quickshell.screens[0]
     property var notch: notchWindows.instances[0] ?? null
 

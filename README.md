@@ -14,7 +14,7 @@ for niri, Hyprland, Sway, KDE Plasma and any Wayland compositor with layer-shell
 
 <img src="docs/media/demo.gif" alt="Islet: the notch pill showing the current lyric and a running focus timer, with glowing karaoke lyrics on the right edge of the screen" width="880">
 
-**[Install](#-install) · [Features](#-features) · [Ask your AI agent](#-let-your-ai-agent-install-it) · [Settings](#-settings) · [FAQ](#-faq)**
+**[Install](#-install) · [Update](#-updating) · [Features](#-features) · [Ask your AI agent](#-let-your-ai-agent-install-it) · [Settings](#-settings) · [FAQ](#-faq)**
 
 </div>
 
@@ -42,7 +42,7 @@ git clone https://github.com/Claritys11/islet ~/.local/src/islet
 **Arch / CachyOS (PKGBUILD)**: `cd packaging/arch && makepkg -si`, then
 `systemctl --user enable --now islet`.
 
-**Update**: `islet update` · **Uninstall**: `~/.local/share/islet/uninstall.sh`
+**Uninstall**: `~/.local/share/islet/uninstall.sh`
 
 </details>
 
@@ -70,6 +70,27 @@ health checks, and keybinds for niri, Hyprland and Sway.
 > [Notchy](https://notchy.dev) itself.
 
 ---
+
+## 🔄 Updating
+
+Islet checks GitHub for a new version every few hours and lets you know with a notification.
+Updating takes one click or one command — your settings, tasks and focus history are kept.
+
+**From the app:** open **Islet Settings** → an *Update available* card shows what's new → **Update now**.
+Islet restarts by itself and a notification says when it's done.
+
+**From a terminal:**
+
+```sh
+islet update            # download, apply and restart
+islet update --check    # only show what's new
+```
+
+`islet update` takes care of everything else too: it reloads the DankMaterialShell bar widget if it
+changed, refreshes the Spicy Lyrics bridge (it tells you when to run `spicetify apply`), and stops
+safely if you've edited Islet's files yourself. Installed with the PKGBUILD instead? Update with
+`makepkg -si` from a fresh checkout. Don't want the automatic check? Turn off
+*Settings → About → Check for updates automatically*.
 
 ## ✨ Features
 
@@ -131,7 +152,7 @@ islet todo "Buy milk"                           add a task (no text = list them)
 islet set <key> <value> · islet get <key>
 islet dms [install|uninstall|status]            Islet in the DankMaterialShell bar
 islet spicetify [install|uninstall|status]      Spicy Lyrics lyrics & timing
-islet status · islet refetch · islet update · islet start|stop|restart
+islet status · islet refetch · islet update [--check] · islet start|stop|restart
 ```
 
 <details>

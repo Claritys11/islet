@@ -45,7 +45,7 @@ FloatingWindow {
         { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
-        { icon: "info", title: "About", subtitle: "Files, shortcuts, reset", keys: [] }
+        { icon: "info", title: "About", subtitle: "Updates, files, shortcuts", keys: ["checkUpdates"] }
     ]
 
     // Bumped on every edit so the change badges recount.
@@ -630,6 +630,23 @@ FloatingWindow {
 
                 // ── Overview ──────────────────────────────────────
                 Page {
+                    Card {
+                        visible: UpdateService.status === "available"
+                        title: `Update available: ${UpdateService.latest}`
+                        hint: UpdateService.changes.slice(0, 3).join(" · ")
+                        RowLayout {
+                            Button {
+                                text: "Update now"
+                                highlighted: true
+                                onClicked: UpdateService.update()
+                            }
+                            Button {
+                                text: "Details"
+                                flat: true
+                                onClicked: win.page = win.pages.length - 1
+                            }
+                        }
+                    }
                     Card {
                         title: "Modules"
                         hint: "Turn on what you want. Lyrics can show on the screen edge, inside the notch, or both."
@@ -1491,6 +1508,73 @@ FloatingWindow {
 
                 // ── About ─────────────────────────────────────────
                 Page {
+                    Card {
+                        id: updateCard
+                        title: {
+                            switch (UpdateService.status) {
+                            case "available":
+                                return `Update available: ${UpdateService.latest}`;
+                            case "updating":
+                                return "Updating…";
+                            case "checking":
+                                return "Checking for updates…";
+                            case "current":
+                                return "Islet is up to date";
+                            case "error":
+                                return "Couldn't check for updates";
+                            }
+                            return "Updates";
+                        }
+                        hint: {
+                            switch (UpdateService.status) {
+                            case "available":
+                                return `You have ${UpdateService.current}. Updating restarts Islet; a notification tells you when it's done.`;
+                            case "updating":
+                                return "Islet restarts in a moment.";
+                            case "current":
+                                return `Version ${UpdateService.current}`;
+                            case "error":
+                                return UpdateService.message;
+                            }
+                            return "Or from a terminal: islet update";
+                        }
+                        Repeater {
+                            model: UpdateService.status === "available" ? UpdateService.changes : []
+                            Label {
+                                required property string modelData
+                                Layout.fillWidth: true
+                                text: `•  ${modelData}`
+                                color: win.text
+                                font.family: win.font
+                                font.pixelSize: 13
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                        RowLayout {
+                            Layout.topMargin: 6
+                            Button {
+                                visible: UpdateService.status === "available"
+                                text: "Update now"
+                                highlighted: true
+                                onClicked: UpdateService.update()
+                            }
+                            Button {
+                                text: "Check now"
+                                flat: UpdateService.status === "available"
+                                enabled: UpdateService.status !== "checking" && UpdateService.status !== "updating"
+                                onClicked: UpdateService.check()
+                            }
+                            Button {
+                                text: "What's new"
+                                flat: true
+                                onClicked: Qt.openUrlExternally("https://github.com/Claritys11/islet/blob/main/CHANGELOG.md")
+                            }
+                        }
+                        SwitchSetting {
+                            key: "checkUpdates"
+                            label: "Check for updates automatically"
+                        }
+                    }
                     Card {
                         title: "Islet"
                         hint: "Lyrics, music, focus and to-dos for your Linux desktop. Built on Quickshell."
