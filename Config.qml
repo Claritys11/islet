@@ -98,6 +98,16 @@ Singleton {
             autoStartFocus: false,
             pomodoroSound: true,
             pauseReminderMinutes: 10,
+            breakTips: true,
+            // Weather (in the pill when nothing plays)
+            weatherEnabled: true,
+            weatherCity: "",
+            weatherUnit: "c",
+            // Visualizer mode: the notch becomes a visualizer while you're away
+            vizMode: true,
+            vizIdleSeconds: 60,
+            // Performance
+            maxFps: 60,
             // Updates
             checkUpdates: true,
             // Checklist
@@ -252,6 +262,13 @@ Singleton {
             property bool pomodoroSound: root.defaults.pomodoroSound
             property int pauseReminderMinutes: root.defaults.pauseReminderMinutes
             property bool checkUpdates: root.defaults.checkUpdates
+            property int maxFps: root.defaults.maxFps
+            property bool breakTips: root.defaults.breakTips
+            property bool weatherEnabled: root.defaults.weatherEnabled
+            property string weatherCity: root.defaults.weatherCity
+            property string weatherUnit: root.defaults.weatherUnit
+            property bool vizMode: root.defaults.vizMode
+            property int vizIdleSeconds: root.defaults.vizIdleSeconds
 
             property string checklistSource: root.defaults.checklistSource
             property string notionPage: root.defaults.notionPage

@@ -14,8 +14,11 @@ Usage: islet <command>
   toggle | show | hide            Show or hide the lyrics overlay
   refetch                         Fetch lyrics for the current song again
 
-  notch [media|focus|checklist]   Toggle the notch, or open it on a tab
+  notch [media|focus|checklist|shelf|viz]
+                                  Toggle the notch, open a tab, or the visualizer
   pomodoro [toggle|reset|resetpause|skip|status]
+  shelf [FILE…|clear]             Put files on the notch's shelf; without files, list it
+  share [copy|save]               A picture of the song and lyric playing now, to copy or save
   todo [text]                     Add a task, or list tasks without text
   dms [install|uninstall|status]  Islet in the DankMaterialShell bar instead of DMS's media widget
   spicetify [install|uninstall|status]
@@ -67,8 +70,20 @@ case "$1" in
     # `show` is a reserved word for qs ipc, so the function is named unhide.
     show) call lyrics unhide ;;
     notch)
-        if [ -n "$2" ]; then call notch open "$2"; else call notch toggle; fi ;;
+        case "${2:-}" in
+            "") call notch toggle ;;
+            viz | visualizer) call notch viz ;;
+            *) call notch open "$2" ;;
+        esac ;;
     pomodoro) call pomodoro "${2:-toggle}" ;;
+    share) call share "${2:-open}" ;;
+    shelf)
+        shift
+        case "${1:-}" in
+            "") call shelf list ;;
+            clear) call shelf clear ;;
+            *) for f; do call shelf add "$(realpath -- "$f")"; done ;;
+        esac ;;
     todo)
         shift
         if [ $# -gt 0 ]; then call checklist add "$*"; else call checklist list; fi ;;

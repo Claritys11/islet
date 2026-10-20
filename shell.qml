@@ -97,10 +97,48 @@ ShellRoot {
             shell.notch?.toggle();
         }
         function open(tab: string): void {
-            shell.notch?.open(["media", "focus", "checklist"].indexOf(tab) >= 0 ? ["media", "focus", "checklist"].indexOf(tab) : undefined);
+            const i = shell.tabs.indexOf(tab);
+            shell.notch?.open(i >= 0 ? i : undefined);
         }
         function close(): void {
             shell.notch?.close();
+        }
+        function viz(): void {
+            shell.notch?.toggleViz();
+        }
+        function status(): string {
+            const n = shell.notch;
+            return n ? `mode ${n.mode}  away ${n.away}  visualizer ${n.vizWanted}` : "notch off";
+        }
+    }
+
+    // File shelf: `islet shelf FILE…`, `islet shelf` lists, `islet shelf clear`.
+    IpcHandler {
+        target: "shelf"
+
+        function add(path: string): string {
+            return ShelfService.add([path]) ? `added ${path}` : `already there, or not a full path: ${path}`;
+        }
+        function list(): string {
+            return ShelfService.items.map(i => i.path).join("\n");
+        }
+        function clear(): void {
+            ShelfService.clear();
+        }
+    }
+
+    // Share card for the song playing now.
+    IpcHandler {
+        target: "share"
+
+        function open(): void {
+            ShareService.show();
+        }
+        function copy(): void {
+            ShareService.run("copy");
+        }
+        function save(): void {
+            ShareService.run("save");
         }
     }
 
@@ -156,11 +194,14 @@ ShellRoot {
             const n = shell.notch;
             if (!n)
                 return;
+            const at = () => n.openAt(Math.max(0, shell.tabs.indexOf(msg.tab ?? "media")), msg.x >= 0 ? msg.x + (msg.width ?? 0) / 2 : -1, msg.y ?? -1);
             if (msg.cmd === "toggle") {
                 if (n.mode === "open")
                     n.close();
                 else
-                    n.openAt(["media", "focus", "checklist"].indexOf(msg.tab ?? "media"), msg.x >= 0 ? msg.x + (msg.width ?? 0) / 2 : -1, msg.y ?? -1);
+                    at();
+            } else if (msg.cmd === "open") {
+                at();
             } else if (msg.cmd === "close") {
                 n.close();
             }
@@ -168,6 +209,9 @@ ShellRoot {
     }
 
     // The notch lives on one monitor: the configured one, else the first.
+    // The notch's tabs, by name.
+    readonly property var tabs: ["media", "focus", "checklist", "shelf"]
+
     // Starts the background update check.
     readonly property var updates: UpdateService
 
@@ -183,6 +227,14 @@ ShellRoot {
 
         NotchWindow {
             onSettingsRequested: shell.openSettings()
+        }
+    }
+
+    LazyLoader {
+        active: ShareService.open
+
+        ShareWindow {
+            screen: shell.notchScreen
         }
     }
 

@@ -8,19 +8,38 @@ import Quickshell.Services.Mpris
 Singleton {
     id: root
 
+    // Whatever is playing — the preferred player first if several are — and
+    // when everything is paused, the one used last, so pausing YouTube Music
+    // doesn't hand the lyrics back to a paused Spotify.
     readonly property MprisPlayer player: {
         const players = Mpris.players.values;
         const want = Config.opts.player.toLowerCase();
-        if (want === "")
-            return players.find(p => p.isPlaying) ?? players[0] ?? null;
-        return players.find(p => [p.identity, p.desktopEntry, p.dbusName].some(s => (s ?? "").toLowerCase().includes(want))) ?? null;
+        const preferred = p => want !== "" && [p.identity, p.desktopEntry, p.dbusName].some(s => (s ?? "").toLowerCase().includes(want));
+        const playing = players.filter(p => p.isPlaying);
+        return playing.find(preferred) ?? playing[0] ?? (players.includes(_lastActive) ? _lastActive : null) ?? players.find(preferred) ?? players[0] ?? null;
     }
+    property MprisPlayer _lastActive: null
+    onPlayerChanged: if (player?.isPlaying)
+        _lastActive = player
+    Connections {
+        target: root.player
+        function onIsPlayingChanged() {
+            if (root.player?.isPlaying)
+                root._lastActive = root.player;
+        }
+    }
+
+    // Browsers play YouTube, SoundCloud and the like, whose titles carry
+    // extras ("(Official Video)", "Artist - Song") that need tidying.
+    readonly property bool fromBrowser: /chrom|firefox|brave|vivaldi|opera|edge|zen|librewolf|floorp|epiphany/i.test(`${player?.identity ?? ""} ${player?.dbusName ?? ""}`)
 
     // Sample lyrics so settings can be previewed without music playing.
     property bool demo: false
 
-    readonly property string title: demo ? "Sample Song" : player?.trackTitle ?? ""
-    readonly property string artist: demo ? "Islet preview" : player?.trackArtist ?? ""
+    // Browser players get their names tidied (see tidy()).
+    readonly property var _names: fromBrowser ? tidy(player?.trackTitle ?? "", player?.trackArtist ?? "") : null
+    readonly property string title: demo ? "Sample Song" : _names?.title ?? player?.trackTitle ?? ""
+    readonly property string artist: demo ? "Islet preview" : _names?.artistText ?? player?.trackArtist ?? ""
     readonly property real length: demo ? demoLength : player?.length ?? 0
     readonly property string artUrl: demo ? Qt.resolvedUrl("assets/demo-cover.jpg") : player?.trackArtUrl ?? ""
     readonly property bool isPlaying: demo || (player?.isPlaying ?? false)
@@ -253,7 +272,12 @@ Singleton {
         running: root.isPlaying
         onTriggered: {
             const now = Date.now();
+            // High-refresh monitors would otherwise redo every lyric binding
+            // 144–240 times a second; the fill looks the same at 60.
+            if (now - root._frameAt < 1000 / Config.opts.maxFps - 2)
+                return;
             if (root.demo) {
+                root._frameAt = now;
                 root.position = ((now - root._demoStart) / 1000) % root.demoLength;
                 return;
             }
@@ -346,7 +370,8 @@ Singleton {
         const id = ++_requestId;
         const api = Config.opts.lrclibUrl;
         const override = Store.db.lyricsChoice?.[key];
-        const base = `artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(title)}`;
+        const names = fromBrowser ? tidy(title, artist) : { title, artist };
+        const base = `artist_name=${encodeURIComponent(names.artist)}&track_name=${encodeURIComponent(names.title)}`;
         const exact = override ? `${api}/api/get/${override}` : `${api}/api/get?${base}` + (length > 0 ? `&duration=${Math.round(length)}` : "");
 
         request(exact, (code, data) => {
@@ -363,14 +388,20 @@ Singleton {
     }
 
     // Look up every LRCLIB version of this song. With `pick`, use the best.
+    // Tries a few searches, loosest last, until one finds something: the
+    // exact names, then the tidied ones, then free text. A loose match must
+    // also have the right length, or it's likely a different song.
     function searchVersions(key, id, pick) {
-        const q = `artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(cleanTitle(title))}`;
-        request(`${Config.opts.lrclibUrl}/api/search?${q}`, (code, results) => {
-            if (id !== _requestId)
-                return;
-            if (code !== 200)
-                return pick ? failed() : undefined;
-            const usable = (results ?? []).filter(hasLyrics);
+        const t = tidy(title, artist);
+        const api = `${Config.opts.lrclibUrl}/api/search?`;
+        const enc = encodeURIComponent;
+        const queries = [
+            { url: api + `artist_name=${enc(artist)}&track_name=${enc(cleanTitle(title))}`, loose: false },
+            { url: api + `artist_name=${enc(t.artist)}&track_name=${enc(t.title)}`, loose: false },
+            { url: api + `q=${enc(t.artist + " " + t.title)}`, loose: true },
+            { url: api + `q=${enc(t.full)}`, loose: true }
+        ].filter((q, i, all) => all.findIndex(o => o.url === q.url) === i);
+        const found = usable => {
             usable.sort((a, b) => score(a) - score(b));
             candidates = usable.slice(0, 12).map(r => ({
                         id: r.id,
@@ -380,7 +411,24 @@ Singleton {
                     }));
             if (pick)
                 finish(key, usable[0] ?? null);
-        });
+        };
+        const next = n => {
+            if (n >= queries.length)
+                return pick ? finish(key, null) : undefined;
+            request(queries[n].url, (code, results) => {
+                if (id !== _requestId)
+                    return;
+                if (code !== 200)
+                    return pick ? failed() : undefined;
+                let usable = (results ?? []).filter(hasLyrics);
+                if (queries[n].loose && length > 0)
+                    usable = usable.filter(r => Math.abs((r.duration ?? 0) - length) <= 3);
+                if (usable.length === 0)
+                    return next(n + 1);
+                found(usable);
+            });
+        };
+        next(0);
     }
 
     // Lower is better: a matching length beats everything, then synced
@@ -444,6 +492,40 @@ Singleton {
 
     function cleanTitle(t) {
         return t.replace(/\s+-\s+.*$/, "").replace(/\s*[(\[](feat|ft|with)\.?\s[^)\]]*[)\]]/i, "").trim();
+    }
+
+    // Title and artists as LRCLIB knows them. Video sites add tags to titles,
+    // put "Artist - Song" in the title, name channels "Artist - Topic" or
+    // "ArtistVEVO", and YouTube Music joins artists in your language
+    // ("Lady Gaga dan Bruno Mars").
+    function tidy(t, a) {
+        const squash = x => x.toLowerCase().replace(/[\s.,'’&_-]/g, "");
+        let artist = a.replace(/\s*-\s*topic$/i, "").replace(/vevo$/i, "").replace(/\s+official( channel)?$/i, "").trim();
+        const full = t
+            .replace(/\s*[(\[【][^)\]】]*\b(official|video|audio|lyrics?|lirik|mv|m\/v|visuali[sz]er|hd|4k|explicit|color coded)\b[^)\]】]*[)\]】]/gi, "")
+            .replace(/\s*[(\[](feat|ft|with)\.?\s[^)\]]*[)\]]/gi, "")
+            .replace(/\s+(feat|ft)\.?\s.*$/i, "")
+            .replace(/\s*[|｜].*$/, "")
+            .replace(/\s+(official\s+)?(music\s+)?(m\/?v|video|audio|lyric video|visuali[sz]er)$/i, "")
+            .replace(/^["“'‘](.*)["”'’]$/, "$1")
+            .trim() || t;
+        let title = full;
+        // "Artist - Song", when the part before the dash names the channel
+        // (so "Song - Remix" on YouTube Music stays whole).
+        const dash = full.split(/ [-–—] /);
+        if (dash.length > 1 && artist !== "" && squash(dash[0]).includes(squash(artist).slice(0, 12))) {
+            artist = dash[0];
+            title = dash.slice(1).join(" - ");
+        }
+        // K-pop style: "NewJeans (뉴진스) 'Super Shy'" — the song is quoted.
+        const quoted = title.match(/^(.*?)\s*['‘"“]([^'’"”]+)['’"”]\s*$/);
+        if (quoted) {
+            if (quoted[1].trim() !== "")
+                artist = quoted[1].replace(/\s*\([^)]*\)/g, "").trim();
+            title = quoted[2].trim();
+        }
+        const artists = artist.split(/\s*,\s*|\s*&\s*|\s+(?:x|and|dan|und|y|et|e|feat\.?|ft\.?|with|vs\.?)\s+/i).filter(s => s !== "");
+        return { title, full, artist: artists[0] ?? artist, artists, artistText: artists.join(", ") || artist };
     }
 
     // ── Parsing ───────────────────────────────────────────────────

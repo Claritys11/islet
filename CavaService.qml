@@ -8,13 +8,28 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    property int bars: 6
+    // 24 bars for visualizer mode; the small visualizers show 6, each the
+    // average of 4 neighbours.
+    readonly property int bars: 24
+    readonly property int smallBars: 6
     // Set by the notch so nothing runs while it's hidden.
     property bool wanted: false
     readonly property bool active: wanted && LyricsService.isPlaying
     property bool hasCava: false
     // 0..1 per bar
     property var values: Array(bars).fill(0)
+    property var small: Array(smallBars).fill(0)
+    onValuesChanged: {
+        const k = bars / smallBars;
+        const out = [];
+        for (let i = 0; i < smallBars; i++) {
+            let sum = 0;
+            for (let j = 0; j < k; j++)
+                sum += values[i * k + j] ?? 0;
+            out.push(sum / k);
+        }
+        small = out;
+    }
 
     readonly property string config: [
         "[general]", `bars = ${bars}`, "framerate = 50",
@@ -49,7 +64,8 @@ Singleton {
         repeat: true
         interval: 90
         onTriggered: {
-            root._targets = root._targets.map(t => Math.random() < 0.35 ? 0.15 + Math.random() * 0.85 : t);
+            // Neighbouring bars move together a little, like a real spectrum.
+            root._targets = root._targets.map((t, i) => Math.random() < 0.35 ? Math.max(0.1, Math.min(1, 0.55 - i / root.bars * 0.35 + (Math.random() - 0.5) * 0.7)) : t);
             root.values = root.values.map((v, i) => v + (root._targets[i] - v) * 0.45);
         }
     }

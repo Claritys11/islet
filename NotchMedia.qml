@@ -176,6 +176,12 @@ Item {
                     tint: loop === MprisLoopState.None ? Theme.subtext : Theme.primary
                     onClicked: root.player.loopState = loop === MprisLoopState.None ? MprisLoopState.Playlist : loop === MprisLoopState.Playlist ? MprisLoopState.Track : MprisLoopState.None
                 }
+                NotchIconButton {
+                    icon: "ios_share"
+                    size: 32
+                    tint: Theme.subtext
+                    onClicked: ShareService.show()
+                }
             }
         }
     }

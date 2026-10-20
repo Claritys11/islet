@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.4.0 — 2026-10-21
+
+### Added
+- **YouTube Music, YouTube and other players**: Islet follows whatever is playing (the *Preferred player*
+  setting wins when several are) and keeps the last one when you pause. Video titles are tidied before
+  searching LRCLIB: *Artist - Song (Official Video)*, *ArtistVEVO*, *Artist - Topic*, K-pop *'Song' MV*,
+  and artists joined in your language (*Lady Gaga dan Bruno Mars*)
+- **File shelf**: a Shelf tab in the notch. Drop files on the island or on the DMS pill, drag them out into
+  any app, click to open. `islet shelf FILE…`
+- **Visualizer mode**: while you're away and music plays, the notch becomes a 24-bar visualizer
+  (*Settings → Notch*; `islet notch viz`)
+- **Weather** in the pill and DMS bar widget when nothing plays (Open-Meteo; your city or DMS's location)
+- **Break tips** in the Focus tab and the break notification
+- **Share card**: a 1080×1080 image of the song and a lyric line, copied or saved (`islet share [copy|save]`)
+- *Smoothness* setting (30 / 60 / 120 fps) and `islet notch status`
+
+### Changed
+- **Much lighter while music plays**: about 15 % of one CPU core instead of 50 % on a 180 Hz screen, and the
+  DMS bar widget no longer keeps DankMaterialShell redrawing (7 % instead of 28 %). The lyrics wheel moves
+  only the rows on screen and sets the scroll once per frame, font weight blends in steps, the clock runs at
+  the chosen frame rate, visualizer bars are no longer rebuilt on every update, and hidden parts of the notch
+  stop animating
+
 ## 1.3.1 — 2026-10-20
 
 ### Added

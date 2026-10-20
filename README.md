@@ -110,11 +110,21 @@ A dynamic island at the top of your screen, in the spirit of [Notchy](https://no
 
 Click the pill to open it. It follows your DankMaterialShell / Matugen wallpaper colours, or stays pure black.
 
+- **📥 Shelf** — drop files on the notch (or on the Islet pill in your DMS bar) to keep them close, then drag
+  them out into any app. Files stay where they are; the shelf only remembers them.
+- **🌙 Visualizer mode** — step away while music plays and the notch becomes a big audio visualizer; touch
+  anything and it's back. Fullscreen videos (idle inhibitors) are respected. `islet notch viz` toggles it by hand.
+- **🌤️ Weather** in the pill when nothing plays — from Open-Meteo, for your city or DankMaterialShell's weather
+  location. Never looked up from your IP.
+- **🧘 Break tips** — each break suggests something good to do with it: stretch, water, rest your eyes…
+- **📸 Share card** — the ⬆ button in Media (or `islet share`) makes a 1080×1080 picture of the song and a lyric
+  line: pick the line, then copy it or save it to `~/Pictures/Islet`.
+
 ### 🎤 Karaoke lyrics, everywhere
 
 <img src="docs/media/hero.png" alt="Islet on a desktop: notch at the top, glowing lyrics wheel on the right" width="100%">
 
-- **Synced lyrics** for whatever is playing, from the free and open [LRCLIB](https://lrclib.net) — no API keys needed
+- **Synced lyrics** for whatever is playing — Spotify, **YouTube Music or YouTube in your browser**, mpv, VLC… — from the free and open [LRCLIB](https://lrclib.net), no API keys needed. Video titles like *Artist - Song (Official Video)* or channels like *ArtistVEVO* are tidied up before searching
 - **🌶️ Spicy Lyrics timing** — already using [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics)? One command makes Islet show the *same* syllable-by-syllable lyrics, on Spotify's exact clock ([details](#-spicy-lyrics-integration))
 - **Visible on every workspace** — it lives on the screen, not on a workspace
 - **Karaoke fill** that glows as each line is sung (sweep or typewriter), inspired by [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics)
@@ -145,7 +155,9 @@ Prefer the terminal? `islet set glow 0.9`, `islet get offsetMs`. Settings live i
 
 ```
 islet settings [lyrics|notch|focus|checklist]    open settings (on a page)
-islet notch [media|focus|checklist]             toggle the notch / open a tab
+islet notch [media|focus|checklist|shelf|viz]   toggle the notch / open a tab / visualizer
+islet shelf [FILE…|clear]                       put files on the shelf (no files = list)
+islet share [copy|save]                         share card of the song playing now
 islet toggle | show | hide                      the lyrics overlay
 islet pomodoro [toggle|reset|resetpause|skip|status]
 islet todo "Buy milk"                           add a task (no text = list them)

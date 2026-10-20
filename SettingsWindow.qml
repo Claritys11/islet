@@ -40,10 +40,10 @@ FloatingWindow {
 
     // Which settings belong to which page (for the change badges).
     readonly property var pages: [
-        { icon: "dashboard", title: "Overview", subtitle: "Modules and quick looks", keys: [] },
+        { icon: "dashboard", title: "Overview", subtitle: "Modules and quick looks", keys: ["maxFps"] },
         { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "fillSpeed", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "lyricsSource", "spicyOffsetMs", "offsetMs", "lrclibUrl"] },
-        { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose"] },
-        { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes"] },
+        { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose", "vizMode", "vizIdleSeconds", "weatherEnabled", "weatherCity", "weatherUnit"] },
+        { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes", "breakTips"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
         { icon: "info", title: "About", subtitle: "Updates, files, shortcuts", keys: ["checkUpdates"] }
     ]
@@ -682,6 +682,19 @@ FloatingWindow {
                         }
                     }
                     Card {
+                        title: "Smoothness"
+                        hint: "How often moving lyrics are redrawn. Lower uses less battery and CPU."
+                        ChoiceSetting {
+                            key: "maxFps"
+                            label: "Frame rate"
+                            choices: [
+                                { text: "Light · 30", value: 30 },
+                                { text: "Smooth · 60", value: 60 },
+                                { text: "Max · 120", value: 120 }
+                            ]
+                        }
+                    }
+                    Card {
                         title: "Notch colour"
                         ChoiceSetting {
                             key: "notchStyle"
@@ -1079,8 +1092,8 @@ FloatingWindow {
                         }
                         TextSetting {
                             key: "player"
-                            label: "Player"
-                            hint: "Running now: " + (Mpris.players.values.map(p => p.identity).join(", ") || "none")
+                            label: "Preferred player"
+                            hint: "Islet follows whatever is playing (Spotify, YouTube Music in a browser, mpv…); this one wins when several are. Running now: " + (Mpris.players.values.map(p => p.identity).join(", ") || "none")
                             placeholder: "any"
                         }
                         SliderSetting {
@@ -1343,6 +1356,49 @@ FloatingWindow {
                             label: "Close when the mouse leaves"
                         }
                     }
+                    Card {
+                        title: "Visualizer mode"
+                        hint: "When you step away while music plays, the notch becomes a big visualizer. Any key or mouse move brings it back. Also: islet notch viz."
+                        SwitchSetting {
+                            key: "vizMode"
+                            label: "Visualizer when I'm away"
+                        }
+                        SliderSetting {
+                            key: "vizIdleSeconds"
+                            label: "After"
+                            from: 10
+                            to: 300
+                            stepSize: 5
+                            decimals: 0
+                            unit: " s"
+                        }
+                    }
+                    Card {
+                        title: "Weather"
+                        hint: {
+                            const W = WeatherService;
+                            const where = Config.opts.weatherCity.trim() !== "" ? (W.place || "city not found") : W.coords !== "" ? "DankMaterialShell's location" : "no location yet — type a city";
+                            return `Shown in the pill when nothing plays. ${W.ready ? `${W.tempText} ${W.description.toLowerCase()}, ` : ""}${where}. From Open-Meteo; your location is never looked up from your IP.`;
+                        }
+                        SwitchSetting {
+                            key: "weatherEnabled"
+                            label: "Show the weather"
+                        }
+                        TextSetting {
+                            key: "weatherCity"
+                            label: "City"
+                            hint: "Empty: use DankMaterialShell's weather location"
+                            placeholder: "e.g. Malang"
+                        }
+                        ChoiceSetting {
+                            key: "weatherUnit"
+                            label: "Units"
+                            choices: [
+                                { text: "°C", value: "c" },
+                                { text: "°F", value: "f" }
+                            ]
+                        }
+                    }
                 }
 
                 // ── Focus ─────────────────────────────────────────
@@ -1439,6 +1495,11 @@ FloatingWindow {
                         SwitchSetting {
                             key: "pomodoroSound"
                             label: "Sound when time is up"
+                        }
+                        SwitchSetting {
+                            key: "breakTips"
+                            label: "Break tips"
+                            hint: "Stretch, drink water, rest your eyes… a different one each break"
                         }
                     }
                 }

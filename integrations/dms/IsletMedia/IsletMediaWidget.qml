@@ -21,6 +21,7 @@ PluginComponent {
     readonly property bool hasTrack: linked && st.hasTrack
     readonly property bool hasTimer: linked && st.timer !== null && (st.bar?.timer ?? true)
     readonly property string text: !hasTrack ? "" : st.line !== "" && st.bar?.text !== "title" ? st.line : `${st.title}  ·  ${st.artist}`
+    readonly property bool hasWeather: linked && !hasTrack && !hasTimer && !!st.weather
     readonly property bool isLyric: hasTrack && st.line !== "" && st.bar?.text !== "title"
 
     function send(msg) {
@@ -57,138 +58,171 @@ PluginComponent {
     }
 
     horizontalBarPill: Component {
-        Row {
-            spacing: Theme.spacingS
+        Item {
+            id: pill
+            implicitWidth: pillRow.implicitWidth
+            implicitHeight: pillRow.implicitHeight
 
-            // Islet isn't running: a quiet hint instead of an empty gap.
-            DankIcon {
-                visible: !root.linked
-                anchors.verticalCenter: parent.verticalCenter
-                name: "lyrics"
-                size: Theme.iconSize - 4
-                color: Theme.surfaceVariantText
-            }
-
-            ClippingRectangle {
-                visible: root.hasTrack
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.round(root.widgetThickness * 0.62)
-                height: width
-                radius: width / 2
-                color: Theme.surfaceContainerHigh
-
-                Image {
-                    anchors.fill: parent
-                    source: root.st?.art ?? ""
-                    sourceSize: Qt.size(64, 64)
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    cache: true
+            // Files dragged onto the pill open Islet's shelf right below it,
+            // and dropping them here parks them on the shelf.
+            DropArea {
+                anchors.fill: parent
+                anchors.margins: -6
+                onEntered: drag => {
+                    if (!drag.hasUrls)
+                        return;
+                    drag.accept(Qt.CopyAction);
+                    const p = pill.mapToGlobal(0, 0);
+                    root.send({ cmd: "open", tab: "shelf", x: p.x, y: -1, width: pill.width });
+                }
+                onDropped: drop => {
+                    if (!drop.hasUrls)
+                        return;
+                    root.send({ cmd: "shelf-add", urls: drop.urls.map(u => u.toString()) });
+                    drop.accept(Qt.CopyAction);
                 }
             }
 
-            // The lyric with its karaoke fill: a dim copy, and a bright copy
-            // revealed as the line is sung. Long lines are cut off and slide
-            // along with the singer instead of ending in "…".
-            Item {
-                id: lyric
-                visible: root.hasTrack
+            Row {
+                id: pillRow
                 anchors.verticalCenter: parent.verticalCenter
-                width: Math.min(base.implicitWidth, root.st?.bar?.width ?? 300)
-                height: base.implicitHeight
-                clip: true
+                spacing: Theme.spacingS
 
-                readonly property real overflow: Math.max(0, base.implicitWidth - width)
-                readonly property real progress: root.isLyric ? (root.st?.progress ?? 0) : 1
-                property real shift: root.isLyric ? overflow * Math.max(0, Math.min(1, (progress - 0.2) / 0.6)) : 0
+                // Islet isn't running: a quiet hint instead of an empty gap.
+                DankIcon {
+                    visible: !root.linked
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "lyrics"
+                    size: Theme.iconSize - 4
+                    color: Theme.surfaceVariantText
+                }
 
-                Behavior on shift {
-                    NumberAnimation {
-                        duration: 300
-                        easing.type: Easing.OutCubic
+                ClippingRectangle {
+                    visible: root.hasTrack
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.round(root.widgetThickness * 0.62)
+                    height: width
+                    radius: width / 2
+                    color: Theme.surfaceContainerHigh
+
+                    Image {
+                        anchors.fill: parent
+                        source: root.st?.art ?? ""
+                        sourceSize: Qt.size(64, 64)
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        cache: true
                     }
                 }
 
-                StyledText {
-                    id: base
-                    x: -lyric.shift
-                    text: root.text
-                    color: Theme.surfaceText
-                    opacity: root.isLyric ? 0.5 : 0.9
-                    font.pixelSize: Theme.fontSizeMedium
-                }
-
+                // The lyric with its karaoke fill: a dim copy, and a bright copy
+                // revealed as the line is sung. Long lines are cut off and slide
+                // along with the singer instead of ending in "…".
                 Item {
-                    visible: root.isLyric
-                    x: -lyric.shift
-                    width: base.implicitWidth * lyric.progress
-                    height: base.height
+                    id: lyric
+                    visible: root.hasTrack
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(base.implicitWidth, root.st?.bar?.width ?? 300)
+                    height: base.implicitHeight
                     clip: true
 
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: 60
-                        }
-                    }
+                    readonly property real overflow: Math.max(0, base.implicitWidth - width)
+                    readonly property real progress: root.isLyric ? (root.st?.progress ?? 0) : 1
+                    // No Behaviors in this pill: Islet sends 30 updates a second,
+                    // and an animation restarted on each one would keep the whole
+                    // bar redrawing at the monitor's refresh rate.
+                    readonly property real shift: root.isLyric ? overflow * Math.max(0, Math.min(1, (progress - 0.2) / 0.6)) : 0
 
                     StyledText {
+                        id: base
+                        x: -lyric.shift
                         text: root.text
-                        color: Theme.primary
+                        color: Theme.surfaceText
+                        opacity: root.isLyric ? 0.5 : 0.9
                         font.pixelSize: Theme.fontSizeMedium
-                        font.weight: Font.Medium
                     }
-                }
-            }
 
-            Row {
-                visible: root.hasTrack && (root.st?.bar?.viz ?? true)
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
-                Repeater {
-                    model: root.st?.viz ?? []
-                    Rectangle {
-                        required property real modelData
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 3
-                        height: Math.max(3, modelData * root.widgetThickness * 0.5)
-                        radius: 1.5
-                        color: Theme.primary
-                        Behavior on height {
-                            NumberAnimation {
-                                duration: 80
-                            }
+                    Item {
+                        visible: root.isLyric
+                        x: -lyric.shift
+                        width: base.implicitWidth * lyric.progress
+                        height: base.height
+                        clip: true
+
+                        StyledText {
+                            text: root.text
+                            color: Theme.primary
+                            font.pixelSize: Theme.fontSizeMedium
+                            font.weight: Font.Medium
                         }
                     }
                 }
-            }
 
-            Row {
-                visible: root.hasTimer
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: Theme.spacingXS
+                Row {
+                    visible: root.hasTrack && (root.st?.bar?.viz ?? true)
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+                    Repeater {
+                        // A count, not the array: each update would rebuild the bars.
+                        model: root.st?.viz?.length ?? 0
+                        Rectangle {
+                            required property int index
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 3
+                            height: Math.max(3, (root.st?.viz?.[index] ?? 0) * root.widgetThickness * 0.5)
+                            radius: 1.5
+                            color: Theme.primary
+                        }
+                    }
+                }
+
+                Row {
+                    visible: root.hasTimer
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Theme.spacingXS
+                    DankIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: root.st?.timer?.paused ? "pause_circle" : "timer"
+                        size: Theme.iconSize - 6
+                        color: root.st?.timer?.mode === "focus" ? Theme.primary : Theme.surfaceText
+                    }
+                    StyledText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.st?.timer?.clock ?? ""
+                        color: Theme.surfaceText
+                        opacity: root.st?.timer?.running ? 1 : 0.55
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.features: ({ tnum: 1 })
+                    }
+                }
+
+                // Nothing playing and no timer: the weather, if Islet has it.
+                Row {
+                    visible: root.hasWeather
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Theme.spacingXS
+                    DankIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: root.st?.weather?.icon ?? "cloud"
+                        size: Theme.iconSize - 4
+                        color: Theme.primary
+                    }
+                    StyledText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.st?.weather?.temp ?? ""
+                        color: Theme.surfaceText
+                        font.pixelSize: Theme.fontSizeMedium
+                    }
+                }
+
+                // …or just a small icon to open Islet.
                 DankIcon {
+                    visible: root.linked && !root.hasTrack && !root.hasTimer && !root.hasWeather
                     anchors.verticalCenter: parent.verticalCenter
-                    name: root.st?.timer?.paused ? "pause_circle" : "timer"
-                    size: Theme.iconSize - 6
-                    color: root.st?.timer?.mode === "focus" ? Theme.primary : Theme.surfaceText
+                    name: "music_note"
+                    size: Theme.iconSize - 4
+                    color: Theme.surfaceVariantText
                 }
-                StyledText {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: root.st?.timer?.clock ?? ""
-                    color: Theme.surfaceText
-                    opacity: root.st?.timer?.running ? 1 : 0.55
-                    font.pixelSize: Theme.fontSizeSmall
-                    font.features: ({ tnum: 1 })
-                }
-            }
-
-            // Nothing playing and no timer: a small icon to open Islet.
-            DankIcon {
-                visible: root.linked && !root.hasTrack && !root.hasTimer
-                anchors.verticalCenter: parent.verticalCenter
-                name: "music_note"
-                size: Theme.iconSize - 4
-                color: Theme.surfaceVariantText
             }
         }
     }

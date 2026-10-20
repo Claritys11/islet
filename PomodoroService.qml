@@ -186,8 +186,33 @@ Singleton {
     function finish() {
         const ended = label;
         advance(true);
-        notify(`${ended} finished`, mode === "focus" ? "Back to focus." : `Time for a ${label.toLowerCase()}.`);
+        const tipText = mode !== "focus" && o.breakTips ? ` ${tip.text}` : "";
+        notify(`${ended} finished`, mode === "focus" ? "Back to focus." : `Time for a ${label.toLowerCase()}.${tipText}`);
     }
+
+    // Something good to do with a break; a different one each time.
+    readonly property var tips: [
+        { icon: "self_improvement", text: "Stand up and stretch your back and shoulders." },
+        { icon: "water_full", text: "Drink a glass of water." },
+        { icon: "visibility", text: "Rest your eyes: look at something 6 metres away for 20 seconds." },
+        { icon: "directions_walk", text: "Walk around for a minute." },
+        { icon: "air", text: "Breathe slowly: in for 4, hold for 4, out for 6." },
+        { icon: "accessibility_new", text: "Roll your neck and wrists gently." },
+        { icon: "light_mode", text: "Get some daylight — open a window or step outside." },
+        { icon: "music_note", text: "Sing along to one song. You've earned it." }
+    ]
+    property var tip: tips[0]
+    property int _tipIndex: -1
+    function pickTip() {
+        let i = Math.floor(Math.random() * tips.length);
+        if (i === _tipIndex)
+            i = (i + 1) % tips.length;
+        _tipIndex = i;
+        tip = tips[i];
+    }
+    // A break started by hand gets a tip too.
+    onModeChanged: if (mode !== "focus")
+        pickTip()
 
     // A pause that drags on (the emergency is over, or forgotten) gets one
     // nudge.

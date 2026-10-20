@@ -100,17 +100,21 @@ Item {
             const omega = 6.6 / (Math.max(root.o.smoothing, 20) * 2.5 / 1000);
             let dt = Math.min(frameTime, 0.05);
             // Small fixed steps keep the spring stable at any frame rate.
+            // Stepped on locals: every write to `pos` moves all the rows, so
+            // it's written once per frame.
+            let pos = root.pos, vel = root._velocity;
             while (dt > 0) {
                 const h = Math.min(dt, 1 / 240);
-                const accel = -2 * omega * root._velocity - omega * omega * (root.pos - root.selected);
-                root._velocity += accel * h;
-                root.pos += root._velocity * h;
+                vel += (-2 * omega * vel - omega * omega * (pos - root.selected)) * h;
+                pos += vel * h;
                 dt -= h;
             }
-            if (Math.abs(root.selected - root.pos) < 0.001 && Math.abs(root._velocity) < 0.01) {
-                root.pos = root.selected;
-                root._velocity = 0;
+            if (Math.abs(root.selected - pos) < 0.001 && Math.abs(vel) < 0.01) {
+                pos = root.selected;
+                vel = 0;
             }
+            root._velocity = vel;
+            root.pos = pos;
         }
     }
 
@@ -131,8 +135,11 @@ Item {
 
             readonly property var o: root.o
             readonly property var shown: root.display(modelData)
-            readonly property real dist: Math.abs(index - root.pos)
-            readonly property real ds: (root.centers[index] ?? 0) - root.posCenter
+            // Rows far from the current line are hidden; leaving `pos` out of
+            // their bindings keeps them still while the wheel scrolls.
+            readonly property bool near: Math.abs(index - root.selected) <= o.visibleLines + 2
+            readonly property real dist: near ? Math.abs(index - root.pos) : 99
+            readonly property real ds: near ? (root.centers[index] ?? 0) - root.posCenter : 0
             readonly property real ang: Math.max(-Math.PI / 2, Math.min(Math.PI / 2, root.radius > 0 ? ds / root.radius : 0))
             // 0 → 1 as the line approaches the middle of the wheel
             readonly property real p: Math.max(0, 1 - Math.min(dist, 1))
@@ -174,8 +181,10 @@ Item {
                 wrap: line.o.longLines === "wrap"
                 minPixelSize: line.o.minFontSize
                 alignment: root.onRight ? Text.AlignRight : Text.AlignLeft
-                // Blend the weight as the line arrives instead of snapping.
-                weight: Math.round(line.o.restingWeight + (line.o.activeWeight - line.o.restingWeight) * line.p)
+                // Blend the weight as the line arrives instead of snapping, in
+                // steps of 25: each change lays the text out again, and finer
+                // steps look no different.
+                weight: Math.round((line.o.restingWeight + (line.o.activeWeight - line.o.restingWeight) * line.p) / 25) * 25
                 measureWeight: Math.max(line.o.activeWeight, line.o.restingWeight)
                 fillColor: line.o.activeColor
                 glowColor: line.o.glowColor

@@ -10,6 +10,7 @@ Rectangle {
     property bool filled: false
     property bool highlighted: false
     property color tint: highlighted ? Theme.onPrimary : Theme.text
+    readonly property alias containsMouse: mouse.containsMouse
     signal clicked
 
     implicitWidth: size

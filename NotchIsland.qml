@@ -3,17 +3,19 @@ import QtQuick.Layouts
 import QtQuick.Shapes
 import QtQuick.Effects
 import Quickshell
+import Quickshell.Wayland
 
 // The dynamic island itself, independent of any window (NotchWindow puts it
 // at the top of the screen; the showcase renders it for screenshots).
 //   closed — a pill with live activities (music, running timer)
 //   peek   — on hover: now playing + transport
-//   open   — on click: tabs for Media, Focus and Checklist
+//   open   — on click: tabs for Media, Focus, Checklist and Shelf
+//   viz    — while you're away and music plays: a big visualizer
 Item {
     id: win
 
     readonly property var o: Config.opts
-    // "closed" | "peek" | "open"
+    // "closed" | "peek" | "open" | "viz"
     property string mode: "closed"
     property int tab: 0
     signal settingsRequested
@@ -22,7 +24,9 @@ Item {
 
     readonly property bool hasMusic: LyricsService.hasTrack
     readonly property bool hasTimer: PomodoroService.active
-    readonly property bool idle: !hasMusic && !hasTimer
+    // Nothing playing and no timer: the weather keeps the pill company.
+    readonly property bool showWeather: !hasMusic && !hasTimer && o.weatherEnabled && WeatherService.ready
+    readonly property bool idle: !hasMusic && !hasTimer && !showWeather
     readonly property bool island: o.notchShape === "island" || barMode
     // "bar": no pill of its own — a bar widget (e.g. in DankMaterialShell)
     // shows the activities and opens the island as a dropdown.
@@ -39,8 +43,12 @@ Item {
             return Qt.size(o.notchWidth, o.notchHeight);
         if (mode === "peek")
             return Qt.size(430, 92);
+        if (mode === "viz")
+            return Qt.size(560, 140);
         if (idle)
             return o.notchIdle === "hidden" ? Qt.size(180, 4) : Qt.size(140, 10);
+        if (showWeather)
+            return Qt.size(weatherChip.implicitWidth + 30, 34);
         const w = (hasMusic ? o.notchPillWidth : 0) + (hasTimer ? (hasMusic ? 96 : 150) : 0);
         return Qt.size(w, 34);
     }
@@ -59,7 +67,29 @@ Item {
         mode === "open" ? close() : open();
     }
 
+    // Visualizer mode by hand (it also comes on by itself when you're away).
+    function toggleViz() {
+        mode = mode === "viz" ? "closed" : "viz";
+    }
+
     onHasMusicChanged: CavaService.wanted = hasMusic
+
+    // Visualizer mode: no keyboard or mouse for a while (idle inhibitors,
+    // like a fullscreen video, are respected) and music playing.
+    IdleMonitor {
+        id: idleMonitor
+        enabled: win.o.vizMode
+        timeout: Math.max(5, win.o.vizIdleSeconds)
+        respectInhibitors: true
+    }
+    readonly property bool away: idleMonitor.isIdle
+    readonly property bool vizWanted: o.vizMode && away && hasMusic && LyricsService.isPlaying
+    onVizWantedChanged: {
+        if (vizWanted && mode === "closed")
+            mode = "viz";
+        else if (!vizWanted && mode === "viz")
+            mode = "closed";
+    }
 
     implicitWidth: Math.max(o.notchWidth, 430) + 80
     implicitHeight: o.notchHeight + 50
@@ -109,7 +139,7 @@ Item {
         Rectangle {
             id: shape
 
-            readonly property real r: win.mode === "open" ? 30 : win.mode === "peek" ? 26 : height / 2
+            readonly property real r: win.mode === "open" ? 30 : win.mode === "peek" || win.mode === "viz" ? 26 : height / 2
 
             anchors.horizontalCenter: parent.horizontalCenter
             y: 0
@@ -117,6 +147,10 @@ Item {
             height: win.target.height
             color: Theme.surface
             opacity: win.mode === "closed" && (win.barMode || (win.idle && win.o.notchIdle === "hidden")) ? 0 : 1
+            // Faded out in bar mode (opened only by the bar widget): skip it,
+            // and its animations (see below) stop. Elsewhere it must stay to
+            // catch the hover that reveals it.
+            visible: opacity > 0 || !win.barMode
             Behavior on opacity {
                 NumberAnimation {
                     duration: 180
@@ -159,9 +193,36 @@ Item {
                 }
             }
 
+            // Files dragged over the island open the shelf; dropping parks
+            // them there.
+            DropArea {
+                id: drop
+                anchors.fill: parent
+                onEntered: drag => {
+                    if (!drag.hasUrls)
+                        return;
+                    drag.accept(Qt.CopyAction);
+                    leaveTimer.stop();
+                    win.open(3);
+                }
+                onDropped: drop => {
+                    if (drop.hasUrls && ShelfService.add(drop.urls) > 0)
+                        drop.accept(Qt.CopyAction);
+                }
+            }
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 6
+                visible: drop.containsDrag
+                radius: shape.r - 6
+                color: Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.08)
+                border.color: Theme.primary
+                border.width: 2
+            }
+
             TapHandler {
                 enabled: win.mode !== "open"
-                onTapped: win.open(win.hasMusic ? 0 : win.hasTimer ? 1 : win.tab)
+                onTapped: win.mode === "viz" ? win.close() : win.open(win.hasMusic ? 0 : win.hasTimer ? 1 : win.tab)
             }
 
             // ── Closed: live activities ───────────────────────────
@@ -170,7 +231,7 @@ Item {
                 anchors.leftMargin: 7
                 anchors.rightMargin: 12
                 spacing: 10
-                opacity: win.mode === "closed" && !win.idle ? 1 : 0
+                opacity: win.mode === "closed" && (win.hasMusic || win.hasTimer) ? 1 : 0
                 visible: opacity > 0
                 Behavior on opacity {
                     NumberAnimation {
@@ -193,6 +254,7 @@ Item {
                     clip: true
 
                     Text {
+                        id: pillLyric
                         readonly property real overflow: Math.max(0, implicitWidth - parent.width)
                         readonly property bool lyric: text !== LyricsService.title
                         anchors.verticalCenter: parent.verticalCenter
@@ -201,7 +263,10 @@ Item {
                         color: Theme.text
                         font.family: Theme.font
                         font.pixelSize: 13
+                        // Animations only while on screen; the lyric moves
+                        // constantly, so a hidden one would still cost.
                         Behavior on x {
+                            enabled: pillLyric.visible
                             NumberAnimation {
                                 duration: 300
                                 easing.type: Easing.OutCubic
@@ -216,6 +281,103 @@ Item {
                 TimerChip {
                     visible: win.hasTimer
                     Layout.fillWidth: !win.hasMusic
+                }
+            }
+
+            // Weather, when there's nothing else to show.
+            Row {
+                id: weatherChip
+                anchors.centerIn: parent
+                spacing: 6
+                opacity: win.mode === "closed" && win.showWeather ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 160
+                    }
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: WeatherService.icon
+                    color: Theme.primary
+                    font.family: Theme.iconFont
+                    font.pixelSize: 18
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: WeatherService.tempText
+                    color: Theme.text
+                    font.family: Theme.font
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                }
+            }
+
+            // ── Viz: you're away, the music fills the island ──────
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 16
+                spacing: 16
+                opacity: win.mode === "viz" ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 400
+                    }
+                }
+
+                NotchArt {
+                    Layout.preferredWidth: 108
+                    Layout.preferredHeight: 108
+                    radius: 16
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: 4
+                    Text {
+                        Layout.fillWidth: true
+                        text: win.pillText
+                        color: Theme.text
+                        elide: Text.ElideRight
+                        font.family: Theme.font
+                        font.pixelSize: 16
+                        font.weight: Font.DemiBold
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        // Without lyrics the line above is already the title.
+                        text: win.pillText === LyricsService.title ? LyricsService.artist : `${LyricsService.title}  ·  ${LyricsService.artist}`
+                        color: Theme.subtext
+                        elide: Text.ElideRight
+                        font.family: Theme.font
+                        font.pixelSize: 12
+                    }
+                    Row {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        spacing: 4
+                        Repeater {
+                            model: CavaService.bars
+                            Rectangle {
+                                id: vizBar
+                                required property int index
+                                readonly property real v: CavaService.values[index] ?? 0
+                                anchors.bottom: parent.bottom
+                                width: Math.max(3, (parent.width - 4 * (CavaService.bars - 1)) / CavaService.bars)
+                                height: Math.max(4, v * parent.height)
+                                radius: width / 2
+                                color: Theme.primary
+                                opacity: 0.45 + v * 0.55
+                                Behavior on height {
+                                    enabled: vizBar.visible
+                                    NumberAnimation {
+                                        duration: 90
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -310,7 +472,8 @@ Item {
                         model: [
                             { icon: "music_note", text: "Media" },
                             { icon: "timer", text: "Focus" },
-                            { icon: "checklist", text: "Checklist" }
+                            { icon: "checklist", text: "Checklist" },
+                            { icon: "inventory_2", text: "Shelf" }
                         ]
                         Rectangle {
                             id: tabButton
@@ -384,6 +547,7 @@ Item {
                     NotchChecklist {
                         id: checklist
                     }
+                    NotchShelf {}
                 }
             }
 
@@ -437,15 +601,19 @@ Item {
     component Visualizer: Row {
         spacing: 2.5
         Repeater {
-            model: CavaService.values
+            // A count, not the values array: a new array every frame would
+            // rebuild every bar.
+            model: CavaService.smallBars
             Rectangle {
-                required property real modelData
+                id: bar
+                required property int index
                 anchors.verticalCenter: parent.verticalCenter
                 width: 3
-                height: Math.max(3, modelData * parent.height)
+                height: Math.max(3, (CavaService.small[index] ?? 0) * parent.height)
                 radius: 1.5
                 color: Theme.primary
                 Behavior on height {
+                    enabled: bar.visible
                     NumberAnimation {
                         duration: 80
                     }

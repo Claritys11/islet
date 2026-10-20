@@ -144,8 +144,48 @@ Item {
                 }
             }
 
+            // On a break: something good to do with it, with an icon that
+            // breathes slowly.
+            RowLayout {
+                visible: root.pomo.mode !== "focus" && Config.opts.breakTips
+                Layout.fillWidth: true
+                spacing: 10
+                Text {
+                    text: root.pomo.tip.icon
+                    color: root.accent
+                    font.family: Theme.iconFont
+                    font.pixelSize: 22
+                    SequentialAnimation on scale {
+                        running: parent.visible && root.visible
+                        loops: Animation.Infinite
+                        NumberAnimation {
+                            from: 0.9
+                            to: 1.12
+                            duration: 2000
+                            easing.type: Easing.InOutSine
+                        }
+                        NumberAnimation {
+                            from: 1.12
+                            to: 0.9
+                            duration: 2000
+                            easing.type: Easing.InOutSine
+                        }
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: root.pomo.tip.text
+                    color: Theme.text
+                    wrapMode: Text.Wrap
+                    maximumLineCount: 2
+                    font.family: Theme.font
+                    font.pixelSize: 12
+                }
+            }
+
             // Round progress towards the long break, and today's total.
             Row {
+                visible: root.pomo.mode === "focus" || !Config.opts.breakTips
                 spacing: 6
                 Repeater {
                     model: Config.opts.longBreakEvery

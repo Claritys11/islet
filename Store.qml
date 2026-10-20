@@ -57,6 +57,8 @@ Singleton {
             property var lyricsChoice: ({})
             // Newest version we've already told you about.
             property string updateNotified: ""
+            // File shelf: [{ path, name, added }] — references, not copies.
+            property var shelf: []
         }
     }
 }

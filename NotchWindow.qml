@@ -11,6 +11,8 @@ PanelWindow {
     screen: modelData
 
     readonly property alias mode: island.mode
+    readonly property alias away: island.away
+    readonly property alias vizWanted: island.vizWanted
     signal settingsRequested
 
     // Where to hang the island: centre x and top y on this screen, or -1 for
@@ -33,6 +35,9 @@ PanelWindow {
     }
     function toggle() {
         island.toggle();
+    }
+    function toggleViz() {
+        island.toggleViz();
     }
 
     anchors.top: true

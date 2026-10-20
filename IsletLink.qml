@@ -10,6 +10,7 @@ import Quickshell.Io
 //   → {"v":1,"hasTrack":true,"title":…,"line":…,"progress":0.42,"timer":{…},…}
 //   ← {"cmd":"toggle","tab":"media","x":812,"y":44,"width":300}
 //   ← {"cmd":"play-pause"} | {"cmd":"next"} | {"cmd":"previous"}
+//   ← {"cmd":"shelf-add","urls":["file:///…"]} | {"cmd":"open","tab":"shelf",x,y,width}
 Singleton {
     id: root
 
@@ -39,9 +40,10 @@ Singleton {
             line: singing ? l.main : "",
             progress: singing ? Math.round(L.progress * 1000) / 1000 : 0,
             source: L.source,
-            viz: CavaService.values.map(v => Math.round(v * 100) / 100),
+            viz: CavaService.small.map(v => Math.round(v * 100) / 100),
             timer: P.active ? { clock: P.clock, mode: P.mode, running: P.running, paused: P.paused, pausedFor: P.paused ? P.format(P.pausedFor) : "", progress: Math.round(P.progress * 1000) / 1000 } : null,
             bar: { width: o.barPillWidth, text: o.notchPillText, viz: o.barShowVisualizer, timer: o.barShowTimer, accent: Theme.primary.toString() },
+            weather: o.weatherEnabled && WeatherService.ready ? { temp: WeatherService.tempText, icon: WeatherService.icon, text: WeatherService.description } : null,
             notchOpen: root.notchOpen
         });
     }
@@ -75,6 +77,9 @@ Singleton {
         case "previous":
             player?.previous();
             break;
+        case "shelf-add":
+            ShelfService.add(msg.urls ?? []);
+            break;
         default:
             notchCommand(msg);
         }
@@ -84,7 +89,7 @@ Singleton {
     Timer {
         running: root.hasClients
         repeat: true
-        interval: LyricsService.isPlaying || PomodoroService.running ? 50 : 1000
+        interval: LyricsService.isPlaying || PomodoroService.running ? 33 : 1000
         onTriggered: root.broadcast(false)
     }
 
