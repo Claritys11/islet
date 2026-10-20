@@ -118,6 +118,16 @@ Singleton {
         _pausedAt = 0;
     }
 
+    // Forget the pause time only: the timer and the rest of the session stay.
+    // Still paused? The pause clock starts again from zero.
+    function resetPause() {
+        _pausedTotal = 0;
+        if (paused)
+            _pausedAt = Date.now();
+        _reminded = false;
+        now = Date.now();
+    }
+
     // Count the focus time since the last tick.
     function tick() {
         const t = Date.now();

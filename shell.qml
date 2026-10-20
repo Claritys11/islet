@@ -116,6 +116,9 @@ ShellRoot {
         function skip(): void {
             PomodoroService.skip();
         }
+        function resetpause(): void {
+            PomodoroService.resetPause();
+        }
         function status(): string {
             const P = PomodoroService;
             const session = P.sessionStart > 0 ? ` · ${P.format(P.elapsed)} elapsed, ${P.formatShort(P.focused)} focus, ${P.formatShort(P.pausedTotal)} paused` : "";

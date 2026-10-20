@@ -1370,6 +1370,12 @@ FloatingWindow {
                                 flat: true
                                 onClicked: PomodoroService.skip()
                             }
+                            Button {
+                                visible: PomodoroService.pausedTotal >= 1
+                                text: "Reset pause time"
+                                flat: true
+                                onClicked: PomodoroService.resetPause()
+                            }
                         }
                     }
                     Card {

@@ -168,13 +168,26 @@ Item {
             }
 
             // This sitting: time since the first start, focus and pauses.
-            Text {
+            Row {
                 visible: root.pomo.sessionStart > 0
-                text: `${root.pomo.format(root.pomo.elapsed)} elapsed  ·  ${root.pomo.formatShort(root.pomo.focused)} focus  ·  ${root.pomo.formatShort(root.pomo.pausedTotal)} paused`
-                color: Theme.subtext
-                font.family: Theme.font
-                font.pixelSize: 12
-                font.features: ({ tnum: 1 })
+                spacing: 4
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: `${root.pomo.format(root.pomo.elapsed)} elapsed  ·  ${root.pomo.formatShort(root.pomo.focused)} focus  ·  ${root.pomo.formatShort(root.pomo.pausedTotal)} paused`
+                    color: Theme.subtext
+                    font.family: Theme.font
+                    font.pixelSize: 12
+                    font.features: ({ tnum: 1 })
+                }
+                // Reset just the pause time.
+                NotchIconButton {
+                    visible: root.pomo.pausedTotal >= 1
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "restart_alt"
+                    size: 22
+                    tint: Theme.subtext
+                    onClicked: root.pomo.resetPause()
+                }
             }
         }
     }

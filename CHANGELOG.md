@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1 — 2026-10-20
+
+### Added
+- Focus: reset only the pause time (↻ next to "paused" in the Focus tab, *Reset pause time* in
+  Settings, or `islet pomodoro resetpause`) — the timer and the rest of the session stay as they are
+
 ## 1.3.0 — 2026-10-19
 
 ### Added

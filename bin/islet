@@ -15,7 +15,7 @@ Usage: islet <command>
   refetch                         Fetch lyrics for the current song again
 
   notch [media|focus|checklist]   Toggle the notch, or open it on a tab
-  pomodoro [toggle|reset|skip|status]
+  pomodoro [toggle|reset|resetpause|skip|status]
   todo [text]                     Add a task, or list tasks without text
   dms [install|uninstall|status]  Islet in the DankMaterialShell bar instead of DMS's media widget
   spicetify [install|uninstall|status]

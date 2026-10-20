@@ -147,7 +147,7 @@ Prefer the terminal? `islet set glow 0.9`, `islet get offsetMs`. Settings live i
 islet settings [lyrics|notch|focus|checklist]    open settings (on a page)
 islet notch [media|focus|checklist]             toggle the notch / open a tab
 islet toggle | show | hide                      the lyrics overlay
-islet pomodoro [toggle|reset|skip|status]
+islet pomodoro [toggle|reset|resetpause|skip|status]
 islet todo "Buy milk"                           add a task (no text = list them)
 islet set <key> <value> · islet get <key>
 islet dms [install|uninstall|status]            Islet in the DankMaterialShell bar
