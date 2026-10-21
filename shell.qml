@@ -46,7 +46,7 @@ ShellRoot {
         }
         // A page name opens that page; anything else searches settings.
         function open(page: string): void {
-            const i = ["overview", "lyrics", "notch", "focus", "checklist", "finder", "about"].indexOf(page.toLowerCase());
+            const i = ["overview", "lyrics", "notch", "focus", "checklist", "calendar", "finder", "about"].indexOf(page.toLowerCase());
             shell.settingsQuery = i >= 0 ? "" : page;
             shell.openSettings(Math.max(0, i));
         }

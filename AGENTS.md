@@ -98,6 +98,14 @@ floating notch, run `islet dms` (it replaces DMS's media widget; a backup of DMS
 check `islet dms status` shows the plugin as `loaded`. If DMS reports the plugin failed to load after an
 Islet update, `systemctl --user restart dms` clears DMS's QML cache.
 
+## 6b. Optional: lessons and deadlines (Notion ⇄ Google Calendar)
+
+Needs the Checklist's Notion integration (see README) shared with the page holding the timetable and
+task databases, and Dank Calendar (`dcal`) signed in to Google. Check with `islet today` (look for
+`dcal: ok` and `notion: ok`). The first sync waits for the user: show them `islet today preview` and let
+**them** confirm (`islet today confirm`, or Settings → Calendar & Notion) — it writes to their Google
+Calendar and fills a GCal ID column in Notion.
+
 ## 7. Optional: configure
 
 Prefer the GUI (`islet settings`). For scripted changes use `islet set <key> <value>`; every key and its default

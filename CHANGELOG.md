@@ -3,6 +3,13 @@
 ## 1.6.0 — unreleased
 
 ### Added
+- **Hari ini**: a notch tab with today's lessons and close deadlines from your Notion timetable and task
+  list (and Google Classroom). Tick a task to mark it Done, add one from the notch. Two-way sync with
+  Google Calendar through Dank Calendar: lessons become weekly events, planned tasks become events; a
+  change on either side follows to the other; conflicts are reported with a button to take the other
+  version. The first sync shows a preview and waits for you. The pill announces a lesson 5 minutes ahead
+  and deadlines due today; the notch opens to Hari ini each morning; nudges before deadlines.
+  *Settings → Calendar & Notion*, `islet today`
 - **Finder**: find files and folders from the notch, Listary-style. `Mod+G` / `islet find`, type part of a
   name (`isw` → islet-windows); Enter opens (folders in your file manager), Ctrl+T terminal there, Ctrl+E
   editor, Alt+Enter containing folder, Ctrl+C copy path. Projects and what you open often rank first.

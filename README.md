@@ -157,6 +157,37 @@ Prefer the terminal? `islet set glow 0.9`, `islet get offsetMs`. Settings live i
 
 ---
 
+## 📅 Hari ini — lessons, deadlines, Google Calendar
+
+The notch's **Hari ini** tab shows today's lessons (the current one marked *sekarang*) next to the
+deadlines that are close — from your **Notion** timetable and task list, plus Google Classroom
+assignments. Tick a deadline to mark it Done in Notion; type in *＋ Tugas baru* to add one.
+
+- **Two-way sync with Google Calendar**: each lesson becomes a weekly event, each task with a plan date
+  an event. Move one in Google Calendar and Notion follows, and the other way round. If the same thing
+  changed on both sides between two syncs, the later change wins and you're told (with a button to take
+  the other version back).
+- **No extra Google login**: Islet goes through [Dank Calendar](https://github.com/AvengeMedia/dankcalendar) (`dcal`),
+  which is already signed in. Islet only ever touches events it made.
+- **Hard to forget**: the pill says *KKA · mulai 5 mnt lagi* before a lesson and shows deadlines due
+  today; the notch opens to Hari ini at your first activity each morning; a nudge comes 3 hours before a
+  deadline with a time.
+
+Set it up in *Settings → Calendar & Notion*: Islet finds your timetable and task databases and their
+columns by itself (fix them there if it guessed wrong), shows what the first sync will create, and
+starts only when you press **Confirm**. It uses the same Notion integration as the Checklist — share
+your Notion page with it (••• → Connections).
+
+```
+islet today                 what Islet sees (Notion, Dank Calendar, sync)
+islet today list            today's lessons and deadlines
+islet today add "Laporan"   a new task in Notion
+islet today preview|sync    what the next sync would do / sync now
+islet notch today           open the tab
+```
+
+---
+
 ## 🔎 Finder
 
 Find any file or folder from the notch, Listary-style. Press **Mod+G** (or run `islet find`), type part of
@@ -184,7 +215,8 @@ adds the Mod+G shortcut to niri for you (`islet find --bind`). Other compositors
 ```
 islet setup                                     the setup guide
 islet settings [page | words]                   open settings, on a page or searching: islet settings youtube
-islet notch [media|focus|checklist|shelf|viz]   toggle the notch / open a tab / visualizer
+islet notch [media|focus|checklist|shelf|today|viz]   toggle the notch / open a tab / visualizer
+islet today [list|add text|preview|sync]        lessons and deadlines (Notion ⇄ Google Calendar)
 islet find [text]                               Finder (also: --open/--copy text, --print text, --reindex, --status, --bind)
 islet shelf [FILE…|clear]                       put files on the shelf (no files = list)
 islet share [copy|save]                         share card of the song playing now
