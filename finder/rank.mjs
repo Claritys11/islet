@@ -195,3 +195,25 @@ export function actionCommand(action, entry, apps) {
         return [entry.kind === "dir" && fm ? fm : "xdg-open", path];
     }
 }
+
+// Islet's own places, found by typing their name: the notch tabs, Settings,
+// the lyrics overlay. A command shows when the query starts its name or an
+// alias (or a word of one), two letters at least, so files aren't crowded.
+const COMMANDS = [
+    { cmd: "tab:media", name: "Media", short: "Notch · lagu dan lirik", icon: "music_note", aliases: ["musik", "music", "lagu", "lirik", "lyrics", "player"] },
+    { cmd: "tab:focus", name: "Pomodoro", short: "Notch · timer fokus", icon: "timer", aliases: ["focus", "fokus", "timer", "belajar"] },
+    { cmd: "tab:checklist", name: "Checklist", short: "Notch · daftar tugas", icon: "checklist", aliases: ["ceklis", "todo", "to do", "tasks", "notion"] },
+    { cmd: "tab:shelf", name: "Shelf", short: "Notch · file yang disimpan", icon: "inventory_2", aliases: ["rak", "taruh", "simpan file"] },
+    { cmd: "tab:today", name: "Hari ini", short: "Notch · pelajaran dan tenggat", icon: "event_note", aliases: ["today", "jadwal", "pelajaran", "tenggat", "deadline", "kalender", "calendar"] },
+    { cmd: "lyrics", name: "Lirik di layar", short: "Tampilkan atau sembunyikan lirik besar", icon: "lyrics", aliases: ["lyrics overlay", "lirik layar", "lyric wheel"] },
+    { cmd: "settings", name: "Settings", short: "Pengaturan Islet", icon: "settings", aliases: ["pengaturan", "setelan", "preferences"] }
+];
+
+export function commands(q) {
+    const query = q.trim().toLowerCase().replace(/\s+/g, " ");
+    if (query.length < 2)
+        return [];
+    const starts = s => s.startsWith(query) || s.split(" ").some((_, i, w) => w.slice(i).join(" ").startsWith(query));
+    return COMMANDS.filter(c => [c.name.toLowerCase()].concat(c.aliases).some(starts))
+        .map(({ cmd, name, short, icon }) => ({ kind: "cmd", cmd, name, short, icon, path: `islet:${cmd}`, positions: [], project: false }));
+}

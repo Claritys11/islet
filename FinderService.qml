@@ -45,6 +45,8 @@ Singleton {
     signal openRequested(string prefill)
     // An action ran (the view closes on everything but "copy").
     signal acted(string action)
+    // A command result (a notch tab, Settings…) was chosen: shell.qml runs it.
+    signal commandRequested(string cmd)
 
     // ── Index ─────────────────────────────────────────────────────
     function roots() {
@@ -255,7 +257,8 @@ Singleton {
     // Folders show as soon as they're in; files join when they arrive.
     function publish(q) {
         const all = (_dirHits ?? []).concat(_fileHits ?? []);
-        results = Rank.rank(q, all, Store.db.finderHistory ?? {}, Date.now()).slice(0, 50).map(present);
+        // Islet's own tabs and pages first, then files and folders.
+        results = Rank.commands(q).concat(Rank.rank(q, all, Store.db.finderHistory ?? {}, Date.now()).slice(0, 50).map(present));
         _shownFor = q;
         if (_dirHits !== null && _fileHits !== null) {
             _doneFor = q;
@@ -307,6 +310,11 @@ Singleton {
         const entry = results[index];
         if (!entry)
             return;
+        if (entry.kind === "cmd") {
+            if (action === "open")
+                commandRequested(entry.cmd);
+            return;
+        }
         if (action === "copy") {
             if (!_available.includes("wl-copy")) {
                 flash("Install wl-clipboard to copy paths");

@@ -64,6 +64,8 @@ Item {
     }
 
     function kindIcon(r) {
+        if (r.kind === "cmd")
+            return r.icon;
         if (r.kind === "dir")
             return r.project ? "folder_special" : "folder";
         return ShelfService.icon({ name: r.name, dir: false });
@@ -172,7 +174,7 @@ Item {
                         spacing: 10
                         Text {
                             text: root.kindIcon(row.modelData)
-                            color: row.modelData.kind === "dir" ? Theme.primary : Theme.subtext
+                            color: row.modelData.kind === "dir" || row.modelData.kind === "cmd" ? Theme.primary : Theme.subtext
                             font.family: Theme.iconFont
                             font.pixelSize: 20
                         }

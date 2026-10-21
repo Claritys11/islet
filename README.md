@@ -193,7 +193,8 @@ islet notch today           open the tab
 ## 🔎 Finder
 
 Find any file or folder from the notch, Listary-style. Press **Mod+G** (or run `islet find`) — the notch
-opens, and typing starts Finder; Mod+G again closes it. Type part of a name — `isw` finds `islet-windows`, `lyrics qml` finds `LyricsService.qml` — and pick a result:
+opens, and typing starts Finder; Mod+G again closes it. Islet's own places come first: `pomo` opens the
+Pomodoro tab, `hari ini` / `jadwal` Hari ini, `shelf`, `ceklis`, `lirik`, `settings`. Type part of a name — `isw` finds `islet-windows`, `lyrics qml` finds `LyricsService.qml` — and pick a result:
 
 | Key | Does |
 |---|---|

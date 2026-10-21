@@ -276,6 +276,18 @@ ShellRoot {
             else
                 shell.notch?.find(prefill);
         }
+        // "pomo" + Enter in Finder: that tab, Settings, or the lyrics.
+        function onCommandRequested(cmd) {
+            if (cmd.startsWith("tab:")) {
+                shell.notch?.open(shell.tabs.indexOf(cmd.slice(4)));
+                return;
+            }
+            shell.notch?.close();
+            if (cmd === "settings")
+                shell.openSettings();
+            else if (cmd === "lyrics")
+                shell.hidden = !shell.hidden;
+        }
     }
 
     // While Finder has the keyboard, or the notch was opened by a click and
