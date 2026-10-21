@@ -49,14 +49,14 @@ test("new lesson creates a weekly series from this week", () => {
     assert.equal(ev.title, "L-p1");
     assert.equal(new Date(ev.start).toISOString(), new Date("2026-10-20T07:00:00+07:00").toISOString());
     assert.equal(new Date(ev.end).toISOString(), new Date("2026-10-20T08:30:00+07:00").toISOString());
-    assert.deepEqual(ev.recurrence, ["RRULE:FREQ=WEEKLY;BYDAY=TU"]);
+    assert.deepEqual(ev.recurrence, ["FREQ=WEEKLY;BYDAY=TU"]);
     assert.match(ev.description, new RegExp(`${TAG}p1$`));
     assert.equal(r.state.pairs.p1.kind, "lesson");
 });
 
 test("semester end adds UNTIL", () => {
     const r = run({ lessons: [lesson("p1")], opts: { ...opts, semesterEnd: "2026-12-19" } });
-    assert.deepEqual(r.actions[0].event.recurrence, ["RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL=20261219T165959Z"]);
+    assert.deepEqual(r.actions[0].event.recurrence, ["FREQ=WEEKLY;BYDAY=TU;UNTIL=20261219T165959Z"]);
 });
 
 test("new task with Rencana Mulai creates an all-day event and sets GCal ID", () => {
@@ -91,7 +91,7 @@ test("Notion change updates the event", () => {
     const r = run({ ...s, lessons: [lesson("p1", "Rabu", "09:00", "10:00", 50)] });
     assert.deepEqual(ops(r), ["updateEvent"]);
     assert.equal(new Date(r.actions[0].event.start).toISOString(), new Date("2026-10-21T09:00:00+07:00").toISOString());
-    assert.deepEqual(r.actions[0].event.recurrence, ["RRULE:FREQ=WEEKLY;BYDAY=WE"]);
+    assert.deepEqual(r.actions[0].event.recurrence, ["FREQ=WEEKLY;BYDAY=WE"]);
 });
 
 test("Google change updates Notion", () => {
@@ -312,5 +312,5 @@ test("a semester end set later reaches existing series", () => {
     s.events = s.events.map(e => ({ ...e, rrule: "RRULE:FREQ=WEEKLY;BYDAY=TU" }));
     const r = runW({ ...s, opts: { ...opts, semesterEnd: "2026-12-19" } });
     assert.deepEqual(ops(r), ["updateEvent"]);
-    assert.deepEqual(r.actions[0].event.recurrence, ["RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL=20261219T165959Z"]);
+    assert.deepEqual(r.actions[0].event.recurrence, ["FREQ=WEEKLY;BYDAY=TU;UNTIL=20261219T165959Z"]);
 });

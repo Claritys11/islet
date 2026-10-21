@@ -594,7 +594,7 @@ Singleton {
         case "updateEvent":
             return DcalService.call("events.update", Object.assign({ id: a.eventId }, eventParams(a.event)), cb);
         case "endSeries": {
-            const rule = (rrules[a.eventId] || "").replace(/;UNTIL=[^;]*/, "");
+            const rule = (rrules[a.eventId] || "").replace(/^RRULE:/, "").replace(/;UNTIL=[^;]*/, "");
             return DcalService.call("events.update", { id: a.eventId, recurrence: `${rule};UNTIL=${untilStamp(a.until)}` }, cb);
         }
         case "deleteEvent":

@@ -78,7 +78,8 @@ function eventFields(ev, kind) {
 
 // ── What to send to Google ────────────────────────────────────────
 function rrule(hari, semesterEnd) {
-    let r = `RRULE:FREQ=WEEKLY;BYDAY=${BYDAY[hariIndex(hari)]}`;
+    // Without "RRULE:": Dank Calendar adds it (Google refuses it doubled).
+    let r = `FREQ=WEEKLY;BYDAY=${BYDAY[hariIndex(hari)]}`;
     // The last second of that day, local, in iCalendar's UTC form.
     if (semesterEnd)
         r += `;UNTIL=${new Date(midnight(semesterEnd, 1) - 1000).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z")}`;
