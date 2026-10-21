@@ -204,7 +204,13 @@ Notion isn't connected to Google Calendar yet. The user wants three things:
     sync succeeded). A dcal hiccup or logout therefore never wipes Notion data. *(Claude's call.)*
 - **`Tenggat`** is **not** made into its own event (the calendar would be cluttered); it lives in
   Islet. The GCal ID column stores the event id of the Rencana Mulai event.
-- **Conflicts:** when both sides changed since the last sync, **the last edit wins**.
+- **Conflicts:** the user will edit on both sides, usually at different times; those edits must
+  all sync, both ways. A conflict means **the same item changed on both sides between two syncs**,
+  with different values. Then **the last edit wins, and the user is always told** (they asked for this):
+  - a notification, e.g. "Tabrakan: Laporan IoT — dipakai versi Google (20.00), versi Notion (19.00)";
+  - a list of recent conflicts in the Today tab header and on the settings page, each with a
+    **"Pakai versi yang satunya"** ("use the other version") button that restores the losing side;
+  - conflicts kept for 7 days.
   - **Detecting changes:** Islet keeps a snapshot of each linked pair (the fields it syncs, as they
     were at the last sync) and compares both sides with it.
   - **Edit times:** dcal's `events.list` returns `id, uid, recurringId, calendarId, summary,
@@ -245,6 +251,10 @@ Notion isn't connected to Google Calendar yet. The user wants three things:
     Classroom; they can't be ticked.
 - **Ticking a task** sets `Status = Done` (optimistic, with rollback on error, like the existing
   Checklist).
+- **Schedule clashes** (two things overlapping in time, e.g. a task's Rencana Mulai during a lesson)
+  are allowed but marked with a "bentrok" ("clash") label on both items in the Today tab. No
+  notification is sent; the user asked to be told about clashes, and the label does that without
+  nagging. *(Claude's call on the form.)*
 - **"＋ tugas baru"** creates a Notion task with `Tipe` defaulting to Sekolah, and optionally a
   Tenggat via a small date or time picker.
 - **Pill priority:** an existing toast, then a lesson starting within 5 minutes, then the current
