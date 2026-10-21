@@ -46,7 +46,7 @@ ShellRoot {
         }
         // A page name opens that page; anything else searches settings.
         function open(page: string): void {
-            const i = ["overview", "lyrics", "notch", "focus", "checklist", "about"].indexOf(page.toLowerCase());
+            const i = ["overview", "lyrics", "notch", "focus", "checklist", "finder", "about"].indexOf(page.toLowerCase());
             shell.settingsQuery = i >= 0 ? "" : page;
             shell.openSettings(Math.max(0, i));
         }
@@ -116,6 +116,35 @@ ShellRoot {
         function status(): string {
             const n = shell.notch;
             return n ? `mode ${n.mode}  away ${n.away}  visualizer ${n.vizWanted}` : "notch off";
+        }
+    }
+
+    // Finder: `islet find [text]`, `islet find --reindex`, `islet find --print text`.
+    IpcHandler {
+        target: "finder"
+
+        function open(q: string): void {
+            FinderService.openRequested(q);
+        }
+        function reindex(): void {
+            FinderService.reindex();
+        }
+        // Starts a search without showing anything; read it with results().
+        function search(q: string): void {
+            FinderService.begin(q);
+        }
+        function results(q: string): string {
+            return FinderService.resultsFor(q);
+        }
+        // Search and act on the best match without showing Finder:
+        // `islet find --open|--copy text`.
+        function pick(q: string, action: string): void {
+            FinderService.begin(q);
+            FinderService.act(0, action);
+        }
+        function status(): string {
+            const f = FinderService;
+            return `${f.status}  ${f.counts.dirs} folders  ${f.counts.files} files  indexed ${f.indexedAt ? Math.round((Date.now() - f.indexedAt) / 1000) + " s ago" : "never"}`;
         }
     }
 
@@ -192,7 +221,39 @@ ShellRoot {
     Binding {
         target: IsletLink
         property: "notchOpen"
-        value: shell.notch?.mode === "open"
+        value: shell.notch?.mode === "open" || shell.notch?.mode === "find"
+    }
+
+    Connections {
+        target: FinderService
+        function onOpenRequested(prefill) {
+            shell.notch?.find(prefill);
+        }
+    }
+
+    // While Finder has the keyboard, a click anywhere else closes it (like a
+    // popup), so the keyboard is never stuck in Islet.
+    // One per screen: a click on another monitor closes it too.
+    Variants {
+        model: shell.notch?.mode === "find" ? Quickshell.screens : []
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+            anchors.top: true
+            anchors.bottom: true
+            anchors.left: true
+            anchors.right: true
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.namespace: "islet-finder-backdrop"
+            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.AllButtons
+                onPressed: shell.notch?.close()
+            }
+        }
     }
 
     Connections {

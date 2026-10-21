@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Mpris
 
 // Islet settings. Every change applies live, is saved to
@@ -48,6 +49,7 @@ FloatingWindow {
         { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose", "notchCloseDelay", "vizMode", "vizIdleSeconds", "weatherEnabled", "weatherCity", "weatherUnit"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes", "breakTips"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
+        { icon: "search", title: "Finder", subtitle: "Find files and folders", keys: ["finderRoots", "finderExclude", "finderHidden", "finderFileManager", "finderTerminal", "finderEditor", "finderReindexMinutes"] },
         { icon: "info", title: "About", subtitle: "Updates, files, shortcuts", keys: ["checkUpdates"] }
     ]
 
@@ -83,6 +85,9 @@ FloatingWindow {
 
     // Questions people actually ask, with the answer and where to go.
     readonly property var guides: [
+        { words: "find search file files folder folders listary launcher locate project dolphin open", title: "Find a file or folder", answer: "Press Mod+G (or run 'islet find'), type part of the name — \"isw\" finds islet-windows — and press Enter. Ctrl+T opens a terminal there, Ctrl+E the editor.", key: "finderRoots" },
+        { words: "keybind shortcut hotkey key mod+g finder", title: "Shortcut for Finder", answer: "Press 'Set it up' on the Finder page: it adds Mod+G to niri for you.", key: "finderTerminal" },
+        { words: "terminal ghostty kitty vscode code editor", title: "Open results in another terminal or editor", answer: "Type the program on the Finder page; empty picks one that's installed.", key: "finderTerminal" },
         { words: "youtube music yt browser chrome chromium firefox brave web video", title: "Use YouTube or YouTube Music", answer: "Nothing to set up: play it in your browser and Islet follows it. If several things play at once, the preferred player wins.", key: "player" },
         { words: "spotify spicy spicetify exact timing syllable", title: "Exact timing with Spicy Lyrics (Spotify)", answer: "Run 'islet spicetify' once in a terminal (Spotify restarts). Then the source below says Spicy Lyrics.", key: "lyricsSource" },
         { words: "early late fast slow sync out off delay offset ahead behind timing too", title: "Lyrics too early or too late", answer: "Move the timing offset. Positive shows lines earlier.", key: "offsetMs" },
@@ -1844,6 +1849,124 @@ FloatingWindow {
                                 color: ChecklistService.status === "error" ? Theme.danger : ChecklistService.status === "ready" ? "#a5d6a7" : win.subtext
                                 text: ChecklistService.status === "ready" ? `Connected ✓ · ${ChecklistService.items.length} to-dos` : ChecklistService.status === "loading" ? "Connecting…" : ChecklistService.error
                             }
+                        }
+                    }
+                }
+
+                // ── Finder ────────────────────────────────────────
+                Page {
+                    Card {
+                        title: "Shortcut"
+                        hint: "Finder opens from the notch: type part of a name, Enter opens it. Ctrl+T terminal · Ctrl+E editor · Alt+Enter containing folder · Ctrl+C copy path."
+                        // Asks first: the second click writes the niri config.
+                        Row_ {
+                            id: bindRow
+                            property bool confirming: false
+                            label: "Open Finder with Mod+G"
+                            hint: bindResult.text.trim() !== "" ? bindResult.text.trim() : bindRow.confirming ? "This adds one line to your niri keybinds (a backup is kept) and checks it with niri. Go ahead?" : "Islet can add the shortcut to niri for you."
+                            RowLayout {
+                                Button {
+                                    visible: bindRow.confirming
+                                    text: "Cancel"
+                                    flat: true
+                                    onClicked: bindRow.confirming = false
+                                }
+                                Button {
+                                    text: bindRow.confirming ? "Yes, add it" : "Set it up"
+                                    enabled: !bindProc.running
+                                    onClicked: {
+                                        if (!bindRow.confirming) {
+                                            bindRow.confirming = true;
+                                            return;
+                                        }
+                                        bindRow.confirming = false;
+                                        bindProc.running = true;
+                                    }
+                                }
+                            }
+                        }
+                        Process {
+                            id: bindProc
+                            command: ["sh", decodeURIComponent(String(Qt.resolvedUrl("bin/islet")).replace(/^file:\/\//, "")), "find", "--bind"]
+                            stdout: StdioCollector {
+                                id: bindResult
+                            }
+                        }
+                        // Selectable, to copy into another compositor's config.
+                        TextEdit {
+                            Layout.fillWidth: true
+                            readOnly: true
+                            selectByMouse: true
+                            wrapMode: Text.WordWrap
+                            text: "Hyprland: bind = SUPER, G, exec, islet find\nSway: bindsym $mod+g exec islet find"
+                            color: win.subtext
+                            selectionColor: win.accent
+                            font.family: win.font
+                            font.pixelSize: 12
+                        }
+                    }
+                    Card {
+                        title: "What to search"
+                        TextSetting {
+                            key: "finderRoots"
+                            label: "Search in"
+                            hint: "Folders, separated by commas. ~ is your home."
+                        }
+                        TextSetting {
+                            key: "finderExclude"
+                            label: "Skip folders named"
+                            hint: "Separated by commas. **/a/b skips a/b anywhere."
+                        }
+                        SwitchSetting {
+                            key: "finderHidden"
+                            label: "Include hidden files"
+                            hint: "Files and folders whose names start with a dot."
+                        }
+                        SliderSetting {
+                            key: "finderReindexMinutes"
+                            label: "Look for new files every"
+                            from: 2
+                            to: 60
+                            stepSize: 1
+                            decimals: 0
+                            unit: " min"
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Button {
+                                text: "Rebuild now"
+                                enabled: FinderService.status !== "indexing"
+                                onClicked: FinderService.reindex()
+                            }
+                            Label {
+                                Layout.fillWidth: true
+                                font.family: win.font
+                                font.pixelSize: 12
+                                color: FinderService.status === "missing-tools" ? Theme.danger : win.subtext
+                                text: FinderService.status === "missing-tools" ? "Install fd and fzf to use Finder." : FinderService.status === "indexing" ? "Indexing…" : `${FinderService.counts.dirs.toLocaleString()} folders and ${FinderService.counts.files.toLocaleString()} files`
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Open with"
+                        hint: "Leave a box empty to use what's installed."
+                        TextSetting {
+                            key: "finderFileManager"
+                            label: "Folders (Enter)"
+                            hint: `Empty: your default file manager${FinderService.apps.fileManager ? " (" + FinderService.apps.fileManager + ")" : ""}`
+                            placeholder: "dolphin"
+                        }
+                        TextSetting {
+                            key: "finderTerminal"
+                            label: "Terminal (Ctrl+T)"
+                            hint: `Empty: ${FinderService.apps.terminal || "none found"}`
+                            placeholder: "ghostty"
+                        }
+                        TextSetting {
+                            key: "finderEditor"
+                            label: "Editor (Ctrl+E)"
+                            hint: `Empty: ${FinderService.apps.editor || "none found"}`
+                            placeholder: "code"
                         }
                     }
                 }

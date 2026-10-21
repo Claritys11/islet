@@ -65,7 +65,7 @@ health checks, and keybinds for niri, Hyprland and Sway.
 | **Desktop** | Wayland with layer-shell: **niri, Hyprland, Sway, KDE Plasma, river, Wayfire, labwc** |
 | **Quickshell** | 0.2 or newer — `pacman -S quickshell` (already there if you use DankMaterialShell) |
 | **Music** | Spotify desktop or any [MPRIS](https://specifications.freedesktop.org/mpris-spec/latest/) player (browsers, mpv, Tidal-hifi, …) |
-| Optional | [`cava`](https://github.com/karlstav/cava) for a real audio visualizer |
+| Optional | [`cava`](https://github.com/karlstav/cava) for a real audio visualizer · [`fd`](https://github.com/sharkdp/fd) and [`fzf`](https://github.com/junegunn/fzf) for Finder |
 
 > **Windows, macOS, GNOME?** Islet is built on Quickshell, which only runs on Linux Wayland compositors
 > that support layer-shell — GNOME, X11, Windows and macOS can't host it. On macOS, try
@@ -157,12 +157,35 @@ Prefer the terminal? `islet set glow 0.9`, `islet get offsetMs`. Settings live i
 
 ---
 
+## 🔎 Finder
+
+Find any file or folder from the notch, Listary-style. Press **Mod+G** (or run `islet find`), type part of
+a name — `isw` finds `islet-windows`, `lyrics qml` finds `LyricsService.qml` — and pick a result:
+
+| Key | Does |
+|---|---|
+| **Enter** | folder → your file manager (Dolphin…), file → its default app |
+| **Ctrl+T** | a terminal in that folder (Ghostty, kitty, foot, Alacritty, Konsole…) |
+| **Ctrl+E** | open it in your editor (VS Code, VSCodium, Zed) |
+| **Alt+Enter** | the folder that contains it |
+| **Ctrl+C** | copy the path |
+
+Project folders (with `.git`) and the things you open often come first; with nothing typed you see what
+you opened lately. Islet keeps its own index of your home (built with `fd`, searched with `fzf`), refreshed
+every 10 minutes — junk like `node_modules`, `venv`, Go's module cache and hidden files is skipped.
+
+*Settings → Finder* sets the folders to search, what to skip, and which apps open things; **Set it up**
+adds the Mod+G shortcut to niri for you (`islet find --bind`). Other compositors: bind a key to `islet find`.
+
+---
+
 ## ⌨️ Command line & keybinds
 
 ```
 islet setup                                     the setup guide
 islet settings [page | words]                   open settings, on a page or searching: islet settings youtube
 islet notch [media|focus|checklist|shelf|viz]   toggle the notch / open a tab / visualizer
+islet find [text]                               Finder (also: --open/--copy text, --print text, --reindex, --status, --bind)
 islet shelf [FILE…|clear]                       put files on the shelf (no files = list)
 islet share [copy|save]                         share card of the song playing now
 islet toggle | show | hide                      the lyrics overlay
@@ -183,6 +206,7 @@ binds {
     Mod+Ctrl+L  { spawn "islet" "settings"; }
     Mod+N       { spawn "islet" "notch"; }
     Mod+Alt+P   { spawn "islet" "pomodoro" "toggle"; }
+    Mod+G       { spawn "islet" "find"; }
 }
 
 window-rule {
@@ -199,6 +223,7 @@ window-rule {
 bind = SUPER SHIFT, L, exec, islet toggle
 bind = SUPER, N, exec, islet notch
 bind = SUPER ALT, P, exec, islet pomodoro toggle
+bind = SUPER, G, exec, islet find
 windowrulev2 = float, title:^(Islet Settings)$
 ```
 </details>
@@ -209,6 +234,7 @@ windowrulev2 = float, title:^(Islet Settings)$
 ```
 bindsym $mod+Shift+l exec islet toggle
 bindsym $mod+n exec islet notch
+bindsym $mod+g exec islet find
 for_window [title="^Islet Settings$"] floating enable
 ```
 </details>

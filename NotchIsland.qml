@@ -41,6 +41,8 @@ Item {
     readonly property size target: {
         if (mode === "open")
             return Qt.size(o.notchWidth, o.notchHeight);
+        if (mode === "find")
+            return Qt.size(o.notchWidth, finderHeight);
         if (mode === "peek")
             return Qt.size(430, 92);
         if (mode === "viz")
@@ -56,7 +58,9 @@ Item {
     // Pinned (📌), on the Shelf tab, or with files being dragged over it,
     // the island stays open after the mouse leaves; close it with ⌃ or Esc.
     property bool pinned: false
-    readonly property bool keepOpen: pinned || (mode === "open" && tab === 3) || drop.containsDrag
+    readonly property bool keepOpen: pinned || (mode === "open" && tab === 3) || mode === "find" || drop.containsDrag
+    // Finder: the search box, 8 results and the key hints.
+    readonly property real finderHeight: 64 + 8 * 44 + 34
 
     function close() {
         mode = "closed";
@@ -70,7 +74,13 @@ Item {
     }
 
     function toggle() {
-        mode === "open" ? close() : open();
+        mode === "open" || mode === "find" ? close() : open();
+    }
+
+    // Finder (`islet find`), optionally with text already typed.
+    function find(prefill) {
+        mode = "find";
+        finder.start(prefill ?? "");
     }
 
     // Visualizer mode by hand (it also comes on by itself when you're away).
@@ -98,7 +108,7 @@ Item {
     }
 
     implicitWidth: Math.max(o.notchWidth, 430) + 80
-    implicitHeight: o.notchHeight + 50
+    implicitHeight: Math.max(o.notchHeight, finderHeight) + 50
 
     Timer {
         id: hoverTimer
@@ -147,7 +157,7 @@ Item {
         Rectangle {
             id: shape
 
-            readonly property real r: win.mode === "open" ? 30 : win.mode === "peek" || win.mode === "viz" ? 26 : height / 2
+            readonly property real r: win.mode === "open" || win.mode === "find" ? 30 : win.mode === "peek" || win.mode === "viz" ? 26 : height / 2
 
             anchors.horizontalCenter: parent.horizontalCenter
             y: 0
@@ -229,7 +239,7 @@ Item {
             }
 
             TapHandler {
-                enabled: win.mode !== "open"
+                enabled: win.mode !== "open" && win.mode !== "find"
                 onTapped: win.mode === "viz" ? win.close() : win.open(win.hasMusic ? 0 : win.hasTimer ? 1 : win.tab)
             }
 
@@ -566,9 +576,26 @@ Item {
                 }
             }
 
+            // ── Finder ────────────────────────────────────────────
+            FinderView {
+                id: finder
+                anchors.fill: parent
+                anchors.margins: 16
+                anchors.topMargin: 12
+                anchors.bottomMargin: 10
+                opacity: win.mode === "find" ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 200
+                    }
+                }
+                onCloseRequested: win.close()
+            }
+
             Shortcut {
                 sequence: "Escape"
-                enabled: win.mode === "open"
+                enabled: win.mode === "open" || win.mode === "find"
                 onActivated: win.close()
             }
         }

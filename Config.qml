@@ -116,6 +116,14 @@ Singleton {
             // Checklist
             checklistSource: "local",
             notionPage: "",
+            // Finder (find files and folders)
+            finderRoots: "~",
+            finderExclude: "node_modules,venv,.venv,__pycache__,target,build,dist,.cache,.git,vendor,**/pkg/mod",
+            finderHidden: false,
+            finderFileManager: "",
+            finderTerminal: "",
+            finderEditor: "",
+            finderReindexMinutes: 10,
             // Readability & behaviour
             shadow: true,
             backdrop: 0.35,
@@ -291,6 +299,14 @@ Singleton {
 
             property string checklistSource: root.defaults.checklistSource
             property string notionPage: root.defaults.notionPage
+
+            property string finderRoots: root.defaults.finderRoots
+            property string finderExclude: root.defaults.finderExclude
+            property bool finderHidden: root.defaults.finderHidden
+            property string finderFileManager: root.defaults.finderFileManager
+            property string finderTerminal: root.defaults.finderTerminal
+            property string finderEditor: root.defaults.finderEditor
+            property int finderReindexMinutes: root.defaults.finderReindexMinutes
 
             property bool shadow: root.defaults.shadow
             property real backdrop: root.defaults.backdrop
