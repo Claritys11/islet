@@ -1,0 +1,356 @@
+{
+ "databases": [
+  {
+   "object": "database",
+   "id": "old-jadwal",
+   "title": [
+    {
+     "plain_text": "🗓️ Jadwal Pelajaran"
+    }
+   ],
+   "last_edited_time": "2026-09-16T14:43:00.000Z",
+   "properties": {
+    "Mata Pelajaran": {
+     "type": "title"
+    },
+    "Hari": {
+     "type": "select",
+     "select": {
+      "options": [
+       {
+        "name": "Pagi"
+       },
+       {
+        "name": "Siang"
+       }
+      ]
+     }
+    },
+    "Ruang": {
+     "type": "rich_text"
+    }
+   }
+  },
+  {
+   "object": "database",
+   "id": "jadwal",
+   "title": [
+    {
+     "plain_text": "Jadwal Pelajaran"
+    }
+   ],
+   "last_edited_time": "2026-10-14T14:37:00.000Z",
+   "properties": {
+    "Slot": {
+     "type": "title"
+    },
+    "Hari": {
+     "type": "select",
+     "select": {
+      "options": [
+       {
+        "name": "Senin"
+       },
+       {
+        "name": "Selasa"
+       },
+       {
+        "name": "Rabu"
+       },
+       {
+        "name": "Kamis"
+       },
+       {
+        "name": "Jumat"
+       },
+       {
+        "name": "Sabtu"
+       }
+      ]
+     }
+    },
+    "Jam": {
+     "type": "rich_text"
+    },
+    "Mapel": {
+     "type": "relation"
+    },
+    "Guru": {
+     "type": "rich_text"
+    },
+    "Kapan": {
+     "type": "formula"
+    },
+    "Hari ini?": {
+     "type": "formula"
+    }
+   }
+  },
+  {
+   "object": "database",
+   "id": "old-tugas",
+   "title": [
+    {
+     "plain_text": "📚 Tugas Sekolah"
+    }
+   ],
+   "last_edited_time": "2026-09-16T14:43:00.000Z",
+   "properties": {
+    "Nama": {
+     "type": "title"
+    },
+    "Selesai": {
+     "type": "checkbox"
+    },
+    "Mapel": {
+     "type": "select"
+    }
+   }
+  },
+  {
+   "object": "database",
+   "id": "tasks",
+   "title": [
+    {
+     "plain_text": "Tasks"
+    }
+   ],
+   "last_edited_time": "2026-10-14T21:42:00.000Z",
+   "properties": {
+    "Tugas": {
+     "type": "title"
+    },
+    "Status": {
+     "type": "status"
+    },
+    "Tipe": {
+     "type": "select"
+    },
+    "Prioritas": {
+     "type": "select"
+    },
+    "Rencana Mulai": {
+     "type": "date"
+    },
+    "Tenggat": {
+     "type": "date"
+    },
+    "Mapel": {
+     "type": "relation"
+    },
+    "Project": {
+     "type": "relation"
+    },
+    "GCal ID": {
+     "type": "rich_text"
+    },
+    "Selesai?": {
+     "type": "formula"
+    },
+    "Sisa waktu": {
+     "type": "formula"
+    }
+   }
+  },
+  {
+   "object": "database",
+   "id": "notes",
+   "title": [
+    {
+     "plain_text": "Notes"
+    }
+   ],
+   "last_edited_time": "2026-10-14T21:42:00.000Z",
+   "properties": {
+    "Name": {
+     "type": "title"
+    },
+    "Tags": {
+     "type": "multi_select"
+    },
+    "Created": {
+     "type": "date"
+    }
+   }
+  }
+ ],
+ "rows": {
+  "lesson": {
+   "id": "p1",
+   "last_edited_time": "2026-10-14T14:37:00.000Z",
+   "properties": {
+    "Slot": {
+     "type": "title",
+     "title": [
+      {
+       "plain_text": "Selasa 1"
+      }
+     ]
+    },
+    "Hari": {
+     "type": "select",
+     "select": {
+      "name": "Selasa"
+     }
+    },
+    "Jam": {
+     "type": "rich_text",
+     "rich_text": [
+      {
+       "plain_text": "07.00-08.30"
+      }
+     ]
+    },
+    "Mapel": {
+     "type": "relation",
+     "relation": [
+      {
+       "id": "m1"
+      }
+     ]
+    },
+    "Guru": {
+     "type": "rich_text",
+     "rich_text": [
+      {
+       "plain_text": "Bu Sri"
+      }
+     ]
+    }
+   }
+  },
+  "badLesson": {
+   "id": "p2",
+   "last_edited_time": "2026-10-14T14:37:00.000Z",
+   "properties": {
+    "Slot": {
+     "type": "title",
+     "title": [
+      {
+       "plain_text": "?"
+      }
+     ]
+    },
+    "Hari": {
+     "type": "select",
+     "select": {
+      "name": "Rabu"
+     }
+    },
+    "Jam": {
+     "type": "rich_text",
+     "rich_text": [
+      {
+       "plain_text": "x"
+      }
+     ]
+    },
+    "Mapel": {
+     "type": "relation",
+     "relation": []
+    },
+    "Guru": {
+     "type": "rich_text",
+     "rich_text": []
+    }
+   }
+  },
+  "task": {
+   "id": "t1",
+   "last_edited_time": "2026-10-15T14:16:00.000Z",
+   "properties": {
+    "Tugas": {
+     "type": "title",
+     "title": [
+      {
+       "plain_text": "Laporan"
+      }
+     ]
+    },
+    "Status": {
+     "type": "status",
+     "status": {
+      "name": "To do"
+     }
+    },
+    "Tipe": {
+     "type": "select",
+     "select": {
+      "name": "Sekolah"
+     }
+    },
+    "Prioritas": {
+     "type": "select",
+     "select": {
+      "name": "Tinggi"
+     }
+    },
+    "Rencana Mulai": {
+     "type": "date",
+     "date": {
+      "start": "2026-10-22",
+      "end": null
+     }
+    },
+    "Tenggat": {
+     "type": "date",
+     "date": {
+      "start": "2026-10-23T23:59:00.000+07:00",
+      "end": null
+     }
+    },
+    "GCal ID": {
+     "type": "rich_text",
+     "rich_text": []
+    }
+   }
+  },
+  "doneTask": {
+   "id": "t2",
+   "last_edited_time": "2026-10-15T14:16:00.000Z",
+   "properties": {
+    "Tugas": {
+     "type": "title",
+     "title": [
+      {
+       "plain_text": "Kuis"
+      }
+     ]
+    },
+    "Status": {
+     "type": "status",
+     "status": {
+      "name": "Done"
+     }
+    },
+    "Tipe": {
+     "type": "select",
+     "select": null
+    },
+    "Prioritas": {
+     "type": "select",
+     "select": null
+    },
+    "Rencana Mulai": {
+     "type": "date",
+     "date": null
+    },
+    "Tenggat": {
+     "type": "date",
+     "date": {
+      "start": "2026-10-20",
+      "end": null
+     }
+    },
+    "GCal ID": {
+     "type": "rich_text",
+     "rich_text": [
+      {
+       "plain_text": "ev-9"
+      }
+     ]
+    }
+   }
+  }
+ }
+}
