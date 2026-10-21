@@ -29,6 +29,9 @@ Singleton {
     property var timetableMap: ({})
     property var tasksMap: ({})
     property real loadedAt: 0
+    // Every lesson's subject could be read (else lessons aren't synced: a
+    // fallback name would rename their events).
+    property bool titlesComplete: true
     property real now: Date.now()
 
     // Assignments from Google Classroom (read-only calendars), for deadlines.
@@ -82,7 +85,9 @@ Singleton {
         interval: 30000
         onTriggered: root._fakeSoon = null
     }
-    readonly property int dueToday: deadlines.filter(d => d.urgency === "today" || d.urgency === "overdue").length
+    // Due today, or overdue Notion tasks (Classroom items can't be ticked off
+    // here, so an overdue one would nag forever).
+    readonly property int dueToday: deadlines.filter(d => d.urgency === "today" || (d.urgency === "overdue" && d.source === "notion")).length
 
     function dbTitle(id) {
         const db = databases.find(d => d.id.replace(/-/g, "") === id.replace(/-/g, ""));
@@ -156,7 +161,8 @@ Singleton {
             for (const r of rows)
                 for (const rel of r.properties[m.mapel]?.relation ?? [])
                     ids.push(rel.id);
-            NotionDbService.pageTitles(ids, titles => {
+            NotionDbService.pageTitles(ids, (titles, complete) => {
+                titlesComplete = complete;
                 const read = rows.map(r => Notion.lessonFromRow(r, m, titles));
                 allLessons = read.filter(l => !l.error);
                 problems = read.filter(l => l.error);
@@ -184,7 +190,7 @@ Singleton {
     function statusName(group) {
         const db = databases.find(d => d.id === tasksDb);
         const prop = db?.properties?.[tasksMap.status]?.status;
-        const g = (prop?.groups ?? []).find(x => x.name.toLowerCase().replace(/ /g, "_") === group);
+        const g = (prop?.groups ?? []).find(x => x.name.toLowerCase().replace(/[\s-]/g, "_") === group);
         const opt = (prop?.options ?? []).find(o => g?.option_ids?.includes(o.id));
         return opt?.name ?? (group === "complete" ? "Done" : "To do");
     }
@@ -306,7 +312,7 @@ Singleton {
         if (ro.length === 0)
             return;
         const n = new Date();
-        DcalService.listEvents(new Date(n.getTime() - 7 * 864e5), new Date(n.getTime() + (o.todayDays + 1) * 864e5), "", (ok, evs) => {
+        DcalService.listEvents(new Date(n.getTime() - 864e5), new Date(n.getTime() + (o.todayDays + 1) * 864e5), "", (ok, evs) => {
             if (ok)
                 classroom = evs.filter(e => ro.includes(e.calendarId)).map(e => ({ id: e.id + e.start, title: e.summary, start: e.start, end: e.end, allDay: e.allDay }));
         });
@@ -335,7 +341,11 @@ Singleton {
         onTriggered: root.load()
     }
     onLoaded: {
-        checkMorning();
+        // Islet starting in the morning with you at the screen; otherwise
+        // the first activity (the IdleMonitor) does it.
+        const h = new Date().getHours();
+        if (!away.isIdle && h >= 4 && h < 12)
+            checkMorning();
         checkNudges();
         if (DcalService.available)
             sync();
@@ -347,6 +357,7 @@ Singleton {
     property string syncError: ""
     property real lastSync: 0
     property bool _syncing: false
+    property bool _reloading: false
     // The first sync's plan, shown before anything is written.
     property string previewText: ""
 
@@ -360,31 +371,58 @@ Singleton {
     readonly property var removedInGoogle: syncState.removed ?? []
     readonly property int linked: Object.values(syncState.pairs ?? {}).filter(p => p.eventId).length
 
+    // What isletEvents lists; events outside it don't count as missing.
+    function syncWindow() {
+        const n = Date.now();
+        return { from: new Date(n - 60 * 864e5), to: new Date(n + 400 * 864e5) };
+    }
+
     // Islet's events in the target calendar, one per series.
     function isletEvents(cb) {
-        const n = new Date();
-        DcalService.listEvents(new Date(n.getTime() - 60 * 864e5), new Date(n.getTime() + 400 * 864e5), Sync.TAG, (ok, evs) => {
+        const w = syncWindow();
+        DcalService.listEvents(w.from, w.to, Sync.TAG, (ok, evs) => {
             if (!ok)
                 return cb(false, evs);
-            const byId = {};
-            for (const e of evs) {
-                if (e.calendarId !== targetCalendar)
-                    continue;
-                const have = byId[e.id];
-                // The series' own first event, or else the earliest one seen.
-                if (!have || (e.recurringId === "" && have.recurringId !== "") || (have.recurringId !== "" && e.start < have.start))
-                    byId[e.id] = e;
-            }
-            cb(true, Object.values(byId).map(e => ({ id: e.id, title: e.summary, start: e.start, end: e.end, allDay: e.allDay, description: e.description, recurring: !!e.recurrence, rrule: e.recurrence?.rrule?.[0] ?? "" })));
+            // A series is listed once per week. It's represented by the time
+            // most of its weeks have, so one week moved in Google (a single
+            // exception) isn't taken for moving the whole series.
+            const groups = {};
+            for (const e of evs)
+                if (e.calendarId === targetCalendar)
+                    (groups[e.id] = groups[e.id] ?? []).push(e);
+            const pickOne = list => {
+                const sig = e => { const s = new Date(e.start), d = new Date(e.end); return `${s.getDay()} ${s.getHours()}:${s.getMinutes()} ${d - s}`; };
+                const count = {};
+                for (const e of list)
+                    count[sig(e)] = (count[sig(e)] ?? 0) + 1;
+                const best = Math.max(...Object.values(count));
+                const usual = list.filter(e => count[sig(e)] === best);
+                return usual.find(e => e.recurringId === "") ?? usual.sort((a, b) => a.start < b.start ? -1 : 1)[0];
+            };
+            cb(true, Object.values(groups).map(pickOne).map(e => ({ id: e.id, title: e.summary, start: e.start, end: e.end, allDay: e.allDay, description: e.description, recurring: !!e.recurrence, rrule: e.recurrence?.rrule?.[0] ?? "" })));
         });
     }
 
+    // Many removals at once are held until allowed (Settings → Allow).
+    property int held: 0
+    property bool _allowMass: false
+
     function makePlan(cb) {
-        if (!notionOk || targetCalendar === "")
-            return cb(null, targetCalendar === "" ? "No Google calendar to write to — is Dank Calendar signed in?" : error);
+        if (targetCalendar === "")
+            return cb(null, "No Google calendar to write to — is Dank Calendar signed in?");
+        if (!DcalService.healthy)
+            return cb(null, DcalService.error || "Dank Calendar isn't running");
+        if (!notionOk)
+            return cb(null, error);
+        if (!titlesComplete)
+            return cb(null, "Notion didn't send every subject's name; trying again next sync");
         isletEvents((ok, events) => {
             if (!ok)
                 return cb(null, events);
+            // A database Islet hasn't synced from before (or just switched
+            // to) only adds: removals need a complete, known side.
+            const dbs = syncState.dbs ?? {};
+            const known = (kind, id) => id !== "" && (dbs[kind] === undefined || dbs[kind] === id);
             const result = Sync.plan({
                 lessons: allLessons.concat(problems),
                 tasks,
@@ -392,10 +430,20 @@ Singleton {
                 state: syncState,
                 now: new Date(),
                 healthy: DcalService.healthy,
-                opts: { seriesFrom: new Date(), semesterEnd: o.todaySemesterEnd, eventMinutes: o.todayEventMinutes }
+                window: syncWindow(),
+                complete: { lesson: known("lesson", timetableDb), task: known("task", tasksDb) },
+                opts: { seriesFrom: new Date(), semesterEnd: o.todaySemesterEnd, eventMinutes: o.todayEventMinutes, allowMass: _allowMass }
             });
+            _allowMass = false;
+            held = result.held ?? 0;
             cb(result, "", events);
         });
+    }
+
+    // "Allow": run the held removals once.
+    function allowRemovals() {
+        _allowMass = true;
+        sync();
     }
 
     function summary(actions) {
@@ -428,7 +476,7 @@ Singleton {
     }
 
     function sync() {
-        if (!o.todayEnabled || !o.todaySync || _syncing)
+        if (!o.todayEnabled || !o.todaySync || _syncing || _reloading)
             return;
         if (!syncState.confirmed) {
             syncStatus = "waiting";
@@ -445,48 +493,77 @@ Singleton {
                 return;
             }
             applyAll(r, events, () => {
-                _syncing = false;
                 lastSync = Date.now();
-                // Notion rows Islet wrote: read them again so the next plan sees them.
-                loadTasks(() => {});
+                if (held > 0 && syncStatus === "done") {
+                    syncStatus = "held";
+                    syncError = `${held} event akan dihapus/diakhiri sekaligus — ditahan. Izinkan di Settings → Calendar & Notion.`;
+                }
+                // What Islet wrote to Notion: read it back before the next
+                // sync may run, so it isn't taken for a new change.
+                _reloading = true;
+                _syncing = false;
+                let left = 2;
+                const done = () => {
+                    if (--left === 0)
+                        _reloading = false;
+                };
+                loadTimetable(done);
+                loadTasks(done);
             });
         });
     }
 
-    // Applies the plan's actions one by one. If one fails, the rest wait for
-    // the next sync: their entries go back to what they were, so nothing is
-    // half done or done twice.
+    // Applies the plan's actions one by one, saving as it goes (a restart
+    // mid-sync keeps what was done). An action that fails is put back to how
+    // it was — its record, conflict and removal entries — and the rest go
+    // on; it's tried again next sync.
     function applyAll(result, events, done) {
         const before = syncState;
         const state = JSON.parse(JSON.stringify(result.state));
         state.calendar = targetCalendar;
         state.confirmed = true;
+        state.dbs = { lesson: timetableDb, task: tasksDb };
         const actions = result.actions;
         const rrules = {};
         for (const e of events)
             rrules[e.id] = e.rrule;
-        const finish = (failedAt, message) => {
-            if (failedAt >= 0) {
-                for (const a of actions.slice(failedAt)) {
-                    if (!a.pageId)
-                        continue;
-                    if (before.pairs?.[a.pageId])
-                        state.pairs[a.pageId] = before.pairs[a.pageId];
-                    else
-                        delete state.pairs[a.pageId];
-                }
-            }
-            Store.db.todaySync = state;
-            syncStatus = failedAt >= 0 ? "error" : "done";
-            syncError = message ?? "";
-            done();
+        const errors = [];
+        const undo = a => {
+            if (!a.pageId)
+                return;
+            if (before.pairs?.[a.pageId])
+                state.pairs[a.pageId] = before.pairs[a.pageId];
+            else
+                delete state.pairs[a.pageId];
+            state.removed = state.removed.filter(r => r.pageId !== a.pageId).concat((before.removed ?? []).filter(r => r.pageId === a.pageId));
+            state.conflicts = state.conflicts.filter(c => c.pageId !== a.pageId).concat((before.conflicts ?? []).filter(c => c.pageId === a.pageId));
         };
         const step = i => {
-            if (i >= actions.length)
-                return finish(-1);
-            applyOne(actions[i], state, rrules, (ok, err) => ok ? step(i + 1) : finish(i, err));
+            if (i >= actions.length) {
+                Store.db.todaySync = state;
+                syncStatus = errors.length ? "error" : "done";
+                syncError = errors.length ? `${errors.length} perubahan gagal: ${errors[0]}` : "";
+                return done();
+            }
+            applyOne(actions[i], state, rrules, (ok, err) => {
+                if (!ok) {
+                    undo(actions[i]);
+                    errors.push(err);
+                }
+                Store.db.todaySync = JSON.parse(JSON.stringify(state));
+                step(i + 1);
+            });
         };
         step(0);
+    }
+
+    // The timetable's own option for a weekday ("Jum'at" if that's how
+    // it's written there), so writing back adds no new option.
+    function hariOption(hari) {
+        const db = databases.find(d => d.id === timetableDb);
+        const opts = db?.properties?.[timetableMap.hari]?.select?.options ?? [];
+        const i = Timetable.hariIndex(hari);
+        return (opts.find(o => Timetable.hariIndex(o.name) === i) ?? { name: hari }).name;
     }
 
     function eventParams(ev) {
@@ -508,8 +585,12 @@ Singleton {
                 state.pairs[a.pageId].eventId = ev.id;
                 if (!a.setGcalId)
                     return cb(true);
-                NotionDbService.update(a.pageId, Notion.taskPatch(m, { gcalId: ev.id }), cb);
+                // The event exists either way; a GCal ID that didn't get
+                // written is written next sync.
+                NotionDbService.update(a.pageId, Notion.taskPatch(m, { gcalId: ev.id }), () => cb(true));
             });
+        case "setGcalId":
+            return NotionDbService.update(a.pageId, Notion.taskPatch(m, { gcalId: a.eventId }), cb);
         case "updateEvent":
             return DcalService.call("events.update", Object.assign({ id: a.eventId }, eventParams(a.event)), cb);
         case "endSeries": {
@@ -529,12 +610,16 @@ Singleton {
         case "updateNotion": {
             if (a.kind === "lesson") {
                 const props = {};
-                props[tm.hari] = { select: { name: a.fields.hari } };
+                props[tm.hari] = { select: { name: hariOption(a.fields.hari) } };
                 props[tm.jam] = { rich_text: [{ type: "text", text: { content: a.jam } }] };
                 return NotionDbService.update(a.pageId, props, cb);
             }
             const f = a.fields;
-            return NotionDbService.update(a.pageId, Notion.taskPatch(m, { title: f.title, start: f.start, end: f.notionEnd, status: statusName(f.done ? "complete" : "to_do") }), cb);
+            // Status only when ticked or unticked: "Doing" stays "Doing".
+            const fields = { title: f.title, start: f.start, end: f.notionEnd };
+            if (a.statusChanged)
+                fields.status = statusName(f.done ? "complete" : "to_do");
+            return NotionDbService.update(a.pageId, Notion.taskPatch(m, fields), cb);
         }
         case "clearStart":
             return NotionDbService.update(a.pageId, Notion.taskPatch(m, { start: "", gcalId: "" }), cb);
@@ -552,14 +637,14 @@ Singleton {
     // Notion; the next sync carries it to Google.
     function useOther(index) {
         const c = conflicts[index];
-        if (!c)
+        if (!c || !ready())
             return;
         const st = Object.assign({}, syncState, { conflicts: conflicts.filter((_, i) => i !== index) });
         Store.db.todaySync = st;
         const done = (ok, err) => ok ? load() : flash(err);
         if (c.kind === "lesson") {
             const props = {};
-            props[timetableMap.hari] = { select: { name: c.other.hari } };
+            props[timetableMap.hari] = { select: { name: hariOption(c.other.hari) } };
             props[timetableMap.jam] = { rich_text: [{ type: "text", text: { content: `${c.other.start.replace(":", ".")}-${c.other.end.replace(":", ".")}` } }] };
             NotionDbService.update(c.pageId, props, done);
         } else {
@@ -571,11 +656,25 @@ Singleton {
 
     // A lesson whose series was deleted in Google: make it again, or remove
     // the row from Notion (to Notion's trash).
+    // The sync record is only safe to change once the calendar is known (at
+    // start-up a stand-in empty record would overwrite the real one).
+    function ready() {
+        if (targetCalendar === "" || status !== "ready" || Store.db.todaySync?.calendar !== targetCalendar) {
+            flash("Belum siap — coba lagi sebentar lagi");
+            return false;
+        }
+        return true;
+    }
+
     function putBack(pageId) {
+        if (!ready())
+            return;
         Store.db.todaySync = Object.assign({}, syncState, { removed: removedInGoogle.filter(r => r.pageId !== pageId) });
         sync();
     }
     function removeFromNotion(pageId) {
+        if (!ready())
+            return;
         NotionDbService.trash(pageId, (ok, err) => {
             if (!ok)
                 return flash(err);

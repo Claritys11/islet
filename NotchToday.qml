@@ -79,10 +79,10 @@ Item {
                 elide: Text.ElideRight
                 text: !t.o.todaySync ? "Sinkron Google Calendar mati"
                     : t.syncStatus === "waiting" ? `Sinkron pertama menunggu konfirmasi · ${t.previewText}`
-                    : t.syncStatus === "error" ? t.syncError
+                    : t.syncStatus === "error" || t.syncStatus === "held" ? t.syncError
                     : t.syncStatus === "syncing" ? "Menyinkronkan…"
                     : t.lastSync ? `Tersinkron ${root.ago(t.lastSync)}` : ""
-                color: t.syncStatus === "error" ? Theme.danger : Theme.subtext
+                color: t.syncStatus === "error" || t.syncStatus === "held" ? Theme.danger : Theme.subtext
                 font.family: Theme.font
                 font.pixelSize: 11
             }

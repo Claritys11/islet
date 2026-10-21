@@ -2035,6 +2035,11 @@ FloatingWindow {
                             visible: TodayService.syncStatus !== "waiting"
                             onClicked: TodayService.load()
                         }
+                        Button {
+                            visible: TodayService.held > 0
+                            text: `Allow removing ${TodayService.held}`
+                            onClicked: TodayService.allowRemovals()
+                        }
                         Repeater {
                             model: TodayService.conflicts
                             RowLayout {

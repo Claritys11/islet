@@ -26,7 +26,7 @@ PluginComponent {
     readonly property string soon: linked ? (st.today?.soon ?? "") : ""
     readonly property int due: linked ? (st.today?.due ?? 0) : 0
     readonly property bool hasSoon: soon !== ""
-    readonly property bool hasDue: !hasTrack && !hasSoon && due > 0
+    readonly property bool hasDue: !hasTrack && !hasTimer && !hasSoon && due > 0
     readonly property bool hasWeather: linked && !hasTrack && !hasTimer && !hasSoon && !hasDue && !!st.weather
     readonly property bool isLyric: hasTrack && st.line !== "" && st.bar?.text !== "title"
 

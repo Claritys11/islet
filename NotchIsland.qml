@@ -28,7 +28,7 @@ Item {
     // shows when nothing plays.
     readonly property var soon: o.todayEnabled ? TodayService.soon : null
     readonly property bool showSoon: soon !== null
-    readonly property bool showDue: o.todayEnabled && !hasMusic && !showSoon && TodayService.dueToday > 0
+    readonly property bool showDue: o.todayEnabled && !hasMusic && !hasTimer && !showSoon && TodayService.dueToday > 0
     readonly property string todayText: showSoon ? `${soon.title} · mulai ${Math.max(1, Math.ceil((soon.startAt - TodayService.now) / 60000))} mnt lagi`
         : showDue ? (TodayService.dueToday === 1 ? `${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.title ?? ""} · ${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.label ?? ""}` : `${TodayService.dueToday} tenggat hari ini`) : ""
     // Nothing playing and no timer: the weather keeps the pill company.
