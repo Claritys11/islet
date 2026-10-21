@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Finder** opens Islet's own places: type `pomo`, `hari ini`/`jadwal`, `shelf`, `ceklis`, `lirik` or
+  `settings` and press Enter.
+
+### Changed
+- **Shelf** pins the notch while it's open (📌 unpins it; leaving the tab undoes it).
+
+### Fixed
+- **Shelf**: dragging a file that isn't a picture showed nothing under the pointer; every tile now travels
+  as its own picture.
+
 ## 1.6.2 — 2026-10-21
 
 ### Changed

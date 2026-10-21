@@ -84,6 +84,9 @@ Item {
                         color: tileMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.05)
                         // Moved somewhere Islet couldn't find, or deleted.
                         opacity: modelData.missing ? 0.45 : 1
+                        // A picture of the tile, taken as the pointer comes
+                        // near, so a drag carries it (kept, or it's freed).
+                        property var shot: null
 
                         Image {
                             id: thumb
@@ -132,7 +135,7 @@ Item {
                                     "text/uri-list": ShelfService.url(tile.modelData.path) + "\r\n",
                                     "text/plain": tile.modelData.path
                                 })
-                            Drag.imageSource: thumb.visible ? thumb.source : ""
+                            Drag.imageSource: tile.shot?.url ?? ""
                             Drag.hotSpot.x: width / 2
                             Drag.hotSpot.y: height / 2
                             // Moved by the drop? Follow it.
@@ -149,6 +152,8 @@ Item {
                             cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
                             drag.target: dragProxy
                             drag.threshold: 6
+                            onContainsMouseChanged: if (containsMouse)
+                                tile.grabToImage(r => tile.shot = r)
                             onPressedChanged: if (!pressed)
                                 ShelfService.dragging = false
                             drag.onActiveChanged: if (drag.active)

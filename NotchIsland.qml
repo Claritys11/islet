@@ -74,7 +74,7 @@ Item {
     // hovering: a click anywhere else closes it, unless pinned.
     property bool clicked: false
     readonly property bool closesOnClickOutside: mode === "find" || (mode === "open" && clicked && !pinned && !ShelfService.dragging)
-    readonly property bool keepOpen: pinned || hotkey || (mode === "open" && tab === 3) || mode === "find" || drop.containsDrag
+    readonly property bool keepOpen: pinned || hotkey || mode === "find" || drop.containsDrag
     // Today needs room for a school day's lessons next to the deadlines.
     readonly property real todayHeight: Math.max(o.notchHeight, 380)
     // Finder: the search box, 8 results and the key hints.
@@ -83,6 +83,7 @@ Item {
     function close() {
         mode = "closed";
         pinned = false;
+        shelfPin = false;
         hotkey = false;
         clicked = false;
     }
@@ -123,8 +124,18 @@ Item {
     // Shelved files moved while the shelf wasn't looking: find them as it
     // opens.
     readonly property bool shelfShown: mode === "open" && tab === 3
-    onShelfShownChanged: if (shelfShown)
-        ShelfService.follow()
+    // The Shelf pins itself (files get dragged in and out, and the notch
+    // must stay); 📌 unpins it, and leaving the tab undoes it.
+    property bool shelfPin: false
+    onShelfShownChanged: {
+        if (shelfShown) {
+            ShelfService.follow();
+            if (!pinned)
+                pinned = shelfPin = true;
+        } else if (shelfPin && mode === "open") {
+            pinned = shelfPin = false;
+        }
+    }
 
     // The first activity of the day: show the day for a few seconds.
     Connections {
@@ -633,9 +644,12 @@ Item {
                     NotchIconButton {
                         icon: "push_pin"
                         size: 28
-                        filled: win.keepOpen
-                        tint: win.keepOpen ? Theme.primary : Theme.subtext
-                        onClicked: win.pinned = !win.pinned
+                        filled: win.pinned
+                        tint: win.pinned ? Theme.primary : Theme.subtext
+                        onClicked: {
+                            win.pinned = !win.pinned;
+                            win.shelfPin = false;
+                        }
                     }
                     NotchIconButton {
                         icon: "settings"
