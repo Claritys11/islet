@@ -1504,8 +1504,8 @@ FloatingWindow {
                         visible: win.o.notchMode === "bar"
                         SliderSetting {
                             key: "barPillWidth"
-                            label: "Lyric width"
-                            hint: "Longer lines are cut off and slide along as they're sung"
+                            label: "Max width"
+                            hint: "The whole pill (cover, lyric, deadlines, timer) never gets wider, so it won't cover your workspaces. Longer lines slide along as they're sung"
                             from: 120
                             to: 600
                             stepSize: 10

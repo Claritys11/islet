@@ -69,6 +69,13 @@ PluginComponent {
             implicitWidth: pillRow.implicitWidth
             implicitHeight: pillRow.implicitHeight
 
+            // The whole pill stays within Islet's "Max width", so a long
+            // line or deadline never pushes it over the workspaces: the text
+            // gets what the other parts leave.
+            readonly property real cap: root.st?.bar?.width ?? 300
+            readonly property real others: [art, dueCount, viz, timer].reduce((w, i) => w + (i.visible ? i.width + pillRow.spacing : 0), 0) + (todayIcon.visible ? todayIcon.width + Theme.spacingXS : 0)
+            readonly property real room: Math.max(60, cap - others)
+
             // Files dragged onto the pill open Islet's shelf right below it,
             // and dropping them here parks them on the shelf.
             DropArea {
@@ -104,6 +111,7 @@ PluginComponent {
                 }
 
                 ClippingRectangle {
+                    id: art
                     visible: root.hasTrack
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.round(root.widgetThickness * 0.62)
@@ -130,6 +138,7 @@ PluginComponent {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: Theme.spacingXS
                     DankIcon {
+                        id: todayIcon
                         anchors.verticalCenter: parent.verticalCenter
                         name: root.hasSoon ? "school" : "assignment_late"
                         size: Theme.iconSize - 4
@@ -137,6 +146,8 @@ PluginComponent {
                     }
                     StyledText {
                         anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(implicitWidth, pill.room)
+                        elide: Text.ElideRight
                         text: root.hasSoon ? root.soon : root.st?.today?.dueText ?? ""
                         color: Theme.surfaceText
                         font.pixelSize: Theme.fontSizeMedium
@@ -147,7 +158,7 @@ PluginComponent {
                     id: lyric
                     visible: root.hasTrack && !root.hasSoon
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.min(base.implicitWidth, root.st?.bar?.width ?? 300)
+                    width: Math.min(base.implicitWidth, pill.room)
                     height: base.implicitHeight
                     clip: true
 
@@ -184,6 +195,7 @@ PluginComponent {
                 }
 
                 StyledText {
+                    id: dueCount
                     visible: root.hasTrack && !root.hasSoon && root.due > 0
                     anchors.verticalCenter: parent.verticalCenter
                     text: `${root.due} tenggat`
@@ -192,6 +204,7 @@ PluginComponent {
                 }
 
                 Row {
+                    id: viz
                     visible: root.hasTrack && !root.hasSoon && (root.st?.bar?.viz ?? true)
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
@@ -210,6 +223,7 @@ PluginComponent {
                 }
 
                 Row {
+                    id: timer
                     visible: root.hasTimer
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: Theme.spacingXS
