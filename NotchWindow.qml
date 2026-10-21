@@ -14,6 +14,7 @@ PanelWindow {
     readonly property alias away: island.away
     readonly property alias vizWanted: island.vizWanted
     readonly property alias hotkey: island.hotkey
+    readonly property alias closesOnClickOutside: island.closesOnClickOutside
     signal settingsRequested
 
     // Where to hang the island: centre x and top y on this screen, or -1 for
@@ -57,8 +58,8 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
 
     WlrLayershell.namespace: "islet-notch"
-    // Finder sits above its click-catcher (shell.qml), which is on Top.
-    WlrLayershell.layer: island.island && island.mode !== "find" && !island.hotkey ? WlrLayer.Top : WlrLayer.Overlay
+    // Above its click-catcher (shell.qml), which is on Top.
+    WlrLayershell.layer: island.island && !island.closesOnClickOutside && !island.hotkey ? WlrLayer.Top : WlrLayer.Overlay
     // Finder (and the Finder key) take the keyboard at once, so you can
     // type straight away.
     WlrLayershell.keyboardFocus: island.mode === "find" || (island.mode === "open" && island.hotkey) ? WlrKeyboardFocus.Exclusive : island.mode === "open" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None

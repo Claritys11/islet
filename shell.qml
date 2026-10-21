@@ -278,11 +278,12 @@ ShellRoot {
         }
     }
 
-    // While Finder has the keyboard, a click anywhere else closes it (like a
-    // popup), so the keyboard is never stuck in Islet.
+    // While Finder has the keyboard, or the notch was opened by a click and
+    // isn't pinned, a click anywhere else closes it (like a popup), so the
+    // keyboard is never stuck in Islet.
     // One per screen: a click on another monitor closes it too.
     Variants {
-        model: shell.notch?.mode === "find" || (shell.notch?.mode === "open" && shell.notch?.hotkey) ? Quickshell.screens : []
+        model: shell.notch?.closesOnClickOutside || (shell.notch?.mode === "open" && shell.notch?.hotkey) ? Quickshell.screens : []
         PanelWindow {
             required property var modelData
             screen: modelData

@@ -10,6 +10,8 @@ Singleton {
     id: root
 
     readonly property var items: Store.db.shelf ?? []
+    // A tile being dragged out: nothing may catch the drop but its target.
+    property bool dragging: false
 
     // urls: file:// URLs or paths, as a drop or the bar widget gives them.
     function add(urls) {

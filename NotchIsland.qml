@@ -70,6 +70,10 @@ Item {
     // Opened by the Finder key (Mod+G): it has the keyboard, and typing
     // turns it into Finder.
     property bool hotkey: false
+    // Opened on purpose (a click, the bar, a command) rather than by
+    // hovering: a click anywhere else closes it, unless pinned.
+    property bool clicked: false
+    readonly property bool closesOnClickOutside: mode === "find" || (mode === "open" && clicked && !pinned && !ShelfService.dragging)
     readonly property bool keepOpen: pinned || hotkey || (mode === "open" && tab === 3) || mode === "find" || drop.containsDrag
     // Today needs room for a school day's lessons next to the deadlines.
     readonly property real todayHeight: Math.max(o.notchHeight, 380)
@@ -80,12 +84,14 @@ Item {
         mode = "closed";
         pinned = false;
         hotkey = false;
+        clicked = false;
     }
 
     function open(t) {
         if (t !== undefined)
             tab = t;
         mode = "open";
+        clicked = true;
     }
 
     function toggle() {

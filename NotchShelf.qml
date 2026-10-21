@@ -136,7 +136,10 @@ Item {
                             Drag.hotSpot.x: width / 2
                             Drag.hotSpot.y: height / 2
                             // Moved by the drop? Follow it.
-                            Drag.onDragFinished: ShelfService.followSoon()
+                            Drag.onDragFinished: {
+                                ShelfService.dragging = false;
+                                ShelfService.followSoon();
+                            }
                         }
 
                         MouseArea {
@@ -146,6 +149,10 @@ Item {
                             cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
                             drag.target: dragProxy
                             drag.threshold: 6
+                            onPressedChanged: if (!pressed)
+                                ShelfService.dragging = false
+                            drag.onActiveChanged: if (drag.active)
+                                ShelfService.dragging = true
                             onReleased: {
                                 dragProxy.x = 0;
                                 dragProxy.y = 0;
