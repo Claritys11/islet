@@ -239,7 +239,7 @@ Item {
             }
 
             TapHandler {
-                enabled: win.mode !== "open"
+                enabled: win.mode !== "open" && win.mode !== "find"
                 onTapped: win.mode === "viz" ? win.close() : win.open(win.hasMusic ? 0 : win.hasTimer ? 1 : win.tab)
             }
 
@@ -595,7 +595,7 @@ Item {
 
             Shortcut {
                 sequence: "Escape"
-                enabled: win.mode === "open"
+                enabled: win.mode === "open" || win.mode === "find"
                 onActivated: win.close()
             }
         }

@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { fzfQuery, nameMatch, frecency, rank, recent, remember, shortPath, detect, actionCommand } from "../finder/rank.mjs";
 
 const DAY = 864e5;
@@ -54,12 +55,23 @@ test("recent lists by frecency", () => {
     assert.deepEqual(recent(h, 0).map(e => e.path), ["/b", "/a"]);
 });
 
-test("fzfQuery neutralises operators", () => {
-    assert.equal(fzfQuery("!foo"), "\\!foo");
-    assert.equal(fzfQuery("bar$"), "bar\\$");
-    assert.equal(fzfQuery("'x ^y"), "\\'x \\^y");
+// Against the real fzf: operator characters are matched as typed.
+function fzf(q, items) {
+    try {
+        return execFileSync("fzf", ["--filter", fzfQuery(q)], { input: items.join("\n") + "\n", encoding: "utf8", env: { PATH: process.env.PATH } }).split("\n").filter(Boolean);
+    } catch {
+        return [];
+    }
+}
+
+test("fzfQuery matches operator characters literally", () => {
+    const items = ["/a/!foo", "/a/bar$", "/a/'x", "/a/^y", "/a/a|b", "/a/plain"];
+    assert.deepEqual(fzf("!foo", items), ["/a/!foo"]);
+    assert.ok(fzf("bar$", items).includes("/a/bar$"));
+    assert.deepEqual(fzf("'x", items), ["/a/'x"]);
+    assert.deepEqual(fzf("^y", items), ["/a/^y"]);
+    assert.ok(fzf("a | b", items).includes("/a/a|b"));
     assert.equal(fzfQuery("  a  b "), "a b");
-    assert.equal(fzfQuery("a | b"), "a \\| b");
 });
 
 test("actionCommand keeps odd paths as single args", () => {

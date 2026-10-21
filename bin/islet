@@ -61,12 +61,14 @@ stop() {
 call() { start && qs -c "$CFG" ipc call "$@"; }
 
 # `islet find bind [FILE]`: Mod+G opens Finder in niri. Adds one line to the
-# first binds { } block of FILE (a backup is kept), checks the config with
-# `niri validate`, and puts the file back if niri rejects it.
+# first binds { } block of FILE (default: user-binds.kdl if there is one,
+# else config.kdl; a backup is kept), checks the config with `niri validate`,
+# and puts the file back if niri rejects it. Messages, errors too, go to
+# stdout so Settings can show them.
 find_bind() {
     file=$1
     line='    Mod+G hotkey-overlay-title="Islet Finder" { spawn "islet" "find"; }'
-    [ -f "$file" ] || { echo "No niri binds file at $file" >&2; return 1; }
+    [ -f "$file" ] || { echo "No niri binds file at $file"; return 1; }
     if grep -q 'spawn "islet" "find"' "$file"; then
         echo "Finder shortcut already set up in $file"
         return 0
@@ -86,13 +88,13 @@ find_bind() {
         END { if (!done) exit 3 }
     ' "$file.islet-backup" > "$file.islet-new" || {
         rm -f "$file.islet-new"
-        echo "Couldn't find a binds { } block in $file" >&2
+        echo "Couldn't find a binds { } block in $file"
         return 1
     }
     mv "$file.islet-new" "$file"
     if ! ${NIRI_VALIDATE:-niri validate} >/dev/null 2>&1; then
         cp -p "$file.islet-backup" "$file"
-        echo "niri didn't accept the change; $file is back as it was" >&2
+        echo "niri didn't accept the change; $file is back as it was"
         return 1
     fi
     echo "Done: Mod+G opens Finder (backup: $file.islet-backup)"
@@ -132,7 +134,13 @@ case "$1" in
         case "${1:-}" in
             --reindex) call finder reindex ;;
             --status) call finder status ;;
-            bind) shift; find_bind "${1:-${XDG_CONFIG_HOME:-$HOME/.config}/niri/user-binds.kdl}" ;;
+            --open | --copy) a=${1#--}; shift; call finder pick "$*" "$a" ;;
+            bind)
+                shift
+                d=${XDG_CONFIG_HOME:-$HOME/.config}/niri
+                f=$d/user-binds.kdl
+                [ -f "$f" ] || f=$d/config.kdl
+                find_bind "${1:-$f}" ;;
             --print)
                 shift
                 q="$*"

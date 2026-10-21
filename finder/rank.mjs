@@ -7,18 +7,18 @@ const DAY = 864e5;
 const WEEK = 7 * DAY;
 
 // fzf's extended search reads a leading ' ! ^ or a trailing $ (and a lone |)
-// as operators. People type them as plain characters, so they're escaped;
-// spaces still separate words that must all match.
+// as operators, and has no escape for them. People type them as plain
+// characters, so such a word becomes an exact-match term ('word), which
+// matches the rest literally; a trailing $ is dropped (ranking still sees
+// the whole query). Spaces separate words that must all match.
 export function fzfQuery(q) {
-    return q.trim().split(/\s+/).filter(w => w !== "").map(w => {
-        if (w === "|")
-            return "\\|";
-        if (/^['!^]/.test(w))
-            w = "\\" + w;
-        if (w.endsWith("$"))
-            w = w.slice(0, -1) + "\\$";
+    return q.trim().split(/\s+/).map(w => {
+        if (w.length > 1 && w.endsWith("$"))
+            w = w.slice(0, -1);
+        if (w === "|" || /^['!^]/.test(w) || w === "$")
+            return "'" + w;
         return w;
-    }).join(" ");
+    }).filter(w => w !== "").join(" ");
 }
 
 function wordStart(name, i) {

@@ -1858,12 +1858,31 @@ FloatingWindow {
                     Card {
                         title: "Shortcut"
                         hint: "Finder opens from the notch: type part of a name, Enter opens it. Ctrl+T terminal · Ctrl+E editor · Alt+Enter containing folder · Ctrl+C copy path."
+                        // Asks first: the second click writes the niri config.
                         Row_ {
+                            id: bindRow
+                            property bool confirming: false
                             label: "Open Finder with Mod+G"
-                            hint: bindResult.text !== "" ? bindResult.text : "Adds one line to your niri keybinds (a backup is kept), then checks it with niri."
-                            Button {
-                                text: "Set it up"
-                                onClicked: bindProc.running = true
+                            hint: bindResult.text.trim() !== "" ? bindResult.text.trim() : bindRow.confirming ? "This adds one line to your niri keybinds (a backup is kept) and checks it with niri. Go ahead?" : "Islet can add the shortcut to niri for you."
+                            RowLayout {
+                                Button {
+                                    visible: bindRow.confirming
+                                    text: "Cancel"
+                                    flat: true
+                                    onClicked: bindRow.confirming = false
+                                }
+                                Button {
+                                    text: bindRow.confirming ? "Yes, add it" : "Set it up"
+                                    enabled: !bindProc.running
+                                    onClicked: {
+                                        if (!bindRow.confirming) {
+                                            bindRow.confirming = true;
+                                            return;
+                                        }
+                                        bindRow.confirming = false;
+                                        bindProc.running = true;
+                                    }
+                                }
                             }
                         }
                         Process {
@@ -1871,10 +1890,6 @@ FloatingWindow {
                             command: ["sh", decodeURIComponent(String(Qt.resolvedUrl("bin/islet")).replace(/^file:\/\//, "")), "find", "bind"]
                             stdout: StdioCollector {
                                 id: bindResult
-                            }
-                            stderr: StdioCollector {
-                                onStreamFinished: if (text.trim() !== "")
-                                    bindResult.text = text.trim()
                             }
                         }
                         Label {

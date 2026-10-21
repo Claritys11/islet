@@ -22,7 +22,7 @@ Singleton {
     property string query: ""
     // [{ path, kind, project, positions, name, short }]
     property var results: []
-    // "ready" | "indexing" | "missing-tools" | "empty"
+    // "ready" | "indexing" | "missing-tools" | "no-folders"
     property string status: "indexing"
     property real indexedAt: 0
     property var counts: ({ dirs: 0, files: 0 })
@@ -62,6 +62,10 @@ Singleton {
         onExited: code => {
             if (code === 127) {
                 root.status = "missing-tools";
+                return;
+            }
+            if (code === 2) {
+                root.status = "no-folders";
                 return;
             }
             root.indexedAt = Date.now();
@@ -147,6 +151,21 @@ Singleton {
     property var _fileHits: null
     // The query whose folder and file results are both in.
     property var _doneFor: null
+    // The query the results on screen belong to (folders may be in before files).
+    property var _shownFor: null
+    // An action asked for before its search finished.
+    property string _pending: ""
+
+    function runPending() {
+        if (_pending === "")
+            return;
+        const action = _pending;
+        _pending = "";
+        if (results.length > 0)
+            act(0, action);
+        else
+            flash("Nothing found");
+    }
 
     onQueryChanged: debounce.restart()
     Timer {
@@ -155,8 +174,17 @@ Singleton {
         onTriggered: root.search(root.query)
     }
 
+    // Search now (opening Finder, the command line), not after the typing
+    // pause — even when the text is the same as last time.
+    function begin(q) {
+        query = q;
+        debounce.stop();
+        search(q);
+    }
+
     function search(q) {
         const id = ++_id;
+        _shownFor = null;
         _dirHits = _fileHits = null;
         if (q.trim() === "") {
             showRecent(id, q);
@@ -167,7 +195,10 @@ Singleton {
             p.running = false;
             p.reqId = id;
             p.q = q;
-            p.command = ["sh", "-c", '[ -f "$2" ] || exit 0; fzf --filter "$1" < "$2" | head -n 150', "sh", fq, `${dir}/${p.file}`];
+            // The first output line is the search's number: a restarted
+            // Process still reports the run it cut short, and only the
+            // output itself can say which search it belongs to.
+            p.command = ["sh", "-c", 'printf "%s\\n" "$3"; [ -f "$2" ] || exit 0; fzf --filter "$1" < "$2" | head -n 150', "sh", fq, `${dir}/${p.file}`, String(id)];
             p.running = true;
         }
     }
@@ -181,9 +212,10 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 const p = self;
-                if (p.reqId !== root._id)
+                const lines = text.split("\n");
+                if (lines[0] !== String(root._id))
                     return;
-                const hits = text.split("\n").filter(l => l !== "").map(path => ({ path, kind: p.kind, project: p.kind === "dir" && root._projects[path] === true }));
+                const hits = lines.slice(1).filter(l => l !== "").map(path => ({ path, kind: p.kind, project: p.kind === "dir" && root._projects[path] === true }));
                 if (p.kind === "dir")
                     root._dirHits = hits;
                 else
@@ -211,8 +243,11 @@ Singleton {
     function publish(q) {
         const all = (_dirHits ?? []).concat(_fileHits ?? []);
         results = Rank.rank(q, all, Store.db.finderHistory ?? {}, Date.now()).slice(0, 50).map(present);
-        if (_dirHits !== null && _fileHits !== null)
+        _shownFor = q;
+        if (_dirHits !== null && _fileHits !== null) {
             _doneFor = q;
+            runPending();
+        }
     }
 
     // Nothing typed: what you opened lately, if it still exists.
@@ -220,7 +255,8 @@ Singleton {
         const list = Rank.recent(Store.db.finderHistory ?? {}, Date.now(), 8);
         if (list.length === 0) {
             results = [];
-            _doneFor = q;
+            _shownFor = _doneFor = q;
+            runPending();
             return;
         }
         exists.reqId = id;
@@ -240,7 +276,8 @@ Singleton {
                     return;
                 const here = text.split("\n");
                 root.results = exists.list.filter(e => here.includes(e.path)).map(e => root.present(Object.assign({ positions: [], project: root._projects[e.path] === true }, e)));
-                root._doneFor = exists.q;
+                root._shownFor = root._doneFor = exists.q;
+                root.runPending();
             }
         }
     }
@@ -248,6 +285,12 @@ Singleton {
     // ── Actions ───────────────────────────────────────────────────
     // "open" | "terminal" | "editor" | "reveal" | "copy"
     function act(index, action) {
+        // The list on screen is still the previous search's (Enter right
+        // after typing): act on the best match once this one is in.
+        if (_shownFor !== query) {
+            _pending = action;
+            return;
+        }
         const entry = results[index];
         if (!entry)
             return;

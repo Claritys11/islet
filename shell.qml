@@ -131,10 +131,16 @@ ShellRoot {
         }
         // Starts a search without showing anything; read it with results().
         function search(q: string): void {
-            FinderService.query = q;
+            FinderService.begin(q);
         }
         function results(q: string): string {
             return FinderService.resultsFor(q);
+        }
+        // Search and act on the best match without showing Finder:
+        // `islet find --open|--copy text`.
+        function pick(q: string, action: string): void {
+            FinderService.begin(q);
+            FinderService.act(0, action);
         }
         function status(): string {
             const f = FinderService;
@@ -227,10 +233,12 @@ ShellRoot {
 
     // While Finder has the keyboard, a click anywhere else closes it (like a
     // popup), so the keyboard is never stuck in Islet.
-    LazyLoader {
-        active: shell.notch?.mode === "find"
+    // One per screen: a click on another monitor closes it too.
+    Variants {
+        model: shell.notch?.mode === "find" ? Quickshell.screens : []
         PanelWindow {
-            screen: shell.notch?.screen ?? null
+            required property var modelData
+            screen: modelData
             anchors.top: true
             anchors.bottom: true
             anchors.left: true

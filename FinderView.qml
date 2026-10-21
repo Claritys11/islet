@@ -10,14 +10,18 @@ Item {
 
     signal closeRequested
     property int current: 0
+    // The selection follows the item, not the row: file results arriving
+    // after folder results reorder the list.
+    property string selectedPath: ""
     readonly property var results: FinderService.results
 
     // Called when the notch switches to Finder.
     function start(text) {
         input.text = text;
-        FinderService.query = text;
+        FinderService.begin(text);
         input.cursorPosition = text.length;
         current = 0;
+        selectedPath = "";
         input.forceActiveFocus();
         updatedClock.now = Date.now();
     }
@@ -29,13 +33,19 @@ Item {
 
     function move(by) {
         if (results.length > 0)
-            current = (current + by + results.length) % results.length;
+            select((current + by + results.length) % results.length);
+    }
+
+    function select(i) {
+        current = i;
+        selectedPath = results[i]?.path ?? "";
     }
 
     Connections {
         target: FinderService
         function onResultsChanged() {
-            root.current = 0;
+            const i = root.results.findIndex(r => r.path === root.selectedPath);
+            root.current = Math.max(0, i);
         }
         function onActed(action) {
             if (action !== "copy")
@@ -96,7 +106,10 @@ Item {
                     font.family: Theme.font
                     font.pixelSize: 16
                     clip: true
-                    onTextChanged: FinderService.query = text
+                    onTextChanged: {
+                        root.selectedPath = "";
+                        FinderService.query = text;
+                    }
                     Keys.onPressed: event => {
                         const ctrl = event.modifiers & Qt.ControlModifier;
                         if (event.key === Qt.Key_Down || (ctrl && event.key === Qt.Key_N)) {
@@ -208,9 +221,9 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onEntered: root.current = row.index
+                        onEntered: root.select(row.index)
                         onClicked: {
-                            root.current = row.index;
+                            root.select(row.index);
                             root.act("open");
                         }
                     }
@@ -222,6 +235,7 @@ Item {
                 visible: root.results.length === 0
                 horizontalAlignment: Text.AlignHCenter
                 text: FinderService.status === "missing-tools" ? "Install fd and fzf to search your files"
+                    : FinderService.status === "no-folders" ? "None of the folders in Settings → Finder exist"
                     : FinderService.counts.files === 0 ? "Indexing your files…"
                     : input.text === "" ? "Type part of a name — \"isw\" finds islet-windows"
                     : "No matches"

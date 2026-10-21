@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -53,4 +53,20 @@ test("restores the file when niri rejects it", () => {
     const r = spawnSync("sh", [islet, "find", "bind", file], { env: { ...process.env, NIRI_VALIDATE: "false" }, encoding: "utf8" });
     assert.notEqual(r.status, 0);
     assert.equal(readFileSync(file, "utf8"), sample);
+});
+
+test("without user-binds.kdl it uses niri's config.kdl", () => {
+    const home = mkdtempSync(join(tmpdir(), "xdg-"));
+    const dir = join(home, "niri");
+    mkdirSync(dir);
+    writeFileSync(join(dir, "config.kdl"), sample);
+    const r = spawnSync("sh", [islet, "find", "bind"], { env: { ...process.env, XDG_CONFIG_HOME: home, NIRI_VALIDATE: "true" }, encoding: "utf8" });
+    assert.equal(r.status, 0, r.stderr + r.stdout);
+    assert.match(readFileSync(join(dir, "config.kdl"), "utf8"), /spawn "islet" "find"/);
+});
+
+test("errors go to stdout too, so Settings can show them", () => {
+    const r = spawnSync("sh", [islet, "find", "bind", "/nonexistent/binds.kdl"], { env: { ...process.env, NIRI_VALIDATE: "true" }, encoding: "utf8" });
+    assert.notEqual(r.status, 0);
+    assert.match(r.stdout, /No niri binds file/);
 });

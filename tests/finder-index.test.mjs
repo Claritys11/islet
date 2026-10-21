@@ -40,3 +40,33 @@ test("includes hidden files when asked, but never .git contents", () => {
     assert.ok(files.includes(`${root}/a/.hidden/z.txt`));
     assert.ok(!files.some(f => f.includes("/.git/")));
 });
+
+test("excludes are not globbed against the working folder, and are trimmed", () => {
+    const root = tree();
+    for (const f of ["a/notes.log", "a/sub/keep.txt"]) {
+        mkdirSync(join(root, f, ".."), { recursive: true });
+        writeFileSync(join(root, f), "");
+    }
+    const cwd = mkdtempSync(join(tmpdir(), "finder-cwd-"));
+    writeFileSync(join(cwd, "x.log"), "");
+    const out = mkdtempSync(join(tmpdir(), "finder-out-"));
+    execFileSync("sh", [script, out, "0", "*.log, sub ,node_modules", root], { cwd });
+    const files = readFileSync(join(out, "files.txt"), "utf8");
+    assert.ok(!files.includes("notes.log"), "*.log should be skipped");
+    assert.ok(!files.includes("/sub/"), "' sub ' should be trimmed and skipped");
+});
+
+test("a bad root fails and keeps the old index", () => {
+    const root = tree();
+    const out = mkdtempSync(join(tmpdir(), "finder-out-"));
+    execFileSync("sh", [script, out, "0", "", root]);
+    const before = readFileSync(join(out, "files.txt"), "utf8");
+    let failed = false;
+    try {
+        execFileSync("sh", [script, out, "0", "", join(root, "does-not-exist")], { stdio: "pipe" });
+    } catch {
+        failed = true;
+    }
+    assert.ok(failed, "should exit non-zero");
+    assert.equal(readFileSync(join(out, "files.txt"), "utf8"), before);
+});
