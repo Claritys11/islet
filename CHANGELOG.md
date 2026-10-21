@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.6.2 — 2026-10-21
+
+### Changed
+- **Notch**: opened by a click (the bar pill, Mod+G, `islet notch`) and not pinned, it closes when you click
+  anywhere else, like a popup.
+- **DMS bar**: *Max width* (was *Lyric width*) now limits the whole pill — cover, lyric, deadlines,
+  visualizer and timer — so it never grows over the workspaces.
+
+### Docs
+- FAQ: Spotify with Spicetify is much lighter run natively on Wayland.
+
 ## 1.6.1 — 2026-10-21
 
 ### Changed

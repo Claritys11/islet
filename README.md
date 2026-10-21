@@ -380,6 +380,21 @@ Islet renders only what's visible and idles when nothing plays. The visualizer r
 </details>
 
 <details>
+<summary><b>Spotify (with Spicetify) is heavy</b></summary>
+
+On Wayland, Spotify runs through XWayland by default, so it can't tell when its window is hidden and keeps
+drawing animated themes and lyric backgrounds all the time. Run it natively — put these two lines in
+`~/.config/spotify-flags.conf` and restart Spotify:
+
+```
+--enable-features=UseOzonePlatform,WaylandWindowDecorations
+--ozone-platform=wayland
+```
+
+Animated themes (StarryNight's stars, say) still cost while Spotify is on screen.
+</details>
+
+<details>
 <summary><b>I used lyrics-wheel</b></summary>
 
 That was Islet's old name. Run the installer again: it removes the old install and your settings,
