@@ -1,0 +1,58 @@
+<h2>Di mana pencarian file muncul?</h2>
+<p class="subtitle">Contoh: kamu tekan keybind, ketik "isw". Isi hasilnya sama di dua pilihan ini, bedanya cuma tempat munculnya. Klik salah satu yang terasa pas.</p>
+
+<style>
+  .scr { background: linear-gradient(135deg,#2b3a55,#1b2233); border-radius: 10px; height: 340px; position: relative; overflow: hidden; font-family: system-ui, sans-serif; }
+  .bar { position:absolute; top:0; left:0; right:0; height:26px; background:#0d0f14cc; }
+  .island { position:absolute; left:50%; transform:translateX(-50%); background:#000; color:#e3e3e8; }
+  .q { display:flex; align-items:center; gap:8px; padding:10px 14px; font-size:15px; border-bottom:1px solid #ffffff14; }
+  .q .cur { color:#fff; } .q .ph { color:#8a8d96; }
+  .r { display:flex; align-items:center; gap:10px; padding:7px 14px; font-size:13px; }
+  .r.sel { background:#a8c7fa26; }
+  .r .ic { width:22px; text-align:center; }
+  .r .nm b { color:#a8c7fa; }
+  .r .pt { color:#8a8d96; font-size:11px; }
+  .keys { display:flex; gap:10px; padding:8px 14px; font-size:11px; color:#a2a5ae; border-top:1px solid #ffffff14; flex-wrap:wrap; }
+  .keys kbd { background:#ffffff1a; border-radius:4px; padding:1px 5px; color:#e3e3e8; font-family:inherit; }
+  .pill { position:absolute; top:4px; left:50%; transform:translateX(-50%); width:170px; height:18px; background:#000; border-radius:9px; }
+</style>
+
+<div class="cards">
+  <div class="card" data-choice="notch" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="scr">
+        <div class="bar"></div>
+        <div class="island" style="top:4px; width:440px; border-radius:22px;">
+          <div class="q"><span>🔍</span><span class="cur">isw</span><span class="ph">— cari file &amp; folder</span></div>
+          <div class="r sel"><span class="ic">📁</span><div><div class="nm"><b>i</b>slet-<b>w</b>indows</div><div class="pt">~/Projects/islet-windows · project</div></div></div>
+          <div class="r"><span class="ic">📄</span><div><div class="nm"><b>i</b>slet-<b>w</b>idget.qml</div><div class="pt">~/Projects/lyrics/integrations/dms/…</div></div></div>
+          <div class="r"><span class="ic">📁</span><div><div class="nm"><b>I</b>nstall-<b>w</b>ok</div><div class="pt">~/wok</div></div></div>
+          <div class="keys"><span><kbd>Enter</kbd> Dolphin</span><span><kbd>Ctrl+T</kbd> Ghostty</span><span><kbd>Ctrl+E</kbd> VS Code</span><span><kbd>Ctrl+C</kbd> salin path</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Keluar dari notch</h3>
+      <p>Notch (atau pill di bar DMS) membesar jadi kotak pencarian, kayak notch jadi "Listary". Terasa satu kesatuan sama Islet.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="center" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="scr">
+        <div class="bar"></div><div class="pill"></div>
+        <div class="island" style="top:70px; width:440px; border-radius:16px; box-shadow:0 20px 50px #0008;">
+          <div class="q"><span>🔍</span><span class="cur">isw</span><span class="ph">— cari file &amp; folder</span></div>
+          <div class="r sel"><span class="ic">📁</span><div><div class="nm"><b>i</b>slet-<b>w</b>indows</div><div class="pt">~/Projects/islet-windows · project</div></div></div>
+          <div class="r"><span class="ic">📄</span><div><div class="nm"><b>i</b>slet-<b>w</b>idget.qml</div><div class="pt">~/Projects/lyrics/integrations/dms/…</div></div></div>
+          <div class="r"><span class="ic">📁</span><div><div class="nm"><b>I</b>nstall-<b>w</b>ok</div><div class="pt">~/wok</div></div></div>
+          <div class="keys"><span><kbd>Enter</kbd> Dolphin</span><span><kbd>Ctrl+T</kbd> Ghostty</span><span><kbd>Ctrl+E</kbd> VS Code</span><span><kbd>Ctrl+C</kbd> salin path</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Kotak di tengah atas</h3>
+      <p>Muncul terpisah agak ke bawah, mirip Spotlight DMS atau Listary di Windows. Notch tetap seperti biasa.</p>
+    </div>
+  </div>
+</div>

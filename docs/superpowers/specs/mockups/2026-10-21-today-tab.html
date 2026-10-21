@@ -1,0 +1,54 @@
+<h2>Calendar di Islet: tab "Hari ini"</h2>
+<p class="subtitle">Contoh isi (data karangan). Kiri: tab di notch. Kanan: pill di bar saat notch tertutup. Klik bagian yang kamu suka, lalu komentari di terminal.</p>
+
+<style>
+  .wrap { display:flex; gap:24px; flex-wrap:wrap; font-family: system-ui, sans-serif; }
+  .notch { background:#000; color:#e3e3e8; border-radius:26px; width:600px; padding:12px 18px 16px; }
+  .tabs { display:flex; gap:6px; font-size:12px; color:#a2a5ae; margin-bottom:10px; }
+  .tabs span { padding:4px 10px; border-radius:12px; } .tabs .on { background:#ffffff1f; color:#fff; }
+  .cols { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  .h { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#a2a5ae; margin-bottom:6px; display:flex; justify-content:space-between; }
+  .cls { display:flex; gap:8px; align-items:center; padding:5px 8px; border-radius:10px; font-size:13px; }
+  .cls .t { color:#a2a5ae; width:84px; font-size:12px; }
+  .cls.past { opacity:.4; } .cls.now { background:#a8c7fa26; } .cls.now .t { color:#a8c7fa; }
+  .badge { font-size:10px; background:#a8c7fa; color:#062e6f; border-radius:8px; padding:0 6px; margin-left:auto; }
+  .task { display:flex; gap:8px; align-items:center; padding:5px 6px; font-size:13px; }
+  .box { width:14px; height:14px; border:1.5px solid #a2a5ae; border-radius:50%; flex:none; }
+  .due { margin-left:auto; font-size:11px; padding:1px 7px; border-radius:8px; white-space:nowrap; }
+  .red { background:#ffb4ab33; color:#ffb4ab; } .yel { background:#ffd58a33; color:#ffd58a; } .gry { background:#ffffff14; color:#a2a5ae; }
+  .pri { width:3px; height:16px; border-radius:2px; flex:none; }
+  .foot { margin-top:10px; font-size:11px; color:#a2a5ae; display:flex; gap:12px; }
+  .pills { display:flex; flex-direction:column; gap:12px; }
+  .pill { background:#000; color:#e3e3e8; border-radius:18px; height:34px; width:300px; display:flex; align-items:center; gap:8px; padding:0 12px; font-size:12.5px; }
+  .pill .ic { width:20px; height:20px; border-radius:6px; background:#161616; display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .lbl { font-size:11px; color:#888; margin-bottom:2px; }
+</style>
+
+<div class="wrap">
+  <div class="notch">
+    <div class="tabs"><span>Media</span><span>Focus</span><span>Checklist</span><span>Shelf</span><span class="on">📅 Hari ini</span><span style="margin-left:auto">⟳ sinkron 2 mnt lalu</span></div>
+    <div class="cols">
+      <div>
+        <div class="h"><span>Pelajaran · Selasa</span><span>4 sisa</span></div>
+        <div class="cls past"><span class="t">07.00–08.30</span>Matematika</div>
+        <div class="cls now"><span class="t">08.30–10.00</span>Bahasa Inggris<span class="badge">sekarang</span></div>
+        <div class="cls"><span class="t">10.15–11.45</span>KKA</div>
+        <div class="cls"><span class="t">12.30–14.00</span>Produktif RPL</div>
+        <div class="cls"><span class="t">14.00–15.30</span>PAI</div>
+      </div>
+      <div>
+        <div class="h"><span>Tenggat dekat</span><span>3</span></div>
+        <div class="task"><span class="pri" style="background:#ffb4ab"></span><span class="box"></span>Laporan IoT<span class="due red">hari ini 23.59</span></div>
+        <div class="task"><span class="pri" style="background:#ffd58a"></span><span class="box"></span>Latihan Trigonometri<span class="due yel">besok</span></div>
+        <div class="task"><span class="pri" style="background:#9de6b5"></span><span class="box"></span>Writeup CTF pwn-2<span class="due gry">Jum, 3 hari</span></div>
+        <div class="foot"><span>＋ tugas baru (ke Notion)</span><span>klik ○ = Done di Notion</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pills">
+    <div><div class="lbl">5 menit sebelum pelajaran</div><div class="pill"><span class="ic">📚</span>KKA · mulai 5 mnt lagi</div></div>
+    <div><div class="lbl">Ada tenggat hari ini (dan nggak ada musik)</div><div class="pill"><span class="ic" style="color:#ffb4ab">!</span>Laporan IoT · tenggat 23.59</div></div>
+    <div><div class="lbl">Musik main — tenggat tampil kecil di kanan</div><div class="pill"><span class="ic">🎵</span>…lirik yang sedang dinyanyikan<span style="margin-left:auto;color:#ffb4ab;font-size:11px">1 tenggat</span></div></div>
+  </div>
+</div>
