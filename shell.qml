@@ -158,6 +158,18 @@ ShellRoot {
         function reload(): void {
             TodayService.load();
         }
+        function list(): string {
+            return TodayService.listText();
+        }
+        function add(text: string): void {
+            TodayService.add(text, "");
+        }
+        function tick(pageId: string): void {
+            TodayService.tick(pageId, true);
+        }
+        function trashTest(): void {
+            TodayService.trashTestTasks();
+        }
     }
 
     // File shelf: `islet shelf FILE…`, `islet shelf` lists, `islet shelf clear`.
