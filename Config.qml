@@ -89,6 +89,7 @@ Singleton {
             notchPillText: "lyrics",
             notchHoverDelay: 150,
             notchAutoClose: true,
+            notchCloseDelay: 1200,
             // Pomodoro
             focusMinutes: 25,
             shortBreakMinutes: 5,
@@ -110,6 +111,8 @@ Singleton {
             maxFps: 60,
             // Updates
             checkUpdates: true,
+            // Settings window: sample lyrics when nothing plays
+            samplePreview: true,
             // Checklist
             checklistSource: "local",
             notionPage: "",
@@ -121,6 +124,20 @@ Singleton {
             hideWhenNoLyrics: false,
             fadeDuration: 400
         })
+
+    // Quick looks for the lyrics that change several settings at once.
+    readonly property var presets: [
+        { name: "Spicy", color: "#ffffff", values: { karaoke: "sweep", glow: 0.7, glowColor: "#ffffff", activeColor: "#ffffff", textColor: "#a6a6a6", unsungOpacity: 0.45, feather: 28, blur: 2 } },
+        { name: "Neon", color: "#ff4fd8", values: { karaoke: "sweep", glow: 1, glowColor: "#ff4fd8", activeColor: "#ffe3fa", textColor: "#9a86a8", unsungOpacity: 0.35, feather: 18, blur: 2.5 } },
+        { name: "Cyber", color: "#3ee6ff", values: { karaoke: "sweep", glow: 1, glowColor: "#3ee6ff", activeColor: "#e0fbff", textColor: "#7d97a3", unsungOpacity: 0.35, feather: 18, blur: 2.5 } },
+        { name: "Typewriter", color: "#ffd166", values: { karaoke: "typewriter", glow: 0.6, glowColor: "#ffffff", activeColor: "#ffffff", textColor: "#a6a6a6", unsungOpacity: 0, feather: 0, blur: 2 } },
+        { name: "Minimal", color: "#a6a6a6", values: { karaoke: "none", glow: 0, activeColor: "#ffffff", textColor: "#a6a6a6", blur: 1.5 } }
+    ]
+
+    function applyPreset(p) {
+        for (const key in p.values)
+            root.set(key, p.values[key], `${p.name} look`);
+    }
 
     function reset() {
         for (const key in defaults)
@@ -262,6 +279,8 @@ Singleton {
             property bool pomodoroSound: root.defaults.pomodoroSound
             property int pauseReminderMinutes: root.defaults.pauseReminderMinutes
             property bool checkUpdates: root.defaults.checkUpdates
+            property int notchCloseDelay: root.defaults.notchCloseDelay
+            property bool samplePreview: root.defaults.samplePreview
             property int maxFps: root.defaults.maxFps
             property bool breakTips: root.defaults.breakTips
             property bool weatherEnabled: root.defaults.weatherEnabled

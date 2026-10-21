@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.0 — 2026-10-21
+
+### Added
+- **Setup guide** on first start (and `islet setup`): where you play music, bar or floating island, lyrics on
+  the screen edge, and a look — every answer applies right away
+- **Search in Settings**: plain words (*youtube*, *too fast*, *weather*) give an answer and jump to the
+  setting, which lights up. `islet settings <words>` opens Settings searching; `islet settings weatherCity`
+  goes straight to a setting
+- **Test mode switch** (sample lyrics) in the Settings sidebar, on every page, and *Start with sample lyrics
+  when nothing plays*
+- Notch **pin** (📌): stays open after the mouse leaves. The Shelf tab and file drags keep it open too, so
+  dragging files in works. *Close after* delay setting (default 1.2 s, was 0.45 s)
+
 ## 1.4.0 — 2026-10-21
 
 ### Added

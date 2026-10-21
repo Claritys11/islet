@@ -53,8 +53,14 @@ Item {
         return Qt.size(w, 34);
     }
 
+    // Pinned (📌), on the Shelf tab, or with files being dragged over it,
+    // the island stays open after the mouse leaves; close it with ⌃ or Esc.
+    property bool pinned: false
+    readonly property bool keepOpen: pinned || (mode === "open" && tab === 3) || drop.containsDrag
+
     function close() {
         mode = "closed";
+        pinned = false;
     }
 
     function open(t) {
@@ -106,15 +112,17 @@ Item {
     Timer {
         id: unvisitedTimer
         interval: 5000
-        running: win.barMode && win.mode === "open" && !hover.hovered
+        running: win.barMode && win.mode === "open" && !hover.hovered && !win.keepOpen
         onTriggered: if (!checklist.inputFocused)
             win.close()
     }
 
     Timer {
         id: leaveTimer
-        interval: 450
+        interval: win.o.notchCloseDelay
         onTriggered: {
+            if (win.keepOpen)
+                return;
             // Don't snatch the panel away while you're typing a task.
             if (win.mode === "open" && checklist.inputFocused && checklist.draft !== "")
                 return;
@@ -187,7 +195,7 @@ Item {
                             hoverTimer.restart();
                     } else {
                         hoverTimer.stop();
-                        if (win.mode !== "closed" && win.o.notchAutoClose)
+                        if (win.mode !== "closed" && win.o.notchAutoClose && !win.keepOpen)
                             leaveTimer.restart();
                     }
                 }
@@ -519,6 +527,13 @@ Item {
                     }
                     TimerChip {
                         visible: win.hasTimer && win.tab !== 1
+                    }
+                    NotchIconButton {
+                        icon: "push_pin"
+                        size: 28
+                        filled: win.keepOpen
+                        tint: win.keepOpen ? Theme.primary : Theme.subtext
+                        onClicked: win.pinned = !win.pinned
                     }
                     NotchIconButton {
                         icon: "settings"

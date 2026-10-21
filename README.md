@@ -28,6 +28,8 @@ curl -fsSL https://raw.githubusercontent.com/Claritys11/islet/main/install.sh | 
 
 That's it — Islet starts right away and with every login. No sudo, no build step, nothing touched
 outside your home folder. Open **Islet Settings** from your app launcher to make it yours.
+A short **setup guide** opens the first time (Spotify or YouTube? bar or floating island? which look?) — run it
+again any time with `islet setup`.
 
 <details>
 <summary>Other ways to install</summary>
@@ -140,6 +142,10 @@ Click the pill to open it. It follows your DankMaterialShell / Matugen wallpaper
 
 Everything is live, and Islet shows you exactly what you changed:
 
+- **Search** — type what you want in plain words (*youtube*, *too fast*, *weather*, *bar*) and Islet answers and
+  jumps to the right setting. From a terminal: `islet settings youtube`
+- **Test with sample lyrics** — a switch in the corner turns test mode on or off at any time
+
 - **A toast on screen** names every change and its new value
 - **Changed settings** are marked, with a one-click reset; the sidebar counts changes per module
 - **See it while you tune it** — the lyrics area is outlined on screen, sample lyrics play when nothing
@@ -154,7 +160,8 @@ Prefer the terminal? `islet set glow 0.9`, `islet get offsetMs`. Settings live i
 ## ⌨️ Command line & keybinds
 
 ```
-islet settings [lyrics|notch|focus|checklist]    open settings (on a page)
+islet setup                                     the setup guide
+islet settings [page | words]                   open settings, on a page or searching: islet settings youtube
 islet notch [media|focus|checklist|shelf|viz]   toggle the notch / open a tab / visualizer
 islet shelf [FILE…|clear]                       put files on the shelf (no files = list)
 islet share [copy|save]                         share card of the song playing now

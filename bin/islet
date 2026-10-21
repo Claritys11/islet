@@ -6,7 +6,8 @@ usage() {
     cat <<USAGE
 Usage: islet <command>
 
-  settings [page]                 Open settings (overview|lyrics|notch|focus|checklist|about)
+  setup                           The setup guide: a few questions that set Islet up
+  settings [page | words]         Open settings on a page, or search it: islet settings youtube
   set <key> <value>, get <key>    Change or read one setting, e.g. islet set glow 0.9
   start | stop | restart          Run Islet (via systemd if the service is installed)
   status                          What's playing and the lyrics status
@@ -58,8 +59,10 @@ stop() {
 call() { start && qs -c "$CFG" ipc call "$@"; }
 
 case "$1" in
+    setup) call islet setup ;;
     settings)
-        if [ -n "$2" ]; then call islet open "$2"; else call islet settings; fi ;;
+        shift
+        if [ $# -gt 0 ]; then call islet open "$*"; else call islet settings; fi ;;
     set) call islet set "$2" "$3" ;;
     get) call islet get "$2" ;;
     start) start ;;

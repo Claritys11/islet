@@ -19,8 +19,11 @@ FloatingWindow {
 
     // The notch window, if enabled (for preview buttons).
     property var shellNotch: null
-    // Show sample lyrics while configuring (automatic when nothing plays).
-    property bool samplePreview: false
+    // Test mode: sample lyrics on screen while configuring. On by itself
+    // when nothing plays (if samplePreview is set); the switches override it.
+    property var sampleOverride: undefined
+    // Opened as `islet settings <words>`: start with that search.
+    property string initialQuery: ""
     property int page: 0
 
     readonly property var o: Config.opts
@@ -34,15 +37,15 @@ FloatingWindow {
     Binding {
         target: LyricsService
         property: "demo"
-        value: win.visible && (win.samplePreview || (LyricsService.player?.trackTitle ?? "") === "")
+        value: win.visible && (win.sampleOverride !== undefined ? win.sampleOverride : win.o.samplePreview && (LyricsService.player?.trackTitle ?? "") === "")
         restoreMode: Binding.RestoreValue
     }
 
     // Which settings belong to which page (for the change badges).
     readonly property var pages: [
         { icon: "dashboard", title: "Overview", subtitle: "Modules and quick looks", keys: ["maxFps"] },
-        { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "fillSpeed", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "lyricsSource", "spicyOffsetMs", "offsetMs", "lrclibUrl"] },
-        { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose", "vizMode", "vizIdleSeconds", "weatherEnabled", "weatherCity", "weatherUnit"] },
+        { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "fillSpeed", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "samplePreview", "lyricsSource", "spicyOffsetMs", "offsetMs", "lrclibUrl"] },
+        { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose", "notchCloseDelay", "vizMode", "vizIdleSeconds", "weatherEnabled", "weatherCity", "weatherUnit"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes", "breakTips"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
         { icon: "info", title: "About", subtitle: "Updates, files, shortcuts", keys: ["checkUpdates"] }
@@ -61,18 +64,124 @@ FloatingWindow {
         return keys.filter(k => Config.opts[k] !== Config.defaults[k]).length;
     }
 
-    // Quick looks for the lyrics that change several settings at once.
-    readonly property var presets: [
-        { name: "Spicy", color: "#ffffff", values: { karaoke: "sweep", glow: 0.7, glowColor: "#ffffff", activeColor: "#ffffff", textColor: "#a6a6a6", unsungOpacity: 0.45, feather: 28, blur: 2 } },
-        { name: "Neon", color: "#ff4fd8", values: { karaoke: "sweep", glow: 1, glowColor: "#ff4fd8", activeColor: "#ffe3fa", textColor: "#9a86a8", unsungOpacity: 0.35, feather: 18, blur: 2.5 } },
-        { name: "Cyber", color: "#3ee6ff", values: { karaoke: "sweep", glow: 1, glowColor: "#3ee6ff", activeColor: "#e0fbff", textColor: "#7d97a3", unsungOpacity: 0.35, feather: 18, blur: 2.5 } },
-        { name: "Typewriter", color: "#ffd166", values: { karaoke: "typewriter", glow: 0.6, glowColor: "#ffffff", activeColor: "#ffffff", textColor: "#a6a6a6", unsungOpacity: 0, feather: 0, blur: 2 } },
-        { name: "Minimal", color: "#a6a6a6", values: { karaoke: "none", glow: 0, activeColor: "#ffffff", textColor: "#a6a6a6", blur: 1.5 } }
+    readonly property var presets: Config.presets
+    function applyPreset(p) {
+        Config.applyPreset(p);
+    }
+
+    // ── Search ────────────────────────────────────────────────────
+    // Every setting row registers itself here (key → row), so search can
+    // find it and jump to it.
+    property var rows: ({})
+    // (A QML var property hands out copies of objects; mutating one would
+    // be lost, so the map is replaced instead.)
+    function register(key, row) {
+        const next = Object.assign({}, rows);
+        next[key] = row;
+        rows = next;
+    }
+
+    // Questions people actually ask, with the answer and where to go.
+    readonly property var guides: [
+        { words: "youtube music yt browser chrome chromium firefox brave web video", title: "Use YouTube or YouTube Music", answer: "Nothing to set up: play it in your browser and Islet follows it. If several things play at once, the preferred player wins.", key: "player" },
+        { words: "spotify spicy spicetify exact timing syllable", title: "Exact timing with Spicy Lyrics (Spotify)", answer: "Run 'islet spicetify' once in a terminal (Spotify restarts). Then the source below says Spicy Lyrics.", key: "lyricsSource" },
+        { words: "early late fast slow sync out off delay offset ahead behind timing too", title: "Lyrics too early or too late", answer: "Move the timing offset. Positive shows lines earlier.", key: "offsetMs" },
+        { words: "fill speed karaoke too fast slow sweep", title: "Karaoke fill too fast or slow", answer: "Fill speed changes how quickly a line lights up (for songs without word timing).", key: "fillSpeed" },
+        { words: "wrong lyrics version different song live remix", title: "Wrong lyrics for this song", answer: "Pick another version from LRCLIB for the song playing now.", key: "lyricsSource" },
+        { words: "bar dms dankmaterialshell panel widget top media", title: "Put Islet in the DankMaterialShell bar", answer: "Choose 'In the DMS bar', then 'Set up DMS bar widget'.", key: "notchMode" },
+        { words: "floating island notch top pill", title: "Floating island instead of the bar", answer: "Choose 'Floating island'.", key: "notchMode" },
+        { words: "close closes closing stay open shut leave pin drag drop", title: "The notch closes too soon", answer: "Pin it with 📌, use the Shelf tab, or close it later.", key: "notchCloseDelay" },
+        { words: "shelf file files drag drop keep park", title: "File shelf", answer: "Drag files onto the notch or the Islet pill in your bar; drag them out into any app. Open it with the Shelf tab." },
+        { words: "share picture image photo instagram story card screenshot", title: "Share the song as a picture", answer: "The ⬆ button in the notch's Media tab (or 'islet share') makes a card to copy or save." },
+        { words: "weather city temperature location celsius fahrenheit", title: "Weather", answer: "Shown when nothing plays. Type your city, or leave it empty to use DankMaterialShell's location.", key: "weatherCity" },
+        { words: "visualizer away idle afk screen", title: "Visualizer when you're away", answer: "The notch turns into a visualizer after you've been away for a while.", key: "vizMode" },
+        { words: "pomodoro timer focus minutes length long work", title: "Focus timer length", answer: "Set focus, short and long break lengths.", key: "focusMinutes" },
+        { words: "continuous auto start automatic loop deep focus", title: "Keep focus going by itself", answer: "Start breaks and focus automatically (the ∞ button in the Focus tab does both).", key: "autoStartFocus" },
+        { words: "break tips stretch water eyes", title: "Break tips", answer: "A suggestion for each break.", key: "breakTips" },
+        { words: "pause emergency reminder", title: "Pause reminder", answer: "Get one nudge when a pause runs long.", key: "pauseReminderMinutes" },
+        { words: "notion tasks todo to-do checklist sync", title: "Tasks from Notion", answer: "Paste your integration secret and page link here.", key: "checklistSource" },
+        { words: "colour color theme glow neon look style preset", title: "Change how the lyrics look", answer: "Try a look preset, or set colours and glow yourself.", key: "glow" },
+        { words: "big bigger small smaller font size text", title: "Bigger or smaller lyrics", answer: "Change the text size.", key: "fontSize" },
+        { words: "left right side position move", title: "Lyrics on the left or right", answer: "Pick the side of the screen.", key: "side" },
+        { words: "hide disable turn off remove lyrics overlay wheel edge", title: "Turn the lyrics on the screen edge off", answer: "Switch the overlay off; lyrics still show in the notch.", key: "lyricsEnabled" },
+        { words: "cpu battery performance lag slow heavy smooth fps laggy", title: "Make Islet lighter", answer: "Choose 'Light · 30' for less CPU and battery.", key: "maxFps" },
+        { words: "update version upgrade new", title: "Updates", answer: "Islet checks for updates; update with one click or 'islet update'.", key: "checkUpdates" },
+        { words: "test sample demo preview example", title: "Test with sample lyrics", answer: "The switch at the bottom left shows sample lyrics while you change things.", key: "samplePreview" },
+        { words: "setup guide start beginning wizard welcome help", title: "Run the setup guide again", answer: "A few questions that set Islet up for you.", action: "setup" }
     ]
 
-    function applyPreset(p) {
-        for (const key in p.values)
-            Config.set(key, p.values[key], `${p.name} look`);
+    function search(query) {
+        const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+        if (words.length === 0)
+            return [];
+        const hit = (hay, w) => hay.includes(w) ? 1 : 0;
+        const out = [];
+        for (const g of guides) {
+            const hay = `${g.words} ${g.title}`.toLowerCase();
+            const n = words.reduce((a, w) => a + hit(hay, w), 0);
+            if (n > 0)
+                out.push({ score: n * 3 + 1, title: g.title, answer: g.answer, key: g.key ?? "", action: g.action ?? "", where: g.key ? pageTitleOf(g.key) : "" });
+        }
+        for (const key in rows) {
+            const r = rows[key];
+            const hay = `${r.label} ${r.hint} ${key}`.toLowerCase();
+            const n = words.reduce((a, w) => a + hit(hay, w), 0);
+            if (n > 0 && !out.some(o => o.key === key))
+                out.push({ score: n * 2, title: r.label, answer: r.hint, key, action: "", where: pageTitleOf(key) });
+        }
+        return out.sort((a, b) => b.score - a.score).slice(0, 12);
+    }
+
+    function pageTitleOf(key) {
+        return pages.find(p => p.keys.includes(key))?.title ?? "";
+    }
+
+    // Show a setting: its page, scrolled to it, glowing.
+    function jumpTo(key) {
+        const i = pages.findIndex(p => p.keys.includes(key));
+        if (i >= 0)
+            page = i;
+        jumpTimer.key = key;
+        jumpTimer.restart();
+    }
+    // Scroll once the page has been laid out.
+    Timer {
+        id: jumpTimer
+        property string key
+        interval: 120
+        onTriggered: {
+            const r = win.rows[key];
+            if (!r)
+                return;
+            let f = r.parent;
+            while (f && f.contentY === undefined)
+                f = f.parent;
+            if (f)
+                f.contentY = Math.max(0, Math.min(f.contentHeight - f.height, r.mapToItem(f.contentItem, 0, 0).y - 90));
+            r.pulse();
+        }
+    }
+
+    signal setupRequested
+
+    // `islet settings weatherCity` goes straight to that setting.
+    // (Later: the rows register themselves once they're all built.)
+    Component.onCompleted: Qt.callLater(() => {
+        if (!rows[initialQuery])
+            return;
+        const key = initialQuery;
+        searchField.text = "";
+        jumpTo(key);
+    })
+    readonly property string query: searchField.text.trim()
+    readonly property var results: search(query)
+
+    function openResult(r) {
+        searchField.text = "";
+        if (r.action === "setup")
+            setupRequested();
+        else if (r.key !== "")
+            jumpTo(r.key);
     }
 
     function fmtTime(s) {
@@ -159,6 +268,28 @@ FloatingWindow {
             duration: 900
             easing.type: Easing.OutCubic
         }
+        // Found by search: a longer, brighter glow so the eye lands on it.
+        SequentialAnimation {
+            id: pulseAnim
+            NumberAnimation {
+                target: flash
+                property: "value"
+                to: 0.4
+                duration: 250
+            }
+            NumberAnimation {
+                target: flash
+                property: "value"
+                to: 0
+                duration: 1800
+                easing.type: Easing.InOutQuad
+            }
+        }
+        function pulse() {
+            pulseAnim.restart();
+        }
+        Component.onCompleted: if (key !== "")
+            win.register(key, row)
         Connections {
             target: Config
             function onEdited(k) {
@@ -458,6 +589,34 @@ FloatingWindow {
                     }
                 }
 
+                // Search: "youtube", "too fast", "weather"… (Ctrl+F)
+                TextField {
+                    id: searchField
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 8
+                    placeholderText: "Search — e.g. youtube"
+                    font.family: win.font
+                    font.pixelSize: 13
+                    leftPadding: 34
+                    Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: 8
+                        text: "search"
+                        size: 20
+                    }
+                    text: win.initialQuery
+                    Keys.onEscapePressed: text = ""
+                    onAccepted: {
+                        const first = win.search(text)[0];
+                        if (first)
+                            win.openResult(first);
+                    }
+                }
+                Shortcut {
+                    sequences: [StandardKey.Find]
+                    onActivated: searchField.forceActiveFocus()
+                }
+
                 Repeater {
                     model: win.pages
                     Rectangle {
@@ -545,6 +704,23 @@ FloatingWindow {
                         y: 10
                         width: parent.width - 24
                         spacing: 2
+                        // Test mode on/off, from any page.
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.bottomMargin: 4
+                            Label {
+                                Layout.fillWidth: true
+                                text: "Sample lyrics"
+                                color: win.text
+                                font.family: win.font
+                                font.pixelSize: 13
+                            }
+                            Switch {
+                                scale: 0.8
+                                checked: LyricsService.demo
+                                onToggled: win.sampleOverride = checked
+                            }
+                        }
                         Label {
                             text: LyricsService.demo ? "PREVIEWING SAMPLE" : "NOW PLAYING"
                             color: win.accent
@@ -588,7 +764,91 @@ FloatingWindow {
             Layout.fillHeight: true
             spacing: 0
 
+            // ── Search results ────────────────────────────────────
+            ScrollView {
+                visible: win.query !== ""
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                contentWidth: availableWidth
+                clip: true
+                ColumnLayout {
+                    x: 24
+                    width: parent.width - 48
+                    spacing: 8
+                    Label {
+                        Layout.topMargin: 20
+                        Layout.bottomMargin: 6
+                        text: win.results.length ? `Results for “${win.query}”` : `Nothing found for “${win.query}”. Try other words, like “timing”, “bar” or “colour”.`
+                        color: win.text
+                        wrapMode: Text.Wrap
+                        Layout.fillWidth: true
+                        font.family: win.font
+                        font.pixelSize: 20
+                        font.weight: Font.Bold
+                    }
+                    Repeater {
+                        model: win.results
+                        Rectangle {
+                            id: res
+                            required property var modelData
+                            readonly property bool clickable: modelData.key !== "" || modelData.action !== ""
+                            Layout.fillWidth: true
+                            implicitHeight: resCol.implicitHeight + 24
+                            radius: 14
+                            color: resMouse.containsMouse && clickable ? "#24262b" : win.card
+                            ColumnLayout {
+                                id: resCol
+                                x: 16
+                                y: 12
+                                width: parent.width - 32
+                                spacing: 3
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: res.modelData.title
+                                        color: win.text
+                                        wrapMode: Text.Wrap
+                                        font.family: win.font
+                                        font.pixelSize: 15
+                                        font.weight: Font.DemiBold
+                                    }
+                                    Label {
+                                        visible: res.modelData.where !== ""
+                                        text: `${res.modelData.where}  →`
+                                        color: win.accent
+                                        font.family: win.font
+                                        font.pixelSize: 12
+                                    }
+                                }
+                                Label {
+                                    visible: res.modelData.answer !== ""
+                                    Layout.fillWidth: true
+                                    text: res.modelData.answer
+                                    color: win.subtext
+                                    wrapMode: Text.Wrap
+                                    font.family: win.font
+                                    font.pixelSize: 13
+                                }
+                            }
+                            MouseArea {
+                                id: resMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: res.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: if (res.clickable)
+                                    win.openResult(res.modelData)
+                            }
+                        }
+                    }
+                    Item {
+                        implicitHeight: 20
+                    }
+                }
+            }
+
             RowLayout {
+                visible: win.query === ""
                 Layout.fillWidth: true
                 Layout.leftMargin: 24
                 Layout.rightMargin: 24
@@ -624,6 +884,7 @@ FloatingWindow {
             }
 
             StackLayout {
+                visible: win.query === ""
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 currentIndex: win.page
@@ -723,8 +984,12 @@ FloatingWindow {
                             }
                             Switch {
                                 checked: LyricsService.demo
-                                onToggled: win.samplePreview = checked
+                                onToggled: win.sampleOverride = checked
                             }
+                        }
+                        SwitchSetting {
+                            key: "samplePreview"
+                            label: "Start with sample lyrics when nothing plays"
                         }
                     }
                     Card {
@@ -1354,6 +1619,16 @@ FloatingWindow {
                         SwitchSetting {
                             key: "notchAutoClose"
                             label: "Close when the mouse leaves"
+                            hint: "Pin it (📌) or use the Shelf tab to keep it open, e.g. while dragging files in"
+                        }
+                        SliderSetting {
+                            key: "notchCloseDelay"
+                            label: "Close after"
+                            from: 200
+                            to: 5000
+                            stepSize: 100
+                            decimals: 0
+                            unit: " ms"
                         }
                     }
                     Card {
@@ -1646,6 +1921,11 @@ FloatingWindow {
                         title: "Islet"
                         hint: "Lyrics, music, focus and to-dos for your Linux desktop. Built on Quickshell."
                         RowLayout {
+                            Button {
+                                text: "Setup guide"
+                                highlighted: true
+                                onClicked: win.setupRequested()
+                            }
                             Button {
                                 text: "GitHub"
                                 onClicked: Qt.openUrlExternally("https://github.com/Claritys11/islet")

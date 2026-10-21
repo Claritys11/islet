@@ -59,6 +59,8 @@ Singleton {
             property string updateNotified: ""
             // File shelf: [{ path, name, added }] — references, not copies.
             property var shelf: []
+            // The first-run setup guide has been seen.
+            property bool setupDone: false
         }
     }
 }

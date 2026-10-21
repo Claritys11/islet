@@ -220,7 +220,7 @@ PanelWindow {
         SettingsWindow {
             visible: true
             page: 1
-            samplePreview: true
+            sampleOverride: true
         }
     }
 

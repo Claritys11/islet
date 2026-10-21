@@ -44,6 +44,8 @@ journalctl --user -u islet -n 30        # look for lines containing ERROR
 `~/.local/bin` must be on `PATH` for the `islet` command. If `islet status` prints `idle`, nothing is
 playing — that's fine.
 
+A setup guide window opens on first start; let the user answer it (or close it). `islet setup` reopens it.
+
 ## 4. Optional: keybinds (ask first)
 
 **niri** (`~/.config/niri/config.kdl`) — add inside the existing `binds { }` block, and add the

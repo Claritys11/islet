@@ -23,6 +23,7 @@ ShellRoot {
     property bool settingsOpen: false
 
     property int settingsPage: 0
+    property string settingsQuery: ""
 
     function openSettings(page) {
         if (page !== undefined)
@@ -36,11 +37,17 @@ ShellRoot {
     IpcHandler {
         target: "islet"
 
+        function setup(): void {
+            shell.setupOpen = true;
+        }
         function settings(): void {
+            shell.settingsQuery = "";
             shell.openSettings();
         }
+        // A page name opens that page; anything else searches settings.
         function open(page: string): void {
             const i = ["overview", "lyrics", "notch", "focus", "checklist", "about"].indexOf(page.toLowerCase());
+            shell.settingsQuery = i >= 0 ? "" : page;
             shell.openSettings(Math.max(0, i));
         }
         // Change one setting, e.g. `islet set glow 0.9`. The value is read
@@ -244,10 +251,38 @@ ShellRoot {
         SettingsWindow {
             visible: true
             page: shell.settingsPage
+            initialQuery: shell.settingsQuery
             shellNotch: shell.notch
             onVisibleChanged: if (!visible)
                 shell.settingsOpen = false
+            onSetupRequested: {
+                visible = false;
+                shell.setupOpen = true;
+            }
         }
+    }
+
+    // First-run guide (and `islet setup`).
+    property bool setupOpen: false
+    LazyLoader {
+        active: shell.setupOpen
+
+        SetupWindow {
+            visible: true
+            // Closed any way at all: seen, don't open it again by itself.
+            onVisibleChanged: if (!visible) {
+                Store.db.setupDone = true;
+                shell.setupOpen = false;
+            }
+            onOpenSettings: shell.openSettings(0)
+        }
+    }
+    // Once, a moment after the very first start (state.json has loaded).
+    Timer {
+        running: shell.showcase === ""
+        interval: 2500
+        onTriggered: if (!Store.db.setupDone)
+            shell.setupOpen = true
     }
 
     // ── Feedback while configuring ────────────────────────────────
