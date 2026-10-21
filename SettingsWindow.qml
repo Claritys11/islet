@@ -49,7 +49,7 @@ FloatingWindow {
         { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose", "notchCloseDelay", "vizMode", "vizIdleSeconds", "weatherEnabled", "weatherCity", "weatherUnit"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes", "breakTips"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
-        { icon: "event_note", title: "Calendar & Notion", subtitle: "Lessons, deadlines, Google sync", keys: ["todayEnabled", "todaySync", "todayCalendar", "todayTimetableDb", "todayTasksDb", "todayColumns", "todayDays", "todayMorningOpen", "todayMorningSeconds", "todayNudges", "todayEventMinutes", "todaySemesterEnd", "todaySyncMinutes"] },
+        { icon: "event_note", title: "Calendar & Notion", subtitle: "Lessons, deadlines, Google sync", keys: ["todayEnabled", "todaySync", "todaySyncLessons", "todayCalendar", "todayTimetableDb", "todayTasksDb", "todayColumns", "todayDays", "todayMorningOpen", "todayMorningSeconds", "todayNudges", "todayEventMinutes", "todaySemesterEnd", "todaySyncMinutes"] },
         { icon: "search", title: "Finder", subtitle: "Find files and folders", keys: ["finderRoots", "finderExclude", "finderHidden", "finderFileManager", "finderTerminal", "finderEditor", "finderReindexMinutes"] },
         { icon: "info", title: "About", subtitle: "Updates, files, shortcuts", keys: ["checkUpdates"] }
     ]
@@ -1991,10 +1991,15 @@ FloatingWindow {
                     Card {
                         title: "Sync with Google Calendar"
                         visible: win.o.todayEnabled
-                        hint: "Both ways: change a lesson or a plan in Notion or in Google Calendar and the other follows within a few minutes. If both change the same thing between two syncs, the later change is kept and you're told."
+                        hint: "Both ways: change a task's plan in Notion or in Google Calendar and the other follows within a few minutes. If both change the same thing between two syncs, the later change is kept and you're told."
                         SwitchSetting {
                             key: "todaySync"
                             label: "Sync"
+                        }
+                        SwitchSetting {
+                            key: "todaySyncLessons"
+                            label: "Lessons too"
+                            hint: "Off: only tasks and deadlines go to Google; lessons stay in Notion and on the Hari ini tab. Turning it off deletes the lesson events Islet made."
                         }
                         // The first sync asks before writing anything.
                         Rectangle {

@@ -127,6 +127,8 @@ Singleton {
             // Today (Notion ⇄ Google Calendar)
             todayEnabled: true,
             todaySync: true,
+            // Lessons as weekly events in Google too (off: only tasks).
+            todaySyncLessons: false,
             todayCalendar: "",
             todayTimetableDb: "",
             todayTasksDb: "",
@@ -324,6 +326,7 @@ Singleton {
 
             property bool todayEnabled: root.defaults.todayEnabled
             property bool todaySync: root.defaults.todaySync
+            property bool todaySyncLessons: root.defaults.todaySyncLessons
             property string todayCalendar: root.defaults.todayCalendar
             property string todayTimetableDb: root.defaults.todayTimetableDb
             property string todayTasksDb: root.defaults.todayTasksDb

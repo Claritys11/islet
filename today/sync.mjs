@@ -20,6 +20,8 @@
 // - A side that wasn't read completely (complete.lesson / complete.task
 //   false: a database missing or just switched) never ends or deletes
 //   anything. Many removals at once are held back until allowed.
+// - opts.lessons false keeps lessons out of Google: only tasks are synced,
+//   and the series Islet made are deleted (Notion is left as it is).
 
 import { BYDAY, hariIndex, seriesStart, fromEvent } from "./timetable.mjs";
 
@@ -165,8 +167,30 @@ function planOnce({ lessons, tasks, events, state, now, healthy, opts, window, c
     const vanished = expected.filter(p => !byId.has(p.eventId)).length;
     const ready = healthy && !(vanished >= 3 && vanished > expected.length / 2);
 
+    // Lessons kept out of Google: delete the series Islet made, and any
+    // stray copy carrying a lesson's tag.
+    const withLessons = opts.lessons !== false;
+    if (!withLessons) {
+        const deleted = new Set();
+        for (const [pageId, pair] of Object.entries(next.pairs)) {
+            if (pair.kind !== "lesson")
+                continue;
+            if (pair.eventId && byId.has(pair.eventId)) {
+                actions.push({ op: "deleteEvent", eventId: pair.eventId, pageId });
+                deleted.add(pair.eventId);
+            } else if (pair.eventId && !ready) {
+                continue;
+            }
+            delete next.pairs[pageId];
+        }
+        const lessonIds = new Set((lessons ?? []).map(l => l.pageId));
+        for (const e of events)
+            if (!deleted.has(e.id) && lessonIds.has(tagOf(e.description)))
+                actions.push({ op: "deleteEvent", eventId: e.id, pageId: tagOf(e.description) });
+    }
+
     const items = [];
-    for (const l of lessons ?? [])
+    for (const l of withLessons ? lessons ?? [] : [])
         items.push(l.error ? { pageId: l.pageId, kind: "lesson", broken: true } : { pageId: l.pageId, kind: "lesson", src: l, fields: lessonFields(l, opts.semesterEnd), edited: l.edited });
     for (const t of tasks ?? [])
         items.push({ pageId: t.pageId, kind: "task", src: t, fields: taskFields(t, minutes), edited: t.edited });

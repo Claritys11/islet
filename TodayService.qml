@@ -432,7 +432,7 @@ Singleton {
                 healthy: DcalService.healthy,
                 window: syncWindow(),
                 complete: { lesson: known("lesson", timetableDb), task: known("task", tasksDb) },
-                opts: { seriesFrom: new Date(), semesterEnd: o.todaySemesterEnd, eventMinutes: o.todayEventMinutes, allowMass: _allowMass }
+                opts: { seriesFrom: new Date(), semesterEnd: o.todaySemesterEnd, eventMinutes: o.todayEventMinutes, allowMass: _allowMass, lessons: o.todaySyncLessons }
             });
             _allowMass = false;
             held = result.held ?? 0;
@@ -451,8 +451,10 @@ Singleton {
         const parts = [];
         if (n("createEvent"))
             parts.push(`buat ${n("createEvent")} event`);
-        if (n("updateEvent") + n("endSeries") + n("deleteEvent"))
-            parts.push(`ubah ${n("updateEvent") + n("endSeries") + n("deleteEvent")} event`);
+        if (n("updateEvent") + n("endSeries"))
+            parts.push(`ubah ${n("updateEvent") + n("endSeries")} event`);
+        if (n("deleteEvent"))
+            parts.push(`hapus ${n("deleteEvent")} event`);
         if (n("updateNotion") + n("clearStart"))
             parts.push(`ubah ${n("updateNotion") + n("clearStart")} baris Notion`);
         if (n("conflict"))

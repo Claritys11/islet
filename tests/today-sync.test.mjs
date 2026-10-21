@@ -314,3 +314,36 @@ test("a semester end set later reaches existing series", () => {
     assert.deepEqual(ops(r), ["updateEvent"]);
     assert.deepEqual(r.actions[0].event.recurrence, ["FREQ=WEEKLY;BYDAY=TU;UNTIL=20261219T165959Z"]);
 });
+
+// Lessons kept out of Google (todaySyncLessons off): only tasks go there.
+const noLessons = { ...opts, lessons: false };
+
+test("lessons off: no series is made, tasks still are", () => {
+    const r = run({ lessons: [lesson("p1")], tasks: [task("t1")], opts: noLessons });
+    assert.deepEqual(ops(r), ["createEvent"]);
+    assert.equal(r.actions[0].pageId, "t1");
+    assert.equal(r.state.pairs.p1, undefined);
+});
+
+test("lessons off: series Islet made are deleted, not held, Notion untouched", () => {
+    const first = run({ lessons: ["a", "b", "c", "d", "e"].map(p => lesson(p)) });
+    const s = apply(first, { lessons: ["a", "b", "c", "d", "e"].map(p => lesson(p)) });
+    const r = run({ lessons: s.lessons, events: s.events, state: s.state, opts: noLessons });
+    assert.equal(r.held, undefined);
+    assert.deepEqual(ops(r), ["deleteEvent", "deleteEvent", "deleteEvent", "deleteEvent", "deleteEvent"]);
+    assert.deepEqual(Object.keys(r.state.pairs), []);
+    assert.deepEqual(r.state.removed, []);
+});
+
+test("lessons off: a stray lesson event with Islet's tag goes too", () => {
+    const stray = { id: "dup", title: "L-p1", start: "2026-10-20T00:00:00Z", end: "2026-10-20T01:30:00Z", allDay: false, description: `${TAG}p1`, recurring: true, rrule: "RRULE:FREQ=WEEKLY;BYDAY=TU" };
+    const r = run({ lessons: [lesson("p1")], events: [stray], opts: noLessons });
+    assert.deepEqual(r.actions.map(a => [a.op, a.eventId]), [["deleteEvent", "dup"]]);
+});
+
+test("lessons off: an Islet series not listed right now is forgotten only when Dank Calendar is ready", () => {
+    const state = emptyState();
+    state.pairs.p1 = { eventId: "gone", kind: "lesson", snap: {}, missing: 0, from: now.getTime(), first: now.getTime() };
+    assert.deepEqual(Object.keys(run({ lessons: [lesson("p1")], state, healthy: false, opts: noLessons }).state.pairs), ["p1"]);
+    assert.deepEqual(Object.keys(run({ lessons: [lesson("p1")], state, opts: noLessons }).state.pairs), []);
+});
