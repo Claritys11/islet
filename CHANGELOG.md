@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.3 — 2026-10-21
 
 ### Added
 - **Finder** opens Islet's own places: type `pomo`, `hari ini`/`jadwal`, `shelf`, `ceklis`, `lirik` or
