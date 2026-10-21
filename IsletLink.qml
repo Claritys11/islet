@@ -44,6 +44,8 @@ Singleton {
             timer: P.active ? { clock: P.clock, mode: P.mode, running: P.running, paused: P.paused, pausedFor: P.paused ? P.format(P.pausedFor) : "", progress: Math.round(P.progress * 1000) / 1000 } : null,
             bar: { width: o.barPillWidth, text: o.notchPillText, viz: o.barShowVisualizer, timer: o.barShowTimer, accent: Theme.primary.toString() },
             weather: o.weatherEnabled && WeatherService.ready ? { temp: WeatherService.tempText, icon: WeatherService.icon, text: WeatherService.description } : null,
+            // Today: a lesson about to start (beats the song), deadlines due today.
+            today: o.todayEnabled ? { soon: TodayService.soon ? `${TodayService.soon.title} · mulai ${Math.max(1, Math.ceil((TodayService.soon.startAt - Date.now()) / 60000))} mnt lagi` : "", due: TodayService.dueToday, dueText: TodayService.dueToday === 1 ? (d => d ? `${d.title} · ${d.label}` : "")(TodayService.deadlines.find(x => x.urgency === "today" || x.urgency === "overdue")) : `${TodayService.dueToday} tenggat hari ini` } : null,
             notchOpen: root.notchOpen
         });
     }

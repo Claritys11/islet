@@ -21,7 +21,13 @@ PluginComponent {
     readonly property bool hasTrack: linked && st.hasTrack
     readonly property bool hasTimer: linked && st.timer !== null && (st.bar?.timer ?? true)
     readonly property string text: !hasTrack ? "" : st.line !== "" && st.bar?.text !== "title" ? st.line : `${st.title}  ·  ${st.artist}`
-    readonly property bool hasWeather: linked && !hasTrack && !hasTimer && !!st.weather
+    // Today: a lesson about to start beats the song; deadlines due today
+    // show when nothing plays (and as a small count while music does).
+    readonly property string soon: linked ? (st.today?.soon ?? "") : ""
+    readonly property int due: linked ? (st.today?.due ?? 0) : 0
+    readonly property bool hasSoon: soon !== ""
+    readonly property bool hasDue: !hasTrack && !hasSoon && due > 0
+    readonly property bool hasWeather: linked && !hasTrack && !hasTimer && !hasSoon && !hasDue && !!st.weather
     readonly property bool isLyric: hasTrack && st.line !== "" && st.bar?.text !== "title"
 
     function send(msg) {
@@ -31,7 +37,7 @@ PluginComponent {
         link.flush();
     }
 
-    pillClickAction: (x, y, width, section, screen) => send({ cmd: "toggle", tab: hasTrack ? "media" : "focus", x, y, width })
+    pillClickAction: (x, y, width, section, screen) => send({ cmd: "toggle", tab: hasSoon || hasDue ? "today" : hasTrack ? "media" : "focus", x, y, width })
     pillRightClickAction: () => send({ cmd: "play-pause" })
 
     Socket {
@@ -118,9 +124,28 @@ PluginComponent {
                 // The lyric with its karaoke fill: a dim copy, and a bright copy
                 // revealed as the line is sung. Long lines are cut off and slide
                 // along with the singer instead of ending in "…".
+                // A lesson starting soon, or a deadline due today.
+                Row {
+                    visible: root.hasSoon || root.hasDue
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Theme.spacingXS
+                    DankIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: root.hasSoon ? "school" : "assignment_late"
+                        size: Theme.iconSize - 4
+                        color: root.hasSoon ? Theme.primary : Theme.error
+                    }
+                    StyledText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.hasSoon ? root.soon : root.st?.today?.dueText ?? ""
+                        color: Theme.surfaceText
+                        font.pixelSize: Theme.fontSizeMedium
+                    }
+                }
+
                 Item {
                     id: lyric
-                    visible: root.hasTrack
+                    visible: root.hasTrack && !root.hasSoon
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.min(base.implicitWidth, root.st?.bar?.width ?? 300)
                     height: base.implicitHeight
@@ -158,8 +183,16 @@ PluginComponent {
                     }
                 }
 
+                StyledText {
+                    visible: root.hasTrack && !root.hasSoon && root.due > 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: `${root.due} tenggat`
+                    color: Theme.error
+                    font.pixelSize: Theme.fontSizeSmall
+                }
+
                 Row {
-                    visible: root.hasTrack && (root.st?.bar?.viz ?? true)
+                    visible: root.hasTrack && !root.hasSoon && (root.st?.bar?.viz ?? true)
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
                     Repeater {
@@ -217,7 +250,7 @@ PluginComponent {
 
                 // …or just a small icon to open Islet.
                 DankIcon {
-                    visible: root.linked && !root.hasTrack && !root.hasTimer && !root.hasWeather
+                    visible: root.linked && !root.hasTrack && !root.hasTimer && !root.hasWeather && !root.hasSoon && !root.hasDue
                     anchors.verticalCenter: parent.verticalCenter
                     name: "music_note"
                     size: Theme.iconSize - 4

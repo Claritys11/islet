@@ -69,7 +69,19 @@ Singleton {
     }
     readonly property var nextLesson: lessonsToday.find(l => !l.past && !l.now) ?? null
     // A lesson starting within 5 minutes (for the pill).
-    readonly property var soon: nextLesson && nextLesson.startAt - now <= 5 * 60000 ? nextLesson : null
+    readonly property var soon: _fakeSoon ?? (nextLesson && nextLesson.startAt - now <= 5 * 60000 ? nextLesson : null)
+    // `islet today fake-soon N`: a pretend lesson for 30 s, to see the pill.
+    property var _fakeSoon: null
+    function fakeSoon(minutes) {
+        _fakeSoon = { title: "Contoh pelajaran", startAt: Date.now() + minutes * 60000, start: "", end: "" };
+        now = Date.now();
+        fakeTimer.restart();
+    }
+    Timer {
+        id: fakeTimer
+        interval: 30000
+        onTriggered: root._fakeSoon = null
+    }
     readonly property int dueToday: deadlines.filter(d => d.urgency === "today" || d.urgency === "overdue").length
 
     function dbTitle(id) {

@@ -15,7 +15,7 @@ Usage: islet <command>
   toggle | show | hide            Show or hide the lyrics overlay
   refetch                         Fetch lyrics for the current song again
 
-  notch [media|focus|checklist|shelf|viz]
+  notch [media|focus|checklist|shelf|today|viz]
                                   Toggle the notch, open a tab, or the visualizer
   pomodoro [toggle|reset|resetpause|skip|status]
   find [text]                     Find files and folders (Listary-style); also:
@@ -172,6 +172,7 @@ case "$1" in
             add) shift; call today add -- "$*" ;;
             trash-test) call today trashTest ;;
             sync) call today sync ;;
+            fake-soon) call today fakeSoon "${2:-3}" ;;
             confirm) call today confirm ;;
             preview)
                 call today preview >/dev/null || exit 1

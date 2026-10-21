@@ -24,9 +24,16 @@ Item {
 
     readonly property bool hasMusic: LyricsService.hasTrack
     readonly property bool hasTimer: PomodoroService.active
+    // Today: a lesson about to start beats the song; a deadline due today
+    // shows when nothing plays.
+    readonly property var soon: o.todayEnabled ? TodayService.soon : null
+    readonly property bool showSoon: soon !== null
+    readonly property bool showDue: o.todayEnabled && !hasMusic && !showSoon && TodayService.dueToday > 0
+    readonly property string todayText: showSoon ? `${soon.title} · mulai ${Math.max(1, Math.ceil((soon.startAt - TodayService.now) / 60000))} mnt lagi`
+        : showDue ? (TodayService.dueToday === 1 ? `${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.title ?? ""} · ${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.label ?? ""}` : `${TodayService.dueToday} tenggat hari ini`) : ""
     // Nothing playing and no timer: the weather keeps the pill company.
-    readonly property bool showWeather: !hasMusic && !hasTimer && o.weatherEnabled && WeatherService.ready
-    readonly property bool idle: !hasMusic && !hasTimer && !showWeather
+    readonly property bool showWeather: !hasMusic && !hasTimer && !showSoon && !showDue && o.weatherEnabled && WeatherService.ready
+    readonly property bool idle: !hasMusic && !hasTimer && !showWeather && !showSoon && !showDue
     readonly property bool island: o.notchShape === "island" || barMode
     // "bar": no pill of its own — a bar widget (e.g. in DankMaterialShell)
     // shows the activities and opens the island as a dropdown.
@@ -40,7 +47,7 @@ Item {
 
     readonly property size target: {
         if (mode === "open")
-            return Qt.size(o.notchWidth, o.notchHeight);
+            return Qt.size(o.notchWidth, tab === 4 ? todayHeight : o.notchHeight);
         if (mode === "find")
             return Qt.size(o.notchWidth, finderHeight);
         if (mode === "peek")
@@ -49,6 +56,8 @@ Item {
             return Qt.size(560, 140);
         if (idle)
             return o.notchIdle === "hidden" ? Qt.size(180, 4) : Qt.size(140, 10);
+        if (showSoon || showDue)
+            return Qt.size(Math.min(o.notchPillWidth + 60, todayChip.implicitWidth + 30), 34);
         if (showWeather)
             return Qt.size(weatherChip.implicitWidth + 30, 34);
         const w = (hasMusic ? o.notchPillWidth : 0) + (hasTimer ? (hasMusic ? 96 : 150) : 0);
@@ -59,6 +68,8 @@ Item {
     // the island stays open after the mouse leaves; close it with ⌃ or Esc.
     property bool pinned: false
     readonly property bool keepOpen: pinned || (mode === "open" && tab === 3) || mode === "find" || drop.containsDrag
+    // Today needs room for a school day's lessons next to the deadlines.
+    readonly property real todayHeight: Math.max(o.notchHeight, 380)
     // Finder: the search box, 8 results and the key hints.
     readonly property real finderHeight: 64 + 8 * 44 + 34
 
@@ -90,6 +101,23 @@ Item {
 
     onHasMusicChanged: CavaService.wanted = hasMusic
 
+    // The first activity of the day: show the day for a few seconds.
+    Connections {
+        target: TodayService
+        function onMorningOpen() {
+            if (win.mode !== "closed")
+                return;
+            win.open(4);
+            morningTimer.restart();
+        }
+    }
+    Timer {
+        id: morningTimer
+        interval: Math.max(2, win.o.todayMorningSeconds) * 1000
+        onTriggered: if (win.mode === "open" && win.tab === 4 && !hover.hovered && !win.keepOpen)
+            win.close()
+    }
+
     // Visualizer mode: no keyboard or mouse for a while (idle inhibitors,
     // like a fullscreen video, are respected) and music playing.
     IdleMonitor {
@@ -108,7 +136,7 @@ Item {
     }
 
     implicitWidth: Math.max(o.notchWidth, 430) + 80
-    implicitHeight: Math.max(o.notchHeight, finderHeight) + 50
+    implicitHeight: Math.max(o.notchHeight, finderHeight, todayHeight) + 50
 
     Timer {
         id: hoverTimer
@@ -123,7 +151,7 @@ Item {
         id: unvisitedTimer
         interval: 5000
         running: win.barMode && win.mode === "open" && !hover.hovered && !win.keepOpen
-        onTriggered: if (!checklist.inputFocused)
+        onTriggered: if (!checklist.inputFocused && !todayTab.inputFocused)
             win.close()
     }
 
@@ -134,7 +162,7 @@ Item {
             if (win.keepOpen)
                 return;
             // Don't snatch the panel away while you're typing a task.
-            if (win.mode === "open" && checklist.inputFocused && checklist.draft !== "")
+            if (win.mode === "open" && ((checklist.inputFocused && checklist.draft !== "") || (todayTab.inputFocused && todayTab.draft !== "")))
                 return;
             win.close();
         }
@@ -240,7 +268,7 @@ Item {
 
             TapHandler {
                 enabled: win.mode !== "open" && win.mode !== "find"
-                onTapped: win.mode === "viz" ? win.close() : win.open(win.hasMusic ? 0 : win.hasTimer ? 1 : win.tab)
+                onTapped: win.mode === "viz" ? win.close() : win.open(win.showSoon || win.showDue ? 4 : win.hasMusic ? 0 : win.hasTimer ? 1 : win.tab)
             }
 
             // ── Closed: live activities ───────────────────────────
@@ -249,7 +277,7 @@ Item {
                 anchors.leftMargin: 7
                 anchors.rightMargin: 12
                 spacing: 10
-                opacity: win.mode === "closed" && (win.hasMusic || win.hasTimer) ? 1 : 0
+                opacity: win.mode === "closed" && (win.hasMusic || win.hasTimer) && !win.showSoon ? 1 : 0
                 visible: opacity > 0
                 Behavior on opacity {
                     NumberAnimation {
@@ -296,9 +324,47 @@ Item {
                     visible: win.hasMusic
                     Layout.preferredHeight: 16
                 }
+                // Deadlines due today, small, while music plays.
+                Text {
+                    visible: win.hasMusic && win.o.todayEnabled && TodayService.dueToday > 0
+                    text: `${TodayService.dueToday} tenggat`
+                    color: Theme.danger
+                    font.family: Theme.font
+                    font.pixelSize: 11
+                }
                 TimerChip {
                     visible: win.hasTimer
                     Layout.fillWidth: !win.hasMusic
+                }
+            }
+
+            // Today: the next lesson about to start, or a deadline due today.
+            Row {
+                id: todayChip
+                anchors.centerIn: parent
+                spacing: 6
+                opacity: win.mode === "closed" && (win.showSoon || win.showDue) ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 160
+                    }
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: win.showSoon ? "school" : "assignment_late"
+                    color: win.showSoon ? Theme.primary : Theme.danger
+                    font.family: Theme.iconFont
+                    font.pixelSize: 17
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(implicitWidth, win.o.notchPillWidth)
+                    elide: Text.ElideRight
+                    text: win.todayText
+                    color: Theme.text
+                    font.family: Theme.font
+                    font.pixelSize: 13
                 }
             }
 
@@ -491,7 +557,8 @@ Item {
                             { icon: "music_note", text: "Media" },
                             { icon: "timer", text: "Focus" },
                             { icon: "checklist", text: "Checklist" },
-                            { icon: "inventory_2", text: "Shelf" }
+                            { icon: "inventory_2", text: "Shelf" },
+                            { icon: "today", text: "Hari ini" }
                         ]
                         Rectangle {
                             id: tabButton
@@ -573,6 +640,9 @@ Item {
                         id: checklist
                     }
                     NotchShelf {}
+                    NotchToday {
+                        id: todayTab
+                    }
                 }
             }
 

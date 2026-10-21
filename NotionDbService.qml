@@ -8,7 +8,11 @@ import Quickshell
 Singleton {
     id: root
 
-    readonly property string token: ChecklistService.token
+    // Read at each request, not through a binding: a binding might not
+    // have caught up yet when the secret has just arrived.
+    function token() {
+        return ChecklistService.token;
+    }
     property var _titles: ({})
 
     function message(status, res) {
@@ -32,7 +36,7 @@ Singleton {
     }
 
     function request(method, path, body, cb, attempt) {
-        if (token === "") {
+        if (token() === "") {
             cb(false, "Add your Notion secret in Settings → Checklist or Calendar & Notion.");
             return;
         }
@@ -53,7 +57,7 @@ Singleton {
             cb(ok, ok ? res : message(xhr.status, res));
         };
         xhr.open(method, `https://api.notion.com/v1/${path}`);
-        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.setRequestHeader("Authorization", `Bearer ${token()}`);
         xhr.setRequestHeader("Notion-Version", "2022-06-28");
         xhr.setRequestHeader("Content-Type", "application/json");
         xhr.send(body ? JSON.stringify(body) : null);
