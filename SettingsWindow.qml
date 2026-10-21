@@ -49,6 +49,7 @@ FloatingWindow {
         { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose", "notchCloseDelay", "vizMode", "vizIdleSeconds", "weatherEnabled", "weatherCity", "weatherUnit"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes", "breakTips"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
+        { icon: "event_note", title: "Calendar & Notion", subtitle: "Lessons, deadlines, Google sync", keys: ["todayEnabled", "todaySync", "todayCalendar", "todayTimetableDb", "todayTasksDb", "todayColumns", "todayDays", "todayMorningOpen", "todayMorningSeconds", "todayNudges", "todayEventMinutes", "todaySemesterEnd", "todaySyncMinutes"] },
         { icon: "search", title: "Finder", subtitle: "Find files and folders", keys: ["finderRoots", "finderExclude", "finderHidden", "finderFileManager", "finderTerminal", "finderEditor", "finderReindexMinutes"] },
         { icon: "info", title: "About", subtitle: "Updates, files, shortcuts", keys: ["checkUpdates"] }
     ]
@@ -85,6 +86,10 @@ FloatingWindow {
 
     // Questions people actually ask, with the answer and where to go.
     readonly property var guides: [
+        { words: "google calendar kalender gcal sync sinkron", title: "Sync with Google Calendar", answer: "Islet uses Dank Calendar, which is already signed in to Google. Check the preview on the Calendar & Notion page and press Confirm once.", key: "todaySync" },
+        { words: "notion jadwal pelajaran timetable schedule lesson kelas", title: "Lessons from your Notion timetable", answer: "Islet finds your timetable database by itself; pick another one on the Calendar & Notion page if it chose wrong.", key: "todayTimetableDb" },
+        { words: "tugas task deadline tenggat due homework pr", title: "Deadlines from Notion", answer: "Tasks that aren't Done and are due within a few days show in the notch's Hari ini tab. Tick one to mark it Done in Notion.", key: "todayDays" },
+        { words: "pagi morning remind reminder pengingat lupa", title: "Don't forget to check", answer: "The notch opens to Hari ini at your first activity each morning, and you get a nudge before a deadline.", key: "todayMorningOpen" },
         { words: "find search file files folder folders listary launcher locate project dolphin open", title: "Find a file or folder", answer: "Press Mod+G (or run 'islet find'), type part of the name — \"isw\" finds islet-windows — and press Enter. Ctrl+T opens a terminal there, Ctrl+E the editor.", key: "finderRoots" },
         { words: "keybind shortcut hotkey key mod+g finder", title: "Shortcut for Finder", answer: "Press 'Set it up' on the Finder page: it adds Mod+G to niri for you.", key: "finderTerminal" },
         { words: "terminal ghostty kitty vscode code editor", title: "Open results in another terminal or editor", answer: "Type the program on the Finder page; empty picks one that's installed.", key: "finderTerminal" },
@@ -1849,6 +1854,296 @@ FloatingWindow {
                                 color: ChecklistService.status === "error" ? Theme.danger : ChecklistService.status === "ready" ? "#a5d6a7" : win.subtext
                                 text: ChecklistService.status === "ready" ? `Connected ✓ · ${ChecklistService.items.length} to-dos` : ChecklistService.status === "loading" ? "Connecting…" : ChecklistService.error
                             }
+                        }
+                    }
+                }
+
+                // ── Calendar & Notion ─────────────────────────────
+                Page {
+                    Card {
+                        title: "Hari ini"
+                        hint: "Today's lessons and close deadlines in the notch (Hari ini tab), from your Notion timetable and tasks, kept in sync with Google Calendar."
+                        SwitchSetting {
+                            key: "todayEnabled"
+                            label: "Show lessons and deadlines"
+                        }
+                    }
+                    Card {
+                        title: "Google Calendar"
+                        visible: win.o.todayEnabled
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.family: win.font
+                            font.pixelSize: 13
+                            color: DcalService.healthy ? "#a5d6a7" : DcalService.available ? Theme.danger : win.subtext
+                            text: DcalService.healthy ? `Connected via Dank Calendar ✓ · ${DcalService.account}` : DcalService.available ? DcalService.error : "Dank Calendar isn't running. Islet reaches Google through it."
+                        }
+                        Button {
+                            visible: !DcalService.healthy
+                            text: "Open Dank Calendar"
+                            onClicked: DcalService.show()
+                        }
+                        Row_ {
+                            key: "todayCalendar"
+                            label: "Write to"
+                            hint: "Where your lessons and plans go. Empty: your main Google calendar."
+                            ComboBox {
+                                id: calPick
+                                width: 260
+                                readonly property var items: [{ id: "", name: `Main calendar${DcalService.primary ? " (" + DcalService.primary.name + ")" : ""}` }].concat(DcalService.writable.map(c => ({ id: c.id, name: `${c.name} · ${c.accountName}` })))
+                                model: items.map(i => i.name)
+                                currentIndex: Math.max(0, items.findIndex(i => i.id === win.o.todayCalendar))
+                                onActivated: i => Config.set("todayCalendar", items[i].id, "Calendar")
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Notion"
+                        visible: win.o.todayEnabled
+                        hint: ChecklistService.token === "" ? "Islet uses the same Notion integration as the Checklist: add its secret on the Checklist page, then share your Workspace page with it (••• → Connections)." : ""
+                        Label {
+                            Layout.fillWidth: true
+                            visible: TodayService.status === "error" || TodayService.status === "setup"
+                            wrapMode: Text.WordWrap
+                            text: TodayService.error
+                            color: Theme.danger
+                            font.family: win.font
+                            font.pixelSize: 12
+                        }
+                        Repeater {
+                            model: [
+                                { key: "todayTimetableDb", label: "Timetable", kind: "timetable", picked: TodayService.timetableDb },
+                                { key: "todayTasksDb", label: "Tasks", kind: "tasks", picked: TodayService.tasksDb }
+                            ]
+                            Row_ {
+                                id: dbRow
+                                required property var modelData
+                                key: modelData.key
+                                label: modelData.label
+                                hint: `${modelData.kind === "timetable" ? TodayService.allLessons.length + " lessons" : TodayService.tasks.length + " tasks"}${win.o[modelData.key] === "" ? " · found by itself" : ""}`
+                                ComboBox {
+                                    width: 260
+                                    readonly property var dbs: TodayService.databases.map(d => ({ id: d.id, name: (d.title ?? []).map(t => t.plain_text).join("") || "Untitled" }))
+                                    model: dbs.map(d => d.name + (d.id === dbRow.modelData.picked && win.o[dbRow.modelData.key] === "" ? " (terdeteksi)" : ""))
+                                    currentIndex: dbs.findIndex(d => d.id === dbRow.modelData.picked)
+                                    onActivated: i => {
+                                        Config.set(dbRow.modelData.key, dbs[i].id, dbRow.modelData.label);
+                                        TodayService.load();
+                                    }
+                                }
+                            }
+                        }
+                        // Which column means what; fixed here if a guess was wrong.
+                        Label {
+                            Layout.fillWidth: true
+                            text: "Columns"
+                            color: win.text
+                            font.family: win.font
+                            font.pixelSize: 13
+                            font.weight: Font.DemiBold
+                        }
+                        Repeater {
+                            model: [
+                                { kind: "timetable", field: "hari", label: "Day (Hari)" },
+                                { kind: "timetable", field: "jam", label: "Time (Jam)" },
+                                { kind: "timetable", field: "mapel", label: "Subject (Mapel)" },
+                                { kind: "tasks", field: "title", label: "Task name" },
+                                { kind: "tasks", field: "status", label: "Status" },
+                                { kind: "tasks", field: "start", label: "Plan (goes to Google)" },
+                                { kind: "tasks", field: "due", label: "Deadline" },
+                                { kind: "tasks", field: "gcal", label: "GCal ID" }
+                            ]
+                            Row_ {
+                                id: colRow
+                                required property var modelData
+                                label: modelData.label
+                                readonly property string db: modelData.kind === "timetable" ? TodayService.timetableDb : TodayService.tasksDb
+                                readonly property var names: Object.keys((TodayService.databases.find(d => d.id === db) ?? {}).properties ?? {}).sort()
+                                readonly property string current: (modelData.kind === "timetable" ? TodayService.timetableMap : TodayService.tasksMap)[modelData.field] ?? ""
+                                ComboBox {
+                                    width: 260
+                                    model: ["—"].concat(colRow.names)
+                                    currentIndex: Math.max(0, colRow.names.indexOf(colRow.current) + 1)
+                                    onActivated: i => {
+                                        let cols = {};
+                                        try {
+                                            cols = JSON.parse(win.o.todayColumns || "{}");
+                                        } catch (e) {}
+                                        cols[colRow.modelData.kind] = Object.assign({}, cols[colRow.modelData.kind] ?? {});
+                                        cols[colRow.modelData.kind][colRow.modelData.field] = i === 0 ? "" : colRow.names[i - 1];
+                                        Config.set("todayColumns", JSON.stringify(cols), "Columns");
+                                        TodayService.load();
+                                    }
+                                }
+                            }
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            visible: TodayService.problems.length > 0
+                            wrapMode: Text.WordWrap
+                            text: `Skipped ${TodayService.problems.length} row(s): ${TodayService.problems.map(p => p.error).join(" · ")}`
+                            color: Theme.danger
+                            font.family: win.font
+                            font.pixelSize: 12
+                        }
+                    }
+                    Card {
+                        title: "Sync with Google Calendar"
+                        visible: win.o.todayEnabled
+                        hint: "Both ways: change a lesson or a plan in Notion or in Google Calendar and the other follows within a few minutes. If both change the same thing between two syncs, the later change is kept and you're told."
+                        SwitchSetting {
+                            key: "todaySync"
+                            label: "Sync"
+                        }
+                        // The first sync asks before writing anything.
+                        Rectangle {
+                            Layout.fillWidth: true
+                            visible: TodayService.syncStatus === "waiting" && win.o.todaySync
+                            implicitHeight: firstSync.implicitHeight + 24
+                            radius: 12
+                            color: Qt.rgba(win.accent.r, win.accent.g, win.accent.b, 0.12)
+                            ColumnLayout {
+                                id: firstSync
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                Label {
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                    text: `First sync: ${TodayService.previewText || "…"} in ${(DcalService.calendars.find(c => c.id === TodayService.targetCalendar) ?? {}).name ?? "your calendar"}. Lessons become weekly events from this week; tasks with a plan date become events. Nothing in your calendar that Islet didn't make is touched.`
+                                    color: win.text
+                                    font.family: win.font
+                                    font.pixelSize: 13
+                                }
+                                Button {
+                                    text: "Confirm and sync"
+                                    highlighted: true
+                                    onClicked: TodayService.confirmFirstSync()
+                                }
+                            }
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.family: win.font
+                            font.pixelSize: 12
+                            color: TodayService.syncStatus === "error" ? Theme.danger : win.subtext
+                            text: TodayService.syncStatus === "error" ? TodayService.syncError : TodayService.lastSync ? `Last sync ${Qt.formatTime(new Date(TodayService.lastSync), "HH:mm")} · ${TodayService.linked} linked` : ""
+                        }
+                        Button {
+                            text: "Sync now"
+                            visible: TodayService.syncStatus !== "waiting"
+                            onClicked: TodayService.load()
+                        }
+                        Button {
+                            visible: TodayService.held > 0
+                            text: `Allow removing ${TodayService.held}`
+                            onClicked: TodayService.allowRemovals()
+                        }
+                        Repeater {
+                            model: TodayService.conflicts
+                            RowLayout {
+                                id: conflictRow
+                                required property var modelData
+                                required property int index
+                                Layout.fillWidth: true
+                                Label {
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                    text: `Conflict: ${conflictRow.modelData.title} — Google's version kept`
+                                    color: win.text
+                                    font.family: win.font
+                                    font.pixelSize: 12
+                                }
+                                Button {
+                                    text: "Use Notion's"
+                                    onClicked: TodayService.useOther(conflictRow.index)
+                                }
+                            }
+                        }
+                        Repeater {
+                            model: TodayService.removedInGoogle
+                            RowLayout {
+                                id: removedRow
+                                required property var modelData
+                                Layout.fillWidth: true
+                                Label {
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                    text: `${removedRow.modelData.title}: deleted in Google Calendar`
+                                    color: win.text
+                                    font.family: win.font
+                                    font.pixelSize: 12
+                                }
+                                Button {
+                                    text: "Put it back"
+                                    onClicked: TodayService.putBack(removedRow.modelData.pageId)
+                                }
+                                Button {
+                                    text: "Remove from Notion"
+                                    onClicked: TodayService.removeFromNotion(removedRow.modelData.pageId)
+                                }
+                            }
+                        }
+                    }
+                    Card {
+                        title: "Reminders"
+                        visible: win.o.todayEnabled
+                        SliderSetting {
+                            key: "todayDays"
+                            label: "Show deadlines up to"
+                            from: 1
+                            to: 14
+                            stepSize: 1
+                            decimals: 0
+                            unit: " days"
+                        }
+                        SwitchSetting {
+                            key: "todayMorningOpen"
+                            label: "Open Hari ini each morning"
+                            hint: "At your first activity of the day, the notch shows the day for a few seconds."
+                        }
+                        SliderSetting {
+                            key: "todayMorningSeconds"
+                            label: "…for"
+                            from: 3
+                            to: 30
+                            stepSize: 1
+                            decimals: 0
+                            unit: " s"
+                        }
+                        SwitchSetting {
+                            key: "todayNudges"
+                            label: "Deadline reminders"
+                            hint: "A morning summary, and a nudge 3 hours before a deadline with a time."
+                        }
+                    }
+                    Card {
+                        title: "Details"
+                        visible: win.o.todayEnabled
+                        SliderSetting {
+                            key: "todayEventMinutes"
+                            label: "Length of a plan with only a start time"
+                            from: 15
+                            to: 180
+                            stepSize: 15
+                            decimals: 0
+                            unit: " min"
+                        }
+                        TextSetting {
+                            key: "todaySemesterEnd"
+                            label: "Semester ends on"
+                            hint: "Lessons stop repeating after this date. Empty: they keep going."
+                            placeholder: "2026-12-19"
+                        }
+                        SliderSetting {
+                            key: "todaySyncMinutes"
+                            label: "Sync every"
+                            from: 2
+                            to: 30
+                            stepSize: 1
+                            decimals: 0
+                            unit: " min"
                         }
                     }
                 }

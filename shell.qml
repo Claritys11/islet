@@ -46,7 +46,7 @@ ShellRoot {
         }
         // A page name opens that page; anything else searches settings.
         function open(page: string): void {
-            const i = ["overview", "lyrics", "notch", "focus", "checklist", "finder", "about"].indexOf(page.toLowerCase());
+            const i = ["overview", "lyrics", "notch", "focus", "checklist", "calendar", "finder", "about"].indexOf(page.toLowerCase());
             shell.settingsQuery = i >= 0 ? "" : page;
             shell.openSettings(Math.max(0, i));
         }
@@ -145,6 +145,48 @@ ShellRoot {
         function status(): string {
             const f = FinderService;
             return `${f.status}  ${f.counts.dirs} folders  ${f.counts.files} files  indexed ${f.indexedAt ? Math.round((Date.now() - f.indexedAt) / 1000) + " s ago" : "never"}`;
+        }
+    }
+
+    // Today: `islet today [status|sync|preview|add "text"]`.
+    IpcHandler {
+        target: "today"
+
+        function status(): string {
+            return TodayService.statusText();
+        }
+        function reload(): void {
+            TodayService.load();
+        }
+        function list(): string {
+            return TodayService.listText();
+        }
+        function add(text: string): void {
+            TodayService.add(text, "");
+        }
+        function tick(pageId: string): void {
+            TodayService.tick(pageId, true);
+        }
+        function trashTest(): void {
+            TodayService.trashTestTasks();
+        }
+        // The plan of the next sync, without writing anything.
+        function preview(): string {
+            TodayService.preview();
+            return "ok";
+        }
+        // For checking the pill: pretend a lesson starts in a few minutes.
+        function fakeSoon(minutes: int): void {
+            TodayService.fakeSoon(minutes);
+        }
+        function previewText(): string {
+            return TodayService.previewText;
+        }
+        function confirm(): void {
+            TodayService.confirmFirstSync();
+        }
+        function sync(): void {
+            TodayService.sync();
         }
     }
 
@@ -278,7 +320,7 @@ ShellRoot {
 
     // The notch lives on one monitor: the configured one, else the first.
     // The notch's tabs, by name.
-    readonly property var tabs: ["media", "focus", "checklist", "shelf"]
+    readonly property var tabs: ["media", "focus", "checklist", "shelf", "today"]
 
     // Starts the background update check.
     readonly property var updates: UpdateService

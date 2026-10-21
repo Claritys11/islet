@@ -15,11 +15,13 @@ Usage: islet <command>
   toggle | show | hide            Show or hide the lyrics overlay
   refetch                         Fetch lyrics for the current song again
 
-  notch [media|focus|checklist|shelf|viz]
+  notch [media|focus|checklist|shelf|today|viz]
                                   Toggle the notch, open a tab, or the visualizer
   pomodoro [toggle|reset|resetpause|skip|status]
   find [text]                     Find files and folders (Listary-style); also:
        --reindex | --print text | --open text | --copy text | --status | --bind
+  today [status|list|add text|preview|confirm|sync|reload]
+                                  Today's lessons and deadlines (Notion ⇄ Google Calendar)
   shelf [FILE…|clear]             Put files on the notch's shelf; without files, list it
   share [copy|save]               A picture of the song and lyric playing now, to copy or save
   todo [text]                     Add a task, or list tasks without text
@@ -160,6 +162,29 @@ case "$1" in
                 echo "timed out" >&2
                 exit 1 ;;
             *) call finder open -- "$*" ;;
+        esac ;;
+    today)
+        shift
+        case "${1:-status}" in
+            status) call today status ;;
+            reload) call today reload ;;
+            list) call today list ;;
+            add) shift; call today add -- "$*" ;;
+            trash-test) call today trashTest ;;
+            sync) call today sync ;;
+            fake-soon) call today fakeSoon "${2:-3}" ;;
+            confirm) call today confirm ;;
+            preview)
+                call today preview >/dev/null || exit 1
+                i=0
+                while [ $i -lt 50 ]; do
+                    sleep 0.2
+                    out=$(qs -c "$CFG" ipc call today previewText)
+                    [ -n "$out" ] && { printf '%s\n' "$out"; exit 0; }
+                    i=$((i + 1))
+                done
+                echo "timed out" >&2; exit 1 ;;
+            *) usage; exit 1 ;;
         esac ;;
     todo)
         shift

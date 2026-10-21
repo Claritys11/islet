@@ -61,6 +61,11 @@ Singleton {
             property var shelf: []
             // Finder: what you opened, for ranking — { path: { count, last, kind } }.
             property var finderHistory: ({})
+            // Today: sync record (see today/sync.mjs), the day the morning
+            // view last opened, and deadline nudges already sent.
+            property var todaySync: ({ pairs: {}, removed: [], conflicts: [], confirmed: false })
+            property string todayMorning: ""
+            property var todayNudged: ({})
             // The first-run setup guide has been seen.
             property bool setupDone: false
         }

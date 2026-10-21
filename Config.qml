@@ -124,6 +124,20 @@ Singleton {
             finderTerminal: "",
             finderEditor: "",
             finderReindexMinutes: 10,
+            // Today (Notion ⇄ Google Calendar)
+            todayEnabled: true,
+            todaySync: true,
+            todayCalendar: "",
+            todayTimetableDb: "",
+            todayTasksDb: "",
+            todayColumns: "",
+            todayDays: 7,
+            todayMorningOpen: true,
+            todayMorningSeconds: 8,
+            todayNudges: true,
+            todayEventMinutes: 60,
+            todaySemesterEnd: "",
+            todaySyncMinutes: 5,
             // Readability & behaviour
             shadow: true,
             backdrop: 0.35,
@@ -307,6 +321,20 @@ Singleton {
             property string finderTerminal: root.defaults.finderTerminal
             property string finderEditor: root.defaults.finderEditor
             property int finderReindexMinutes: root.defaults.finderReindexMinutes
+
+            property bool todayEnabled: root.defaults.todayEnabled
+            property bool todaySync: root.defaults.todaySync
+            property string todayCalendar: root.defaults.todayCalendar
+            property string todayTimetableDb: root.defaults.todayTimetableDb
+            property string todayTasksDb: root.defaults.todayTasksDb
+            property string todayColumns: root.defaults.todayColumns
+            property int todayDays: root.defaults.todayDays
+            property bool todayMorningOpen: root.defaults.todayMorningOpen
+            property int todayMorningSeconds: root.defaults.todayMorningSeconds
+            property bool todayNudges: root.defaults.todayNudges
+            property int todayEventMinutes: root.defaults.todayEventMinutes
+            property string todaySemesterEnd: root.defaults.todaySemesterEnd
+            property int todaySyncMinutes: root.defaults.todaySyncMinutes
 
             property bool shadow: root.defaults.shadow
             property real backdrop: root.defaults.backdrop
