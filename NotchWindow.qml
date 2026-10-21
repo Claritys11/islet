@@ -13,6 +13,7 @@ PanelWindow {
     readonly property alias mode: island.mode
     readonly property alias away: island.away
     readonly property alias vizWanted: island.vizWanted
+    readonly property alias hotkey: island.hotkey
     signal settingsRequested
 
     // Where to hang the island: centre x and top y on this screen, or -1 for
@@ -36,6 +37,9 @@ PanelWindow {
     function find(prefill) {
         island.find(prefill);
     }
+    function summon() {
+        island.summon();
+    }
     function toggle() {
         island.toggle();
     }
@@ -54,9 +58,10 @@ PanelWindow {
 
     WlrLayershell.namespace: "islet-notch"
     // Finder sits above its click-catcher (shell.qml), which is on Top.
-    WlrLayershell.layer: island.island && island.mode !== "find" ? WlrLayer.Top : WlrLayer.Overlay
-    // Finder takes the keyboard at once, so you can type straight away.
-    WlrLayershell.keyboardFocus: island.mode === "find" ? WlrKeyboardFocus.Exclusive : island.mode === "open" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.layer: island.island && island.mode !== "find" && !island.hotkey ? WlrLayer.Top : WlrLayer.Overlay
+    // Finder (and the Finder key) take the keyboard at once, so you can
+    // type straight away.
+    WlrLayershell.keyboardFocus: island.mode === "find" || (island.mode === "open" && island.hotkey) ? WlrKeyboardFocus.Exclusive : island.mode === "open" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     // In bar mode a closed island is invisible and must not catch clicks.
     mask: island.barMode && island.mode === "closed" ? noInput : islandRegion

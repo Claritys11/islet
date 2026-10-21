@@ -168,7 +168,11 @@ export function actionCommand(action, entry, apps) {
     case "terminal": {
         const t = apps.terminal;
         const name = t.split("/").pop();
-        if (name === "ghostty" || name === "foot")
+        // A running Ghostty would open the window itself, in the folder of
+        // the terminal in focus: its own process honours the folder.
+        if (name === "ghostty")
+            return [t, "--gtk-single-instance=false", `--working-directory=${folder}`];
+        if (name === "foot")
             return [t, `--working-directory=${folder}`];
         if (name === "kitty")
             return [t, "--directory", folder];

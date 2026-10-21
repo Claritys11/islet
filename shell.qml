@@ -268,8 +268,13 @@ ShellRoot {
 
     Connections {
         target: FinderService
+        // `islet find` (the Finder key) opens the notch, `islet find text`
+        // Finder itself.
         function onOpenRequested(prefill) {
-            shell.notch?.find(prefill);
+            if (prefill === "")
+                shell.notch?.summon();
+            else
+                shell.notch?.find(prefill);
         }
     }
 
@@ -277,7 +282,7 @@ ShellRoot {
     // popup), so the keyboard is never stuck in Islet.
     // One per screen: a click on another monitor closes it too.
     Variants {
-        model: shell.notch?.mode === "find" ? Quickshell.screens : []
+        model: shell.notch?.mode === "find" || (shell.notch?.mode === "open" && shell.notch?.hotkey) ? Quickshell.screens : []
         PanelWindow {
             required property var modelData
             screen: modelData

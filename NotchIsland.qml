@@ -67,7 +67,10 @@ Item {
     // Pinned (📌), on the Shelf tab, or with files being dragged over it,
     // the island stays open after the mouse leaves; close it with ⌃ or Esc.
     property bool pinned: false
-    readonly property bool keepOpen: pinned || (mode === "open" && tab === 3) || mode === "find" || drop.containsDrag
+    // Opened by the Finder key (Mod+G): it has the keyboard, and typing
+    // turns it into Finder.
+    property bool hotkey: false
+    readonly property bool keepOpen: pinned || hotkey || (mode === "open" && tab === 3) || mode === "find" || drop.containsDrag
     // Today needs room for a school day's lessons next to the deadlines.
     readonly property real todayHeight: Math.max(o.notchHeight, 380)
     // Finder: the search box, 8 results and the key hints.
@@ -76,6 +79,7 @@ Item {
     function close() {
         mode = "closed";
         pinned = false;
+        hotkey = false;
     }
 
     function open(t) {
@@ -88,7 +92,16 @@ Item {
         mode === "open" || mode === "find" ? close() : open();
     }
 
-    // Finder (`islet find`), optionally with text already typed.
+    // The Finder key: opens the notch, or closes it if it opened it.
+    function summon() {
+        if (mode === "find" || (mode === "open" && hotkey))
+            return close();
+        hotkey = true;
+        open();
+        Qt.callLater(() => typeCatcher.forceActiveFocus());
+    }
+
+    // Finder (`islet find text`), optionally with text already typed.
     function find(prefill) {
         mode = "find";
         finder.start(prefill ?? "");
@@ -100,6 +113,12 @@ Item {
     }
 
     onHasMusicChanged: CavaService.wanted = hasMusic
+
+    // Shelved files moved while the shelf wasn't looking: find them as it
+    // opens.
+    readonly property bool shelfShown: mode === "open" && tab === 3
+    onShelfShownChanged: if (shelfShown)
+        ShelfService.follow()
 
     // The first activity of the day: show the day for a few seconds.
     Connections {
@@ -661,6 +680,17 @@ Item {
                     }
                 }
                 onCloseRequested: win.close()
+            }
+
+            // After the Finder key, the first letter typed starts Finder.
+            Item {
+                id: typeCatcher
+                Keys.onPressed: event => {
+                    if (win.mode !== "open" || event.text.length !== 1 || event.text < " " || event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
+                        return;
+                    win.find(event.text);
+                    event.accepted = true;
+                }
             }
 
             Shortcut {

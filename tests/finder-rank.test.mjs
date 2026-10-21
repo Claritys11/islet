@@ -90,7 +90,7 @@ test("actionCommand keeps odd paths as single args", () => {
 
 test("terminal flags per terminal", () => {
     const dir = { path: "/h/p", kind: "dir" };
-    assert.deepEqual(actionCommand("terminal", dir, { terminal: "ghostty" }), ["ghostty", "--working-directory=/h/p"]);
+    assert.deepEqual(actionCommand("terminal", dir, { terminal: "ghostty" }), ["ghostty", "--gtk-single-instance=false", "--working-directory=/h/p"]);
     assert.deepEqual(actionCommand("terminal", dir, { terminal: "konsole" }), ["konsole", "--workdir", "/h/p"]);
     assert.deepEqual(actionCommand("terminal", dir, { terminal: "kitty" }), ["kitty", "--directory", "/h/p"]);
     assert.deepEqual(actionCommand("terminal", { path: "/h/p/a.txt", kind: "file" }, { terminal: "foot" }), ["foot", "--working-directory=/h/p"]);
