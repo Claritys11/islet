@@ -58,8 +58,9 @@ function eventFields(ev, kind) {
         return Object.assign({ title: ev.title }, fromEvent(ev.start, ev.end));
     const done = ev.title.startsWith("✓ ");
     const title = done ? ev.title.slice(2) : ev.title;
+    // All-day dates come as midnight UTC of that date, whatever the zone.
     if (ev.allDay)
-        return { title, start: localDate(new Date(ev.start)), end: "", allDay: true, done };
+        return { title, start: String(ev.start).slice(0, 10), end: "", allDay: true, done };
     return { title, start: iso(ev.start), end: iso(ev.end), allDay: false, done };
 }
 
@@ -87,8 +88,9 @@ function lessonEvent(l, f, from, opts) {
 function taskEvent(t, f) {
     const title = (f.done ? "✓ " : "") + f.title;
     const description = `${TAG}${t.pageId}`;
+    // Dank Calendar keeps all-day dates as midnight UTC of the date.
     if (f.allDay)
-        return { title, description, start: midnight(f.start).toISOString(), end: midnight(f.start, 1).toISOString(), allDay: true };
+        return { title, description, start: `${f.start}T00:00:00Z`, end: `${localDate(midnight(f.start, 1))}T00:00:00Z`, allDay: true };
     return { title, description, start: f.start, end: f.end, allDay: false };
 }
 

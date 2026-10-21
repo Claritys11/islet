@@ -63,8 +63,9 @@ test("new task with Rencana Mulai creates an all-day event and sets GCal ID", ()
     const a = r.actions[0];
     assert.equal(a.setGcalId, true);
     assert.equal(a.event.allDay, true);
-    assert.equal(new Date(a.event.start).toISOString(), new Date("2026-10-22T00:00:00+07:00").toISOString());
-    assert.equal(new Date(a.event.end).toISOString(), new Date("2026-10-23T00:00:00+07:00").toISOString());
+    // Dank Calendar keeps all-day dates as midnight UTC of that date.
+    assert.equal(a.event.start, "2026-10-22T00:00:00Z");
+    assert.equal(a.event.end, "2026-10-23T00:00:00Z");
 });
 
 test("task without Rencana Mulai has no event", () => {
@@ -191,6 +192,14 @@ test("clearing Rencana Mulai in Notion deletes Islet's event", () => {
     const r = run({ ...s, tasks: s.tasks.map(t => ({ ...t, start: "", edited: 50 })) });
     assert.deepEqual(ops(r), ["deleteEvent"]);
     assert.equal(r.state.pairs.t1, undefined);
+});
+
+test("an all-day event reads back as its own date", () => {
+    const s = synced([], [task("t1")]);
+    s.events = s.events.map(e => ({ ...e, start: "2026-10-25T00:00:00Z", end: "2026-10-26T00:00:00Z" }));
+    const r = run(s);
+    assert.deepEqual(ops(r), ["updateNotion"]);
+    assert.equal(r.actions[0].fields.start, "2026-10-25");
 });
 
 test("a timed task without an end gets the default length", () => {
