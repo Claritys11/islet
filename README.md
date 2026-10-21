@@ -113,7 +113,8 @@ A dynamic island at the top of your screen, in the spirit of [Notchy](https://no
 Click the pill to open it. It follows your DankMaterialShell / Matugen wallpaper colours, or stays pure black.
 
 - **📥 Shelf** — drop files on the notch (or on the Islet pill in your DMS bar) to keep them close, then drag
-  them out into any app. Files stay where they are; the shelf only remembers them.
+  them out into any app. Files stay where they are; the shelf only remembers them, and follows a file
+  that was moved.
 - **🌙 Visualizer mode** — step away while music plays and the notch becomes a big audio visualizer; touch
   anything and it's back. Fullscreen videos (idle inhibitors) are respected. `islet notch viz` toggles it by hand.
 - **🌤️ Weather** in the pill when nothing plays — from Open-Meteo, for your city or DankMaterialShell's weather
@@ -163,8 +164,9 @@ The notch's **Hari ini** tab shows today's lessons (the current one marked *seka
 deadlines that are close — from your **Notion** timetable and task list, plus Google Classroom
 assignments. Tick a deadline to mark it Done in Notion; type in *＋ Tugas baru* to add one.
 
-- **Two-way sync with Google Calendar**: each lesson becomes a weekly event, each task with a plan date
-  an event. Move one in Google Calendar and Notion follows, and the other way round. If the same thing
+- **Two-way sync with Google Calendar**: each task with a plan date becomes an event (lessons stay in
+  Notion and on the tab; turn on *Lessons too* to get them as weekly events). Move one in Google Calendar
+  and Notion follows, and the other way round. If the same thing
   changed on both sides between two syncs, the later change wins and you're told (with a button to take
   the other version back).
 - **No extra Google login**: Islet goes through [Dank Calendar](https://github.com/AvengeMedia/dankcalendar) (`dcal`),
@@ -190,8 +192,8 @@ islet notch today           open the tab
 
 ## 🔎 Finder
 
-Find any file or folder from the notch, Listary-style. Press **Mod+G** (or run `islet find`), type part of
-a name — `isw` finds `islet-windows`, `lyrics qml` finds `LyricsService.qml` — and pick a result:
+Find any file or folder from the notch, Listary-style. Press **Mod+G** (or run `islet find`) — the notch
+opens, and typing starts Finder; Mod+G again closes it. Type part of a name — `isw` finds `islet-windows`, `lyrics qml` finds `LyricsService.qml` — and pick a result:
 
 | Key | Does |
 |---|---|

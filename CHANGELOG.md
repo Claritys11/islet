@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.6.1 — 2026-10-21
+
+### Changed
+- **Hari ini**: lessons no longer go to Google Calendar by default — only tasks and deadlines do; the
+  lessons stay in Notion and on the tab. *Settings → Calendar & Notion → Lessons too* brings them back;
+  turning it off deletes the lesson events Islet made.
+- **Finder**: Mod+G (`islet find`) opens the notch and typing starts Finder; Mod+G again closes it.
+
+### Fixed
+- **Hari ini**: lessons couldn't be created in Google Calendar ("Invalid recurrence rule").
+- **Finder**: Ctrl+T opened Ghostty in the folder of the terminal in focus instead of the result's.
+- **Shelf**: a file moved after being shelved (dragged out with Move, say) is found again; one that's gone
+  shows "tidak ditemukan".
+
 ## 1.6.0 — 2026-10-21
 
 ### Added
