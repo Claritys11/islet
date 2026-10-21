@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import "today/notion.mjs" as Notion
 import "today/timetable.mjs" as Timetable
 import "today/deadlines.mjs" as Deadlines
+import "today/sync.mjs" as Sync
 
 // "Today": the Notion timetable and task list, today's lessons and close
 // deadlines, kept in sync with Google Calendar through Dank Calendar.
@@ -324,7 +325,260 @@ Singleton {
     onLoaded: {
         checkMorning();
         checkNudges();
+        if (DcalService.available)
+            sync();
     }
+
+    // ── Sync with Google Calendar ─────────────────────────────────
+    // "" | "syncing" | "waiting" (first sync not confirmed) | "done" | "error"
+    property string syncStatus: ""
+    property string syncError: ""
+    property real lastSync: 0
+    property bool _syncing: false
+    // The first sync's plan, shown before anything is written.
+    property string previewText: ""
+
+    readonly property string targetCalendar: o.todayCalendar || (DcalService.primary?.id ?? "")
+    readonly property var syncState: {
+        const st = Store.db.todaySync ?? {};
+        // The record belongs to one calendar; another calendar starts afresh.
+        return st.calendar === targetCalendar ? st : Object.assign(Sync.emptyState(), { calendar: targetCalendar, confirmed: false });
+    }
+    readonly property var conflicts: syncState.conflicts ?? []
+    readonly property var removedInGoogle: syncState.removed ?? []
+    readonly property int linked: Object.values(syncState.pairs ?? {}).filter(p => p.eventId).length
+
+    // Islet's events in the target calendar, one per series.
+    function isletEvents(cb) {
+        const n = new Date();
+        DcalService.listEvents(new Date(n.getTime() - 60 * 864e5), new Date(n.getTime() + 400 * 864e5), Sync.TAG, (ok, evs) => {
+            if (!ok)
+                return cb(false, evs);
+            const byId = {};
+            for (const e of evs) {
+                if (e.calendarId !== targetCalendar)
+                    continue;
+                const have = byId[e.id];
+                // The series' own first event, or else the earliest one seen.
+                if (!have || (e.recurringId === "" && have.recurringId !== "") || (have.recurringId !== "" && e.start < have.start))
+                    byId[e.id] = e;
+            }
+            cb(true, Object.values(byId).map(e => ({ id: e.id, title: e.summary, start: e.start, end: e.end, allDay: e.allDay, description: e.description, recurring: !!e.recurrence, rrule: e.recurrence?.rrule?.[0] ?? "" })));
+        });
+    }
+
+    function makePlan(cb) {
+        if (!notionOk || targetCalendar === "")
+            return cb(null, targetCalendar === "" ? "No Google calendar to write to — is Dank Calendar signed in?" : error);
+        isletEvents((ok, events) => {
+            if (!ok)
+                return cb(null, events);
+            const result = Sync.plan({
+                lessons: allLessons.concat(problems),
+                tasks,
+                events,
+                state: syncState,
+                now: new Date(),
+                healthy: DcalService.healthy,
+                opts: { seriesFrom: new Date(), semesterEnd: o.todaySemesterEnd, eventMinutes: o.todayEventMinutes }
+            });
+            cb(result, "", events);
+        });
+    }
+
+    function summary(actions) {
+        const n = op => actions.filter(a => a.op === op).length;
+        const parts = [];
+        if (n("createEvent"))
+            parts.push(`buat ${n("createEvent")} event`);
+        if (n("updateEvent") + n("endSeries") + n("deleteEvent"))
+            parts.push(`ubah ${n("updateEvent") + n("endSeries") + n("deleteEvent")} event`);
+        if (n("updateNotion") + n("clearStart"))
+            parts.push(`ubah ${n("updateNotion") + n("clearStart")} baris Notion`);
+        if (n("conflict"))
+            parts.push(`tabrakan ${n("conflict")}`);
+        if (n("removedInGoogle"))
+            parts.push(`dihapus di Google ${n("removedInGoogle")}`);
+        return parts.length ? parts.join(" · ") : "tidak ada perubahan";
+    }
+
+    function preview(cb) {
+        previewText = "";
+        makePlan((r, err) => {
+            previewText = r ? summary(r.actions) : err;
+            cb?.(previewText);
+        });
+    }
+
+    function confirmFirstSync() {
+        Store.db.todaySync = Object.assign({}, syncState, { confirmed: true });
+        sync();
+    }
+
+    function sync() {
+        if (!o.todayEnabled || !o.todaySync || _syncing)
+            return;
+        if (!syncState.confirmed) {
+            syncStatus = "waiting";
+            preview();
+            return;
+        }
+        _syncing = true;
+        syncStatus = "syncing";
+        makePlan((r, err, events) => {
+            if (!r) {
+                _syncing = false;
+                syncStatus = "error";
+                syncError = err;
+                return;
+            }
+            applyAll(r, events, () => {
+                _syncing = false;
+                lastSync = Date.now();
+                // Notion rows Islet wrote: read them again so the next plan sees them.
+                loadTasks(() => {});
+            });
+        });
+    }
+
+    // Applies the plan's actions one by one. If one fails, the rest wait for
+    // the next sync: their entries go back to what they were, so nothing is
+    // half done or done twice.
+    function applyAll(result, events, done) {
+        const before = syncState;
+        const state = JSON.parse(JSON.stringify(result.state));
+        state.calendar = targetCalendar;
+        state.confirmed = true;
+        const actions = result.actions;
+        const rrules = {};
+        for (const e of events)
+            rrules[e.id] = e.rrule;
+        const finish = (failedAt, message) => {
+            if (failedAt >= 0) {
+                for (const a of actions.slice(failedAt)) {
+                    if (!a.pageId)
+                        continue;
+                    if (before.pairs?.[a.pageId])
+                        state.pairs[a.pageId] = before.pairs[a.pageId];
+                    else
+                        delete state.pairs[a.pageId];
+                }
+            }
+            Store.db.todaySync = state;
+            syncStatus = failedAt >= 0 ? "error" : "done";
+            syncError = message ?? "";
+            done();
+        };
+        const step = i => {
+            if (i >= actions.length)
+                return finish(-1);
+            applyOne(actions[i], state, rrules, (ok, err) => ok ? step(i + 1) : finish(i, err));
+        };
+        step(0);
+    }
+
+    function eventParams(ev) {
+        return { summary: ev.title, start: ev.start, end: ev.end, description: ev.description, allDay: ev.allDay ? "true" : "false", recurrence: ev.recurrence ? ev.recurrence[0] : undefined };
+    }
+
+    function untilStamp(date) {
+        const [y, m, d] = date.split("-").map(Number);
+        return new Date(new Date(y, m - 1, d + 1).getTime() - 1000).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+    }
+
+    function applyOne(a, state, rrules, cb) {
+        const m = tasksMap, tm = timetableMap;
+        switch (a.op) {
+        case "createEvent":
+            return DcalService.call("events.create", Object.assign({ calendarId: targetCalendar }, eventParams(a.event)), (ok, ev) => {
+                if (!ok)
+                    return cb(false, ev);
+                state.pairs[a.pageId].eventId = ev.id;
+                if (!a.setGcalId)
+                    return cb(true);
+                NotionDbService.update(a.pageId, Notion.taskPatch(m, { gcalId: ev.id }), cb);
+            });
+        case "updateEvent":
+            return DcalService.call("events.update", Object.assign({ id: a.eventId }, eventParams(a.event)), cb);
+        case "endSeries": {
+            const rule = (rrules[a.eventId] || "").replace(/;UNTIL=[^;]*/, "");
+            return DcalService.call("events.update", { id: a.eventId, recurrence: `${rule};UNTIL=${untilStamp(a.until)}` }, cb);
+        }
+        case "deleteEvent":
+            return DcalService.call("events.delete", { id: a.eventId }, (ok, err) => {
+                if (!ok || a.op !== "deleteEvent" || !m.gcal)
+                    return cb(ok, err);
+                // A task whose plan was cleared: forget its event id too.
+                if (tasks.some(t => t.pageId === a.pageId))
+                    NotionDbService.update(a.pageId, Notion.taskPatch(m, { gcalId: "" }), cb);
+                else
+                    cb(true);
+            });
+        case "updateNotion": {
+            if (a.kind === "lesson") {
+                const props = {};
+                props[tm.hari] = { select: { name: a.fields.hari } };
+                props[tm.jam] = { rich_text: [{ type: "text", text: { content: a.jam } }] };
+                return NotionDbService.update(a.pageId, props, cb);
+            }
+            const f = a.fields;
+            return NotionDbService.update(a.pageId, Notion.taskPatch(m, { title: f.title, start: f.start, end: f.notionEnd, status: statusName(f.done ? "complete" : "to_do") }), cb);
+        }
+        case "clearStart":
+            return NotionDbService.update(a.pageId, Notion.taskPatch(m, { start: "", gcalId: "" }), cb);
+        case "conflict":
+            notify(`Tabrakan: ${a.title}`, `Dipakai versi Google Calendar. Versi Notion disimpan — buka tab Hari ini untuk memakainya.`);
+            return cb(true);
+        case "removedInGoogle":
+            notify(`${a.title} dihapus di Google Calendar`, "Notion tidak diubah. Buka Settings → Calendar & Notion untuk mengembalikan atau menghapusnya.");
+            return cb(true);
+        }
+        cb(true);
+    }
+
+    // "Pakai versi yang satunya": put the version that lost back into
+    // Notion; the next sync carries it to Google.
+    function useOther(index) {
+        const c = conflicts[index];
+        if (!c)
+            return;
+        const st = Object.assign({}, syncState, { conflicts: conflicts.filter((_, i) => i !== index) });
+        Store.db.todaySync = st;
+        const done = (ok, err) => ok ? load() : flash(err);
+        if (c.kind === "lesson") {
+            const props = {};
+            props[timetableMap.hari] = { select: { name: c.other.hari } };
+            props[timetableMap.jam] = { rich_text: [{ type: "text", text: { content: `${c.other.start.replace(":", ".")}-${c.other.end.replace(":", ".")}` } }] };
+            NotionDbService.update(c.pageId, props, done);
+        } else {
+            const f = c.other;
+            const plain = f.allDay || !f.end || new Date(f.end) - new Date(f.start) === o.todayEventMinutes * 60000;
+            NotionDbService.update(c.pageId, Notion.taskPatch(tasksMap, { title: f.title, start: f.start, end: plain ? "" : f.end, status: statusName(f.done ? "complete" : "to_do") }), done);
+        }
+    }
+
+    // A lesson whose series was deleted in Google: make it again, or remove
+    // the row from Notion (to Notion's trash).
+    function putBack(pageId) {
+        Store.db.todaySync = Object.assign({}, syncState, { removed: removedInGoogle.filter(r => r.pageId !== pageId) });
+        sync();
+    }
+    function removeFromNotion(pageId) {
+        NotionDbService.trash(pageId, (ok, err) => {
+            if (!ok)
+                return flash(err);
+            Store.db.todaySync = Object.assign({}, syncState, { removed: removedInGoogle.filter(r => r.pageId !== pageId) });
+            load();
+        });
+    }
+
+    // Changes made from Islet go out shortly after.
+    Timer {
+        id: soonSync
+        interval: 3000
+        onTriggered: root.sync()
+    }
+    onChanged: soonSync.restart()
 
     function listText() {
         const lessons = lessonsToday.map(l => `lesson ${l.start}-${l.end} ${l.title}${l.now ? " (now)" : l.past ? " (past)" : ""}${l.clash ? " [bentrok]" : ""}`);
@@ -347,7 +601,11 @@ Singleton {
             `tasks: ${tasks.length}`,
             `deadlines: ${deadlines.length}`,
             `classroom: ${classroom.length}`,
-            `problems: ${problems.length}`
+            `problems: ${problems.length}`,
+            `calendar: ${(DcalService.calendars.find(c => c.id === targetCalendar) ?? {}).name ?? "-"}`,
+            `linked: ${linked}`,
+            `sync: ${syncStatus}${syncError ? " — " + syncError : ""}${lastSync ? " (" + Qt.formatTime(new Date(lastSync), "HH:mm") + ")" : ""}`,
+            `conflicts: ${conflicts.length}`
         ].join("\n");
     }
 

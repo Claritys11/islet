@@ -170,6 +170,20 @@ ShellRoot {
         function trashTest(): void {
             TodayService.trashTestTasks();
         }
+        // The plan of the next sync, without writing anything.
+        function preview(): string {
+            TodayService.preview();
+            return "ok";
+        }
+        function previewText(): string {
+            return TodayService.previewText;
+        }
+        function confirm(): void {
+            TodayService.confirmFirstSync();
+        }
+        function sync(): void {
+            TodayService.sync();
+        }
     }
 
     // File shelf: `islet shelf FILE…`, `islet shelf` lists, `islet shelf clear`.
