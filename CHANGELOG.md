@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.6.0 — unreleased
+## 1.6.0 — 2026-10-21
 
 ### Added
 - **Hari ini**: a notch tab with today's lessons and close deadlines from your Notion timetable and task
