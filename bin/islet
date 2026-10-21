@@ -60,6 +60,44 @@ stop() {
 
 call() { start && qs -c "$CFG" ipc call "$@"; }
 
+# `islet find bind [FILE]`: Mod+G opens Finder in niri. Adds one line to the
+# first binds { } block of FILE (a backup is kept), checks the config with
+# `niri validate`, and puts the file back if niri rejects it.
+find_bind() {
+    file=$1
+    line='    Mod+G hotkey-overlay-title="Islet Finder" { spawn "islet" "find"; }'
+    [ -f "$file" ] || { echo "No niri binds file at $file" >&2; return 1; }
+    if grep -q 'spawn "islet" "find"' "$file"; then
+        echo "Finder shortcut already set up in $file"
+        return 0
+    fi
+    taken=$(grep -rnE '^[[:space:]]*Mod\+G[[:space:]{]' "$(dirname "$file")" --include='*.kdl' 2>/dev/null | head -n 1)
+    if [ -n "$taken" ]; then
+        echo "Mod+G is already used: $taken"
+        echo "Pick another key and add this line to your binds yourself:"
+        echo "$line"
+        return 1
+    fi
+    cp -p "$file" "$file.islet-backup" || return 1
+    awk -v add="$line" '
+        !done && /^[[:space:]]*binds[[:space:]]*\{/ { inside = 1 }
+        inside && !done && /^}/ { print add; done = 1; inside = 0 }
+        { print }
+        END { if (!done) exit 3 }
+    ' "$file.islet-backup" > "$file.islet-new" || {
+        rm -f "$file.islet-new"
+        echo "Couldn't find a binds { } block in $file" >&2
+        return 1
+    }
+    mv "$file.islet-new" "$file"
+    if ! ${NIRI_VALIDATE:-niri validate} >/dev/null 2>&1; then
+        cp -p "$file.islet-backup" "$file"
+        echo "niri didn't accept the change; $file is back as it was" >&2
+        return 1
+    fi
+    echo "Done: Mod+G opens Finder (backup: $file.islet-backup)"
+}
+
 case "$1" in
     setup) call islet setup ;;
     settings)
@@ -94,6 +132,7 @@ case "$1" in
         case "${1:-}" in
             --reindex) call finder reindex ;;
             --status) call finder status ;;
+            bind) shift; find_bind "${1:-${XDG_CONFIG_HOME:-$HOME/.config}/niri/user-binds.kdl}" ;;
             --print)
                 shift
                 q="$*"

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0 — unreleased
+
+### Added
+- **Finder**: find files and folders from the notch, Listary-style. `Mod+G` / `islet find`, type part of a
+  name (`isw` → islet-windows); Enter opens (folders in your file manager), Ctrl+T terminal there, Ctrl+E
+  editor, Alt+Enter containing folder, Ctrl+C copy path. Projects and what you open often rank first.
+  Its own index (fd + fzf), refreshed every 10 minutes, skipping junk like `node_modules`, `venv` and Go's
+  module cache. *Settings → Finder*, and `islet find bind` sets up the niri shortcut
+
 ## 1.5.0 — 2026-10-21
 
 ### Added
