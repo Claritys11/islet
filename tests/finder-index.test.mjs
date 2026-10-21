@@ -70,3 +70,12 @@ test("a bad root fails and keeps the old index", () => {
     assert.ok(failed, "should exit non-zero");
     assert.equal(readFileSync(join(out, "files.txt"), "utf8"), before);
 });
+
+test("projects inside hidden folders are skipped unless hidden files are on", () => {
+    const root = tree();
+    mkdirSync(join(root, "a/.cache/dep/.git"), { recursive: true });
+    const off = build(root, "0");
+    assert.deepEqual(off.projects, [`${root}/a/proj`]);
+    const on = build(root, "1");
+    assert.ok(on.projects.includes(`${root}/a/.cache/dep`));
+});

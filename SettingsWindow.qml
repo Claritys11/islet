@@ -1887,16 +1887,20 @@ FloatingWindow {
                         }
                         Process {
                             id: bindProc
-                            command: ["sh", decodeURIComponent(String(Qt.resolvedUrl("bin/islet")).replace(/^file:\/\//, "")), "find", "bind"]
+                            command: ["sh", decodeURIComponent(String(Qt.resolvedUrl("bin/islet")).replace(/^file:\/\//, "")), "find", "--bind"]
                             stdout: StdioCollector {
                                 id: bindResult
                             }
                         }
-                        Label {
+                        // Selectable, to copy into another compositor's config.
+                        TextEdit {
                             Layout.fillWidth: true
+                            readOnly: true
+                            selectByMouse: true
                             wrapMode: Text.WordWrap
-                            text: "Hyprland: bind = SUPER, G, exec, islet find   ·   Sway: bindsym $mod+g exec islet find"
+                            text: "Hyprland: bind = SUPER, G, exec, islet find\nSway: bindsym $mod+g exec islet find"
                             color: win.subtext
+                            selectionColor: win.accent
                             font.family: win.font
                             font.pixelSize: 12
                         }

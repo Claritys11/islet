@@ -28,11 +28,31 @@ function wordStart(name, i) {
     return /[\s\-_.()[\]]/.test(prev) || (/[a-z0-9]/.test(prev) && /[A-Z]/.test(cur));
 }
 
-// Does the query appear in `name` as a subsequence, letters in order? The
-// best of all alignments wins: letters at word starts ("isw" → islet-windows)
-// and runs of letters score more. → { score, positions } or null.
+// Does the query appear in `name`? Typed words are first tried in order as
+// one run of letters ("islet win"); failing that, each word on its own, in
+// any order ("windows islet"), for a little less. → { score, positions } or null.
 export function nameMatch(q, name) {
-    const query = q.replace(/\s+/g, "").toLowerCase();
+    const words = q.trim().split(/\s+/).filter(w => w !== "");
+    const whole = matchWord(words.join(""), name);
+    if (whole || words.length < 2)
+        return whole;
+    let score = -5;
+    const positions = new Set();
+    for (const w of words) {
+        const m = matchWord(w, name);
+        if (!m)
+            return null;
+        score += m.score;
+        m.positions.forEach(i => positions.add(i));
+    }
+    return { score, positions: Array.from(positions).sort((a, b) => a - b) };
+}
+
+// One word as a subsequence of `name`, letters in order. The best of all
+// alignments wins: letters at word starts ("isw" → islet-windows) and runs
+// of letters score more.
+function matchWord(word, name) {
+    const query = word.toLowerCase();
     const lower = name.toLowerCase();
     const n = query.length, m = name.length;
     if (n === 0 || n > m)

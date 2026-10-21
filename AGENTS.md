@@ -74,7 +74,7 @@ windowrulev2 = float, title:^(Islet Settings)$
 **Sway**: `bindsym $mod+Shift+l exec islet toggle` and `for_window [title="^Islet Settings$"] floating enable`.
 
 **Finder** (find files and folders): needs `fd` and `fzf` (`sudo pacman -S fd fzf`). On niri,
-`islet find bind` adds `Mod+G` to `~/.config/niri/user-binds.kdl` itself (backup kept, validated, refuses
+`islet find --bind` adds `Mod+G` to `~/.config/niri/user-binds.kdl` itself (backup kept, validated, refuses
 if Mod+G is taken) — ask first. Check it with `islet find --print <part of a folder name>`.
 
 ## 5. Optional: Spicy Lyrics timing (Spotify + Spicetify users)

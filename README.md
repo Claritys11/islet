@@ -175,7 +175,7 @@ you opened lately. Islet keeps its own index of your home (built with `fd`, sear
 every 10 minutes — junk like `node_modules`, `venv`, Go's module cache and hidden files is skipped.
 
 *Settings → Finder* sets the folders to search, what to skip, and which apps open things; **Set it up**
-adds the Mod+G shortcut to niri for you (`islet find bind`). Other compositors: bind a key to `islet find`.
+adds the Mod+G shortcut to niri for you (`islet find --bind`). Other compositors: bind a key to `islet find`.
 
 ---
 
@@ -185,7 +185,7 @@ adds the Mod+G shortcut to niri for you (`islet find bind`). Other compositors: 
 islet setup                                     the setup guide
 islet settings [page | words]                   open settings, on a page or searching: islet settings youtube
 islet notch [media|focus|checklist|shelf|viz]   toggle the notch / open a tab / visualizer
-islet find [text]                               Finder (also: --reindex, --print text, --status, bind)
+islet find [text]                               Finder (also: --open/--copy text, --print text, --reindex, --status, --bind)
 islet shelf [FILE…|clear]                       put files on the shelf (no files = list)
 islet share [copy|save]                         share card of the song playing now
 islet toggle | show | hide                      the lyrics overlay

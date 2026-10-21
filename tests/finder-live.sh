@@ -13,6 +13,8 @@ case "$first" in
 esac
 islet find --print '!nothing' >/dev/null 2>&1 || fail "operator query crashed"
 islet find --print "a'b \$c" >/dev/null 2>&1 || fail "quote query crashed"
+islet find --print -x >/dev/null 2>&1 || fail "a query starting with - was taken as an option"
+islet find --print windows islet | head -n 1 | grep -q "islet-windows" || fail "words in another order"
 
 # Nothing typed: answers (the recent list) instead of waiting forever.
 islet find --print "" >/dev/null 2>&1 || fail "empty query never finished"

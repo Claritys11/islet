@@ -17,6 +17,7 @@ Singleton {
     readonly property string home: Quickshell.env("HOME")
     readonly property string dir: `${Quickshell.env("XDG_CACHE_HOME") || home + "/.cache"}/islet/finder`
     readonly property string script: decodeURIComponent(String(Qt.resolvedUrl("finder/index.sh")).replace(/^file:\/\//, ""))
+    readonly property string searchScript: decodeURIComponent(String(Qt.resolvedUrl("finder/search.sh")).replace(/^file:\/\//, ""))
 
     // Set to search; results follow.
     property string query: ""
@@ -38,6 +39,7 @@ Singleton {
     property string _defaultFm: ""
     property var _projects: ({})
     property bool _hasIndex: false
+    property bool _again: false
 
     // `islet find [text]`: the notch opens Finder.
     signal openRequested(string prefill)
@@ -50,8 +52,15 @@ Singleton {
     }
 
     function reindex() {
-        if (indexer.running)
+        // fd or fzf missing: nothing to build, and the message must stay.
+        if (status === "missing-tools")
             return;
+        // A rebuild is running: run another when it ends, so a change to
+        // the settings made meanwhile isn't lost.
+        if (indexer.running) {
+            _again = true;
+            return;
+        }
         status = "indexing";
         indexer.command = ["sh", script, dir, o.finderHidden ? "1" : "0", o.finderExclude].concat(roots());
         indexer.running = true;
@@ -60,6 +69,10 @@ Singleton {
     Process {
         id: indexer
         onExited: code => {
+            if (root._again) {
+                root._again = false;
+                Qt.callLater(root.reindex);
+            }
             if (code === 127) {
                 root.status = "missing-tools";
                 return;
@@ -198,7 +211,7 @@ Singleton {
             // The first output line is the search's number: a restarted
             // Process still reports the run it cut short, and only the
             // output itself can say which search it belongs to.
-            p.command = ["sh", "-c", 'printf "%s\\n" "$3"; [ -f "$2" ] || exit 0; fzf --filter "$1" < "$2" | head -n 150', "sh", fq, `${dir}/${p.file}`, String(id)];
+            p.command = ["sh", searchScript, String(id), fq, `${dir}/${p.file}`];
             p.running = true;
         }
     }
@@ -295,6 +308,10 @@ Singleton {
         if (!entry)
             return;
         if (action === "copy") {
+            if (!_available.includes("wl-copy")) {
+                flash("Install wl-clipboard to copy paths");
+                return;
+            }
             Quickshell.execDetached(Rank.actionCommand("copy", entry, apps));
             flash("Path copied");
             acted(action);

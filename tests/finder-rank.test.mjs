@@ -105,3 +105,11 @@ test("shortPath and detect", () => {
     assert.equal(detect(["ghostty", "kitty"], ["kitty", "ghostty"]), "ghostty");
     assert.equal(detect(["zed"], []), "");
 });
+
+test("words can come in any order", () => {
+    const m = nameMatch("windows islet", "islet-windows");
+    assert.ok(m, "should match by name");
+    assert.deepEqual(m.positions, [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12]);
+    assert.ok(nameMatch("islet windows", "islet-windows").score >= m.score);
+    assert.equal(nameMatch("islet zzz", "islet-windows"), null);
+});

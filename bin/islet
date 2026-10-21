@@ -19,7 +19,7 @@ Usage: islet <command>
                                   Toggle the notch, open a tab, or the visualizer
   pomodoro [toggle|reset|resetpause|skip|status]
   find [text]                     Find files and folders (Listary-style); also:
-       --reindex | --print text | --status | bind
+       --reindex | --print text | --open text | --copy text | --status | --bind
   shelf [FILE…|clear]             Put files on the notch's shelf; without files, list it
   share [copy|save]               A picture of the song and lyric playing now, to copy or save
   todo [text]                     Add a task, or list tasks without text
@@ -60,7 +60,7 @@ stop() {
 
 call() { start && qs -c "$CFG" ipc call "$@"; }
 
-# `islet find bind [FILE]`: Mod+G opens Finder in niri. Adds one line to the
+# `islet find --bind [FILE]`: Mod+G opens Finder in niri. Adds one line to the
 # first binds { } block of FILE (default: user-binds.kdl if there is one,
 # else config.kdl; a backup is kept), checks the config with `niri validate`,
 # and puts the file back if niri rejects it. Messages, errors too, go to
@@ -73,7 +73,7 @@ find_bind() {
         echo "Finder shortcut already set up in $file"
         return 0
     fi
-    taken=$(grep -rnE '^[[:space:]]*Mod\+G[[:space:]{]' "$(dirname "$file")" --include='*.kdl' 2>/dev/null | head -n 1)
+    taken=$(grep -rnE '^[[:space:]]*(Mod|Super)\+G[[:space:]{]' "$(dirname "$file")" --include='*.kdl' 2>/dev/null | head -n 1)
     if [ -n "$taken" ]; then
         echo "Mod+G is already used: $taken"
         echo "Pick another key and add this line to your binds yourself:"
@@ -81,9 +81,12 @@ find_bind() {
         return 1
     fi
     cp -p "$file" "$file.islet-backup" || return 1
+    # Insert before the brace that closes the first binds block, however
+    # it's indented: count braces from "binds {" on.
     awk -v add="$line" '
-        !done && /^[[:space:]]*binds[[:space:]]*\{/ { inside = 1 }
-        inside && !done && /^}/ { print add; done = 1; inside = 0 }
+        !done && !inside && /^[[:space:]]*binds[[:space:]]*\{/ { inside = 1; depth = 0 }
+        inside && !done && /^[[:space:]]*}/ && depth == 1 { print add; done = 1; inside = 0 }
+        inside { n = split($0, c, ""); for (i = 1; i <= n; i++) { if (c[i] == "{") depth++; else if (c[i] == "}") depth-- } }
         { print }
         END { if (!done) exit 3 }
     ' "$file.islet-backup" > "$file.islet-new" || {
@@ -91,9 +94,11 @@ find_bind() {
         echo "Couldn't find a binds { } block in $file"
         return 1
     }
-    mv "$file.islet-new" "$file"
+    # Written in place (not moved over it), so a symlinked file (dotfiles
+    # managers) stays a symlink.
+    cat "$file.islet-new" > "$file" && rm -f "$file.islet-new"
     if ! ${NIRI_VALIDATE:-niri validate} >/dev/null 2>&1; then
-        cp -p "$file.islet-backup" "$file"
+        cat "$file.islet-backup" > "$file"
         echo "niri didn't accept the change; $file is back as it was"
         return 1
     fi
@@ -134,8 +139,8 @@ case "$1" in
         case "${1:-}" in
             --reindex) call finder reindex ;;
             --status) call finder status ;;
-            --open | --copy) a=${1#--}; shift; call finder pick "$*" "$a" ;;
-            bind)
+            --open | --copy) a=${1#--}; shift; call finder pick -- "$*" "$a" ;;
+            --bind)
                 shift
                 d=${XDG_CONFIG_HOME:-$HOME/.config}/niri
                 f=$d/user-binds.kdl
@@ -144,17 +149,17 @@ case "$1" in
             --print)
                 shift
                 q="$*"
-                call finder search "$q" || exit 1
+                call finder search -- "$q" || exit 1
                 i=0
                 while [ $i -lt 50 ]; do
-                    out=$(qs -c "$CFG" ipc call finder results "$q")
+                    out=$(qs -c "$CFG" ipc call finder results -- "$q")
                     [ "$out" != pending ] && { printf '%s\n' "$out"; exit 0; }
                     sleep 0.1
                     i=$((i + 1))
                 done
                 echo "timed out" >&2
                 exit 1 ;;
-            *) call finder open "$*" ;;
+            *) call finder open -- "$*" ;;
         esac ;;
     todo)
         shift
