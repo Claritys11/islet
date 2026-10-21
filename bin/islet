@@ -20,6 +20,7 @@ Usage: islet <command>
   pomodoro [toggle|reset|resetpause|skip|status]
   find [text]                     Find files and folders (Listary-style); also:
        --reindex | --print text | --open text | --copy text | --status | --bind
+  today [status|reload]           Today's lessons and deadlines (Notion ⇄ Google Calendar)
   shelf [FILE…|clear]             Put files on the notch's shelf; without files, list it
   share [copy|save]               A picture of the song and lyric playing now, to copy or save
   todo [text]                     Add a task, or list tasks without text
@@ -160,6 +161,13 @@ case "$1" in
                 echo "timed out" >&2
                 exit 1 ;;
             *) call finder open -- "$*" ;;
+        esac ;;
+    today)
+        shift
+        case "${1:-status}" in
+            status) call today status ;;
+            reload) call today reload ;;
+            *) usage; exit 1 ;;
         esac ;;
     todo)
         shift

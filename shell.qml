@@ -148,6 +148,18 @@ ShellRoot {
         }
     }
 
+    // Today: `islet today [status|sync|preview|add "text"]`.
+    IpcHandler {
+        target: "today"
+
+        function status(): string {
+            return TodayService.statusText();
+        }
+        function reload(): void {
+            TodayService.load();
+        }
+    }
+
     // File shelf: `islet shelf FILE…`, `islet shelf` lists, `islet shelf clear`.
     IpcHandler {
         target: "shelf"
