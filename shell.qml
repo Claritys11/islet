@@ -215,7 +215,37 @@ ShellRoot {
     Binding {
         target: IsletLink
         property: "notchOpen"
-        value: shell.notch?.mode === "open"
+        value: shell.notch?.mode === "open" || shell.notch?.mode === "find"
+    }
+
+    Connections {
+        target: FinderService
+        function onOpenRequested(prefill) {
+            shell.notch?.find(prefill);
+        }
+    }
+
+    // While Finder has the keyboard, a click anywhere else closes it (like a
+    // popup), so the keyboard is never stuck in Islet.
+    LazyLoader {
+        active: shell.notch?.mode === "find"
+        PanelWindow {
+            screen: shell.notch?.screen ?? null
+            anchors.top: true
+            anchors.bottom: true
+            anchors.left: true
+            anchors.right: true
+            color: "transparent"
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.namespace: "islet-finder-backdrop"
+            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.AllButtons
+                onPressed: shell.notch?.close()
+            }
+        }
     }
 
     Connections {
