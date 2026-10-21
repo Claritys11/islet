@@ -18,6 +18,8 @@ Usage: islet <command>
   notch [media|focus|checklist|shelf|viz]
                                   Toggle the notch, open a tab, or the visualizer
   pomodoro [toggle|reset|resetpause|skip|status]
+  find [text]                     Find files and folders (Listary-style); also:
+       --reindex | --print text | --status | bind
   shelf [FILE…|clear]             Put files on the notch's shelf; without files, list it
   share [copy|save]               A picture of the song and lyric playing now, to copy or save
   todo [text]                     Add a task, or list tasks without text
@@ -86,6 +88,26 @@ case "$1" in
             "") call shelf list ;;
             clear) call shelf clear ;;
             *) for f; do call shelf add "$(realpath -- "$f")"; done ;;
+        esac ;;
+    find)
+        shift
+        case "${1:-}" in
+            --reindex) call finder reindex ;;
+            --status) call finder status ;;
+            --print)
+                shift
+                q="$*"
+                call finder search "$q" || exit 1
+                i=0
+                while [ $i -lt 50 ]; do
+                    out=$(qs -c "$CFG" ipc call finder results "$q")
+                    [ "$out" != pending ] && { printf '%s\n' "$out"; exit 0; }
+                    sleep 0.1
+                    i=$((i + 1))
+                done
+                echo "timed out" >&2
+                exit 1 ;;
+            *) call finder open "$*" ;;
         esac ;;
     todo)
         shift

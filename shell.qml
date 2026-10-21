@@ -119,6 +119,29 @@ ShellRoot {
         }
     }
 
+    // Finder: `islet find [text]`, `islet find --reindex`, `islet find --print text`.
+    IpcHandler {
+        target: "finder"
+
+        function open(q: string): void {
+            FinderService.openRequested(q);
+        }
+        function reindex(): void {
+            FinderService.reindex();
+        }
+        // Starts a search without showing anything; read it with results().
+        function search(q: string): void {
+            FinderService.query = q;
+        }
+        function results(q: string): string {
+            return FinderService.resultsFor(q);
+        }
+        function status(): string {
+            const f = FinderService;
+            return `${f.status}  ${f.counts.dirs} folders  ${f.counts.files} files  indexed ${f.indexedAt ? Math.round((Date.now() - f.indexedAt) / 1000) + " s ago" : "never"}`;
+        }
+    }
+
     // File shelf: `islet shelf FILE…`, `islet shelf` lists, `islet shelf clear`.
     IpcHandler {
         target: "shelf"
