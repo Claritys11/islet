@@ -56,6 +56,11 @@ Singleton {
             const ok = xhr.status >= 200 && xhr.status < 300;
             cb(ok, ok ? res : message(xhr.status, res));
         };
+        // No answer in 30 s: give up (abort ends it as a network failure).
+        waitComponent.createObject(root, { interval: 30000, then: () => {
+                if (xhr.readyState !== XMLHttpRequest.DONE)
+                    xhr.abort();
+            } });
         xhr.open(method, `https://api.notion.com/v1/${path}`);
         xhr.setRequestHeader("Authorization", `Bearer ${token()}`);
         xhr.setRequestHeader("Notion-Version", "2022-06-28");
@@ -72,10 +77,13 @@ Singleton {
             if (!ok)
                 return cb(false, res);
             const all = (acc ?? []).concat(res.results ?? []);
-            if (res.has_more && all.length < 2000)
+            if (!res.has_more)
+                cb(true, all);
+            else if (all.length < 2000)
                 pages(method, path, body, cb, all, res.next_cursor);
             else
-                cb(true, all);
+                // Not all of it: a partial list must not look complete.
+                cb(false, "That Notion database has more than 2000 rows; Islet reads at most 2000.");
         });
     }
 
@@ -88,24 +96,26 @@ Singleton {
         pages("POST", `databases/${dbId}/query`, {}, cb);
     }
 
-    // Titles of related pages (a lesson's subject), remembered.
+    // Titles of related pages (a lesson's subject), remembered once read.
+    // cb(titles, complete): complete is false if any couldn't be read, so
+    // lessons aren't renamed to a fallback by a passing Notion hiccup.
     function pageTitles(ids, cb) {
-        const missing = ids.filter(id => _titles[id] === undefined);
+        const missing = Array.from(new Set(ids)).filter(id => _titles[id] === undefined);
         if (missing.length === 0)
-            return cb(_titles);
-        let left = missing.length;
+            return cb(_titles, true);
+        let left = missing.length, complete = true;
         for (const id of missing) {
             request("GET", `pages/${id}`, null, (ok, page) => {
-                const next = Object.assign({}, _titles);
                 if (ok) {
                     const prop = Object.values(page.properties ?? {}).find(p => p.type === "title");
+                    const next = Object.assign({}, _titles);
                     next[id] = (prop?.title ?? []).map(t => t.plain_text).join("");
+                    _titles = next;
                 } else {
-                    next[id] = "";
+                    complete = false;
                 }
-                _titles = next;
                 if (--left === 0)
-                    cb(_titles);
+                    cb(_titles, complete);
             });
         }
     }

@@ -1,4 +1,4 @@
-import { parseJam } from "./timetable.mjs";
+import { parseJam, hariIndex, HARI } from "./timetable.mjs";
 
 // Notion side of "Today": which databases are the timetable and the task
 // list, which columns mean what, and rows as plain objects. Plain functions
@@ -89,12 +89,15 @@ export function lessonFromRow(row, map, mapelTitles) {
     const time = parseJam(jam);
     if (!time)
         return { error: `Jam “${jam}” isn't a time like 07.00-08.30`, pageId: row.id };
+    const day = hariIndex(text(p[map.hari]));
+    if (day < 0)
+        return { error: `Hari “${text(p[map.hari])}” isn't a weekday`, pageId: row.id };
     const mapel = p[map.mapel];
     const subject = mapel?.type === "relation" ? (mapel.relation ?? []).map(r => mapelTitles[r.id]).filter(Boolean).join(", ") : text(mapel);
     return {
         pageId: row.id,
         title: subject || text(p[map.title]),
-        hari: text(p[map.hari]),
+        hari: HARI[day],
         start: time.start,
         end: time.end,
         guru: text(p[map.guru]),

@@ -19,17 +19,19 @@ function apply(result, { lessons = [], tasks = [], events = [] }) {
     for (const a of result.actions) {
         if (a.op === "createEvent") {
             const id = `ev-${a.pageId}-${n++}`;
-            events.push({ id, title: a.event.title, start: a.event.start, end: a.event.end, allDay: a.event.allDay, description: a.event.description, recurring: !!a.event.recurrence });
+            events.push({ id, title: a.event.title, start: a.event.start, end: a.event.end, allDay: a.event.allDay, description: a.event.description, recurring: !!a.event.recurrence, rrule: a.event.recurrence?.[0] ?? "" });
             state.pairs[a.pageId].eventId = id;
             tasks = tasks.map(t => t.pageId === a.pageId ? { ...t, gcalId: id } : t);
         } else if (a.op === "updateEvent") {
-            events = events.map(e => e.id === a.eventId ? { ...e, title: a.event.title, start: a.event.start, end: a.event.end, allDay: a.event.allDay } : e);
+            events = events.map(e => e.id === a.eventId ? { ...e, title: a.event.title, start: a.event.start, end: a.event.end, allDay: a.event.allDay, rrule: a.event.recurrence?.[0] ?? e.rrule } : e);
         } else if (a.op === "updateNotion") {
             if (a.kind === "lesson")
                 lessons = lessons.map(l => l.pageId === a.pageId ? { ...l, hari: a.fields.hari, start: a.fields.start, end: a.fields.end, edited: 99 } : l);
             else
                 tasks = tasks.map(t => t.pageId === a.pageId ? { ...t, title: a.fields.title, start: a.fields.start, startHasTime: !a.fields.allDay, end: a.fields.notionEnd, done: a.fields.done, edited: 99 } : t);
             state.pairs[a.pageId].notionEdited = 99;
+        } else if (a.op === "setGcalId") {
+            tasks = tasks.map(t => t.pageId === a.pageId ? { ...t, gcalId: a.eventId } : t);
         }
     }
     return { lessons, tasks, events, state };
@@ -97,7 +99,7 @@ test("Google change updates Notion", () => {
     s.events = s.events.map(e => ({ ...e, start: "2026-10-20T01:00:00Z", end: "2026-10-20T02:30:00Z" }));
     const r = run(s);
     assert.deepEqual(ops(r), ["updateNotion"]);
-    assert.deepEqual(r.actions[0].fields, { title: "L-p1", hari: "Selasa", start: "08:00", end: "09:30" });
+    assert.deepEqual(r.actions[0].fields, { title: "L-p1", hari: "Selasa", start: "08:00", end: "09:30", until: "" });
     assert.equal(r.actions[0].jam, "08.00-09.30");
 });
 
@@ -136,7 +138,7 @@ test("series deleted in Google never touches Notion (after two healthy syncs)", 
     const s = synced([lesson("p1")], []);
     const once = run({ ...s, events: [] });
     assert.deepEqual(once.actions, []);
-    const twice = run({ ...s, events: [], state: once.state });
+    const twice = run({ ...s, events: [], state: once.state, now: new Date(now.getTime() + 5 * 60000) });
     assert.deepEqual(ops(twice), ["removedInGoogle"]);
     assert.equal(twice.state.pairs.p1, undefined);
     assert.deepEqual(twice.state.removed.map(r => r.pageId), ["p1"]);
@@ -148,7 +150,7 @@ test("task event missing once does nothing, twice clears Rencana Mulai", () => {
     const s = synced([], [task("t1")]);
     const once = run({ ...s, events: [] });
     assert.deepEqual(once.actions, []);
-    const twice = run({ ...s, events: [], state: once.state });
+    const twice = run({ ...s, events: [], state: once.state, now: new Date(now.getTime() + 5 * 60000) });
     assert.deepEqual(ops(twice), ["clearStart"]);
 });
 
@@ -220,4 +222,95 @@ test("does not change the state it was given", () => {
     const before = JSON.stringify(s.state);
     run({ ...s, lessons: [] });
     assert.equal(JSON.stringify(s.state), before);
+});
+
+// ── Review fixes ──────────────────────────────────────────────────
+const window = { from: new Date(now.getTime() - 60 * 864e5), to: new Date(now.getTime() + 400 * 864e5) };
+const full = { lesson: true, task: true };
+const runW = input => run(Object.assign({ window, complete: full }, input));
+const later = (state, minutes) => ({ ...state });
+
+test("C1: a task event outside the listed window is not 'missing'", () => {
+    const old = task("t1", { start: "2026-07-01" });
+    const s = apply(runW({ tasks: [old] }), { tasks: [old] });
+    let st = s.state;
+    for (let i = 0; i < 3; i++) {
+        const r = runW({ ...s, events: [], state: st, now: new Date(now.getTime() + i * 10 * 60000) });
+        assert.deepEqual(r.actions, []);
+        st = r.state;
+    }
+});
+
+test("C2: an incomplete side never ends series or deletes events", () => {
+    const s = apply(runW({ lessons: [lesson("p1")], tasks: [task("t1")] }), { lessons: [lesson("p1")], tasks: [task("t1")] });
+    const r = runW({ ...s, lessons: [], tasks: [], complete: { lesson: false, task: false } });
+    assert.deepEqual(r.actions, []);
+    assert.ok(r.state.pairs.p1 && r.state.pairs.t1);
+});
+
+test("C2: mass removals are held back unless allowed", () => {
+    const lessons = ["a", "b", "c", "d", "e"].map(id => lesson(id));
+    const s = apply(runW({ lessons }), { lessons });
+    const r = runW({ ...s, lessons: [] });
+    assert.deepEqual(r.actions.filter(a => a.op === "endSeries"), []);
+    assert.equal(r.held, 5);
+    const ok = runW({ ...s, lessons: [], opts: { ...opts, allowMass: true } });
+    assert.equal(ok.actions.filter(a => a.op === "endSeries").length, 5);
+});
+
+test("I1: two misses must be minutes apart", () => {
+    const s = apply(runW({ tasks: [task("t1"), task("t2")] }), { tasks: [task("t1"), task("t2")] });
+    const events = s.events.filter(e => !e.description.endsWith("t1"));
+    const once = runW({ ...s, events });
+    const soon = runW({ ...s, events, state: once.state, now: new Date(now.getTime() + 60000) });
+    assert.deepEqual(soon.actions, []);
+    const after = runW({ ...s, events, state: soon.state, now: new Date(now.getTime() + 6 * 60000) });
+    assert.deepEqual(ops(after), ["clearStart"]);
+});
+
+test("I1: most of Islet's events vanishing at once counts as Dank Calendar not ready", () => {
+    const tasks = ["a", "b", "c", "d"].map(id => task(id));
+    const s = apply(runW({ tasks }), { tasks });
+    let st = s.state;
+    for (let i = 0; i < 3; i++) {
+        const r = runW({ ...s, events: [], state: st, now: new Date(now.getTime() + i * 10 * 60000) });
+        assert.deepEqual(r.actions, []);
+        st = r.state;
+    }
+});
+
+test("I2: Status is written only when done changed", () => {
+    const s = apply(runW({ tasks: [task("t1")] }), { tasks: [task("t1")] });
+    s.events = s.events.map(e => ({ ...e, title: "Renamed" }));
+    const r = runW(s);
+    assert.equal(r.actions[0].statusChanged, false);
+    s.events = s.events.map(e => ({ ...e, title: "✓ Renamed" }));
+    assert.equal(runW(s).actions[0].statusChanged, true);
+});
+
+test("endSeries on a series that hasn't started yet deletes it instead", () => {
+    const fri = lesson("p1", "Jumat"); // this week's Friday is still ahead
+    const s = apply(runW({ lessons: [fri] }), { lessons: [fri] });
+    assert.deepEqual(ops(runW({ ...s, lessons: [] })), ["deleteEvent"]);
+});
+
+test("adopted series keep their own start", () => {
+    const s = apply(runW({ lessons: [lesson("p1")] }), { lessons: [lesson("p1")] });
+    const r = runW({ ...s, state: emptyState(), now: new Date(now.getTime() + 30 * 864e5), opts: { ...opts, seriesFrom: new Date(now.getTime() + 30 * 864e5) } });
+    assert.equal(r.state.pairs.p1.from, new Date(s.events[0].start).getTime());
+});
+
+test("a task whose GCal ID didn't get written gets it next time", () => {
+    const s = apply(runW({ tasks: [task("t1")] }), { tasks: [task("t1")] });
+    const r = runW({ ...s, tasks: s.tasks.map(t => ({ ...t, gcalId: "" })) });
+    assert.deepEqual(ops(r), ["setGcalId"]);
+    assert.equal(r.actions[0].eventId, s.events[0].id);
+});
+
+test("a semester end set later reaches existing series", () => {
+    const s = apply(runW({ lessons: [lesson("p1")] }), { lessons: [lesson("p1")] });
+    s.events = s.events.map(e => ({ ...e, rrule: "RRULE:FREQ=WEEKLY;BYDAY=TU" }));
+    const r = runW({ ...s, opts: { ...opts, semesterEnd: "2026-12-19" } });
+    assert.deepEqual(ops(r), ["updateEvent"]);
+    assert.deepEqual(r.actions[0].event.recurrence, ["RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL=20261219T165959Z"]);
 });

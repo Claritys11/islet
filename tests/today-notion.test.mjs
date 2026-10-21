@@ -56,3 +56,11 @@ test("taskPatch builds Notion property updates", () => {
     assert.deepEqual(taskPatch(tmap, { start: "" }), { "Rencana Mulai": { date: null } });
     assert.deepEqual(taskPatch(tmap, { title: "X" }), { Tugas: { title: [{ type: "text", text: { content: "X" } }] } });
 });
+
+test("Hari is normalised, and a row without a weekday is a problem", () => {
+    const row = structuredClone(fx.rows.lesson);
+    row.properties.Hari.select.name = "Jum'at";
+    assert.equal(lessonFromRow(row, lmap, {}).hari, "Jumat");
+    row.properties.Hari.select = null;
+    assert.ok(lessonFromRow(row, lmap, {}).error);
+});

@@ -29,6 +29,12 @@ Singleton {
         Process {
             id: proc
             property var done
+            // A hung call must not stop syncing for good.
+            property Timer limit: Timer {
+                interval: 30000
+                running: proc.running
+                onTriggered: proc.running = false
+            }
             stdout: StdioCollector {
                 id: out
             }
