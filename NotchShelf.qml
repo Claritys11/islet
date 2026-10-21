@@ -82,6 +82,8 @@ Item {
                         height: 92
                         radius: 14
                         color: tileMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.05)
+                        // Moved somewhere Islet couldn't find, or deleted.
+                        opacity: modelData.missing ? 0.45 : 1
 
                         Image {
                             id: thumb
@@ -109,8 +111,8 @@ Item {
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
                             anchors.margins: 6
-                            text: tile.modelData.name
-                            color: Theme.text
+                            text: tile.modelData.missing ? "tidak ditemukan" : tile.modelData.name
+                            color: tile.modelData.missing ? Theme.danger : Theme.text
                             elide: Text.ElideMiddle
                             horizontalAlignment: Text.AlignHCenter
                             font.family: Theme.font
@@ -133,6 +135,8 @@ Item {
                             Drag.imageSource: thumb.visible ? thumb.source : ""
                             Drag.hotSpot.x: width / 2
                             Drag.hotSpot.y: height / 2
+                            // Moved by the drop? Follow it.
+                            Drag.onDragFinished: ShelfService.followSoon()
                         }
 
                         MouseArea {
@@ -146,7 +150,7 @@ Item {
                                 dragProxy.x = 0;
                                 dragProxy.y = 0;
                             }
-                            onClicked: Qt.openUrlExternally(ShelfService.url(tile.modelData.path))
+                            onClicked: tile.modelData.missing ? ShelfService.follow() : Qt.openUrlExternally(ShelfService.url(tile.modelData.path))
                         }
 
                         NotchIconButton {
