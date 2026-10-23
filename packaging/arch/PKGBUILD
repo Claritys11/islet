@@ -1,12 +1,12 @@
 # Maintainer: Claritys11 <https://github.com/Claritys11>
 pkgname=islet-git
-pkgver=1.7.0
+pkgver=1.7.1
 pkgrel=1
 pkgdesc="Notchy-style dynamic island, synced karaoke lyrics, Pomodoro and Notion checklist for Quickshell"
 arch=('any')
 url="https://github.com/Claritys11/islet"
 license=('MIT')
-depends=('quickshell')
+depends=('quickshell' 'curl')
 makedepends=('git')
 optdepends=('cava: real audio visualizer in the notch'
             'python: Spicy Lyrics bridge (islet spicetify)'

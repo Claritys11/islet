@@ -36,7 +36,8 @@ Singleton {
             hasTrack: L.hasTrack,
             title: L.title,
             artist: L.artist,
-            art: L.artUrl,
+            // A local file: the bar widget never loads art over https (see ArtCache).
+            art: ArtCache.local,
             playing: L.isPlaying,
             line: singing ? l.main : "",
             progress: singing ? Math.round(L.progress * 1000) / 1000 : 0,

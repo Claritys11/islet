@@ -1,11 +1,17 @@
 # Changelog
 
-## Unreleased
+## 1.7.1 — 2026-10-23
 
 ### Added
 - **DMS bar**: scrolling on Islet's pill turns the playing app's own volume, 5% a notch, and shows it in
   the pill for a moment. It moves the app's PipeWire stream (like a mixer's per-app slider), so it works
   for Spotify, browsers and other players alike.
+
+### Fixed
+- **DMS crashed at startup now and then** (Qt 6.12 with OpenSSL: two threads reading the system
+  certificates at once) when Islet's pill loaded the album art over https at the same moment as DMS's
+  own requests. Islet now downloads the art to `~/.cache/islet/art` and the pill only opens local files
+  (3 crashes in 7 DMS restarts before, none in 6 after).
 
 ## 1.7.0 — 2026-10-23
 
