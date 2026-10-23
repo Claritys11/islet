@@ -18,6 +18,7 @@ Item {
     // "closed" | "peek" | "open" | "viz"
     property string mode: "closed"
     property int tab: 0
+    readonly property int tabCount: 6
     signal settingsRequested
     // The visible island, for the window's input mask.
     property alias shapeItem: shape
@@ -47,7 +48,7 @@ Item {
 
     readonly property size target: {
         if (mode === "open")
-            return Qt.size(o.notchWidth, tab === 4 ? todayHeight : o.notchHeight);
+            return Qt.size(o.notchWidth, tab >= 4 ? todayHeight : o.notchHeight);
         if (mode === "find")
             return Qt.size(o.notchWidth, finderHeight);
         if (mode === "peek")
@@ -594,7 +595,8 @@ Item {
                             { icon: "timer", text: "Focus" },
                             { icon: "checklist", text: "Checklist" },
                             { icon: "inventory_2", text: "Shelf" },
-                            { icon: "today", text: "Hari ini" }
+                            { icon: "today", text: "Hari ini" },
+                            { icon: "calendar_month", text: "Kalender" }
                         ]
                         Rectangle {
                             id: tabButton
@@ -606,10 +608,19 @@ Item {
                             radius: 15
                             color: current ? Qt.rgba(1, 1, 1, 0.12) : tabMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
 
+                            Behavior on implicitWidth {
+                                NumberAnimation {
+                                    duration: 180
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+
+                            // Six tabs don't fit with words: only the open
+                            // one says its name.
                             Row {
                                 id: tabRow
                                 anchors.centerIn: parent
-                                spacing: 6
+                                spacing: tabButton.current ? 6 : 0
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: tabButton.modelData.icon
@@ -619,8 +630,9 @@ Item {
                                 }
                                 Text {
                                     anchors.verticalCenter: parent.verticalCenter
+                                    visible: tabButton.current
                                     text: tabButton.modelData.text
-                                    color: tabButton.current ? Theme.text : Theme.subtext
+                                    color: Theme.text
                                     font.family: Theme.font
                                     font.pixelSize: 13
                                 }
@@ -681,6 +693,10 @@ Item {
                     NotchShelf {}
                     NotchToday {
                         id: todayTab
+                        onCalendarRequested: win.tab = 5
+                    }
+                    NotchCalendar {
+                        active: win.mode === "open" && win.tab === 5
                     }
                 }
             }
@@ -713,6 +729,17 @@ Item {
                 }
             }
 
+            // ← → go through the tabs (not while typing in a field).
+            Shortcut {
+                sequence: "Left"
+                enabled: win.mode === "open" && !checklist.inputFocused && !todayTab.inputFocused
+                onActivated: win.tab = (win.tab + win.tabCount - 1) % win.tabCount
+            }
+            Shortcut {
+                sequence: "Right"
+                enabled: win.mode === "open" && !checklist.inputFocused && !todayTab.inputFocused
+                onActivated: win.tab = (win.tab + 1) % win.tabCount
+            }
             Shortcut {
                 sequence: "Escape"
                 enabled: win.mode === "open" || win.mode === "find"

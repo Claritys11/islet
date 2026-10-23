@@ -15,7 +15,7 @@ Usage: islet <command>
   toggle | show | hide            Show or hide the lyrics overlay
   refetch                         Fetch lyrics for the current song again
 
-  notch [media|focus|checklist|shelf|today|viz]
+  notch [media|focus|checklist|shelf|today|calendar|viz]
                                   Toggle the notch, open a tab, or the visualizer
   pomodoro [toggle|reset|resetpause|skip|status]
   find [text]                     Find files and folders (Listary-style); also:

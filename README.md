@@ -162,7 +162,15 @@ Prefer the terminal? `islet set glow 0.9`, `islet get offsetMs`. Settings live i
 
 The notch's **Hari ini** tab shows today's lessons (the current one marked *sekarang*) next to the
 deadlines that are close — from your **Notion** timetable and task list, plus Google Classroom
-assignments. Tick a deadline to mark it Done in Notion; type in *＋ Tugas baru* to add one.
+assignments — and today's **Google Calendar events** (any you made yourself, with their calendar's
+colour; one that runs past midnight says until when). Tick a deadline to mark it Done in Notion; type in
+*＋ Tugas baru* to add one.
+
+The **Kalender** tab next to it shows the whole month: dots in each calendar's colour, red Sundays, and
+for the day you pick its events, Classroom assignments, Notion deadlines and lessons. ‹ › or the mouse
+wheel turn the months; *Hari ini* jumps back.
+
+In the open notch, **← →** go through the tabs (Esc closes it).
 
 - **Two-way sync with Google Calendar**: each task with a plan date becomes an event (lessons stay in
   Notion and on the tab; turn on *Lessons too* to get them as weekly events). Move one in Google Calendar
@@ -182,10 +190,10 @@ your Notion page with it (••• → Connections).
 
 ```
 islet today                 what Islet sees (Notion, Dank Calendar, sync)
-islet today list            today's lessons and deadlines
+islet today list            today's lessons, events and deadlines
 islet today add "Laporan"   a new task in Notion
 islet today preview|sync    what the next sync would do / sync now
-islet notch today           open the tab
+islet notch today|calendar  open the tab
 ```
 
 ---
@@ -194,7 +202,7 @@ islet notch today           open the tab
 
 Find any file or folder from the notch, Listary-style. Press **Mod+G** (or run `islet find`) — the notch
 opens, and typing starts Finder; Mod+G again closes it. Islet's own places come first: `pomo` opens the
-Pomodoro tab, `hari ini` / `jadwal` Hari ini, `shelf`, `ceklis`, `lirik`, `settings`. Type part of a name — `isw` finds `islet-windows`, `lyrics qml` finds `LyricsService.qml` — and pick a result:
+Pomodoro tab, `hari ini` / `jadwal` Hari ini, `kalender`, `shelf`, `ceklis`, `lirik`, `settings`. Type part of a name — `isw` finds `islet-windows`, `lyrics qml` finds `LyricsService.qml` — and pick a result:
 
 | Key | Does |
 |---|---|

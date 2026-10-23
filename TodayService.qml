@@ -6,6 +6,7 @@ import "today/notion.mjs" as Notion
 import "today/timetable.mjs" as Timetable
 import "today/deadlines.mjs" as Deadlines
 import "today/sync.mjs" as Sync
+import "today/agenda.mjs" as Agenda
 
 // "Today": the Notion timetable and task list, today's lessons and close
 // deadlines, kept in sync with Google Calendar through Dank Calendar.
@@ -70,8 +71,23 @@ Singleton {
         }
         return Array.from(Deadlines.clashes(items));
     }
-    readonly property var nextLesson: lessonsToday.find(l => !l.past && !l.now) ?? null
-    // A lesson starting within 5 minutes (for the pill).
+    // Google Calendar events around today (all calendars, Islet's copies
+    // included; Agenda leaves those out).
+    property var events: []
+    // Today's events from calendars you write to (Classroom's read-only
+    // ones are deadlines already).
+    readonly property var agendaToday: Agenda.eventsOn(events, new Date(now), new Date(now), DcalService.calendars).filter(e => !e.readOnly)
+    // Lessons and events together, by start time. `startAt` only for things
+    // that begin today at a time (what "starts in N min" can be said of).
+    readonly property var scheduleToday: {
+        const day = new Date(now);
+        const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+        const lessons = lessonsToday.map(l => Object.assign({ kind: "lesson", key: "lesson:" + l.pageId, time: `${l.start.replace(":", ".")}–${l.end.replace(":", ".")}`, until: "", sortAt: l.startAt }, l));
+        const evs = agendaToday.map(e => Object.assign({ kind: "event", sortAt: e.start.getTime(), startAt: !e.allDay && e.start.getTime() >= dayStart ? e.start.getTime() : 0, clash: false }, e));
+        return lessons.concat(evs).sort((a, b) => a.sortAt - b.sortAt);
+    }
+    readonly property var nextLesson: scheduleToday.find(l => l.startAt && !l.past && !l.now) ?? null
+    // A lesson or event starting within 5 minutes (for the pill).
     readonly property var soon: _fakeSoon ?? (nextLesson && nextLesson.startAt - now <= 5 * 60000 ? nextLesson : null)
     // `islet today fake-soon N`: a pretend lesson for 30 s, to see the pill.
     property var _fakeSoon: null
@@ -306,21 +322,26 @@ Singleton {
         Quickshell.execDetached(["notify-send", "-a", "Islet", "-i", "x-office-calendar", title, body]);
     }
 
-    // Classroom assignments: events in Google calendars Islet can't write.
-    function loadClassroom() {
+    // Google events from yesterday to the deadline window's end: today's
+    // agenda, and Classroom assignments (events in Google calendars Islet
+    // can't write).
+    function loadEvents() {
         const ro = DcalService.calendars.filter(c => c.readOnly && c.accountKind === "google" && !/holiday|libur/i.test(c.name)).map(c => c.id);
-        if (ro.length === 0)
-            return;
         const n = new Date();
-        DcalService.listEvents(new Date(n.getTime() - 864e5), new Date(n.getTime() + (o.todayDays + 1) * 864e5), "", (ok, evs) => {
-            if (ok)
-                classroom = evs.filter(e => ro.includes(e.calendarId)).map(e => ({ id: e.id + e.start, title: e.summary, start: e.start, end: e.end, allDay: e.allDay }));
+        const from = new Date(n.getFullYear(), n.getMonth(), n.getDate() - 1);
+        DcalService.listEvents(from, new Date(n.getTime() + (o.todayDays + 1) * 864e5), "", (ok, evs) => {
+            if (!ok)
+                return;
+            events = evs;
+            classroom = evs.filter(e => ro.includes(e.calendarId)).map(e => ({ id: e.id + e.start, title: e.summary, start: e.start, end: e.end, allDay: e.allDay }));
+            eventsLoaded();
         });
     }
+    signal eventsLoaded
     Connections {
         target: DcalService
         function onRefreshed() {
-            root.loadClassroom();
+            root.loadEvents();
         }
     }
 
@@ -695,9 +716,10 @@ Singleton {
 
     function listText() {
         const lessons = lessonsToday.map(l => `lesson ${l.start}-${l.end} ${l.title}${l.now ? " (now)" : l.past ? " (past)" : ""}${l.clash ? " [bentrok]" : ""}`);
+        const evs = agendaToday.map(e => `event ${e.time}${e.until ? " " + e.until : ""} ${e.title} [${e.calendar}]${e.now ? " (now)" : e.past ? " (past)" : ""}`);
         const due = deadlines.map(d => `due ${d.label}: ${d.title} [${d.source}]`);
         const rest = tasks.filter(t => !t.due).map(t => `task ${t.done ? "[x]" : "[ ]"} ${t.title}`);
-        return lessons.concat(due, rest).join("\n");
+        return lessons.concat(evs, due, rest).join("\n");
     }
 
     function statusText() {

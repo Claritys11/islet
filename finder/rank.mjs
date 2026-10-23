@@ -204,7 +204,8 @@ const COMMANDS = [
     { cmd: "tab:focus", name: "Pomodoro", short: "Notch · timer fokus", icon: "timer", aliases: ["focus", "fokus", "timer", "belajar"] },
     { cmd: "tab:checklist", name: "Checklist", short: "Notch · daftar tugas", icon: "checklist", aliases: ["ceklis", "todo", "to do", "tasks", "notion"] },
     { cmd: "tab:shelf", name: "Shelf", short: "Notch · file yang disimpan", icon: "inventory_2", aliases: ["rak", "taruh", "simpan file"] },
-    { cmd: "tab:today", name: "Hari ini", short: "Notch · pelajaran dan tenggat", icon: "event_note", aliases: ["today", "jadwal", "pelajaran", "tenggat", "deadline", "kalender", "calendar"] },
+    { cmd: "tab:today", name: "Hari ini", short: "Notch · pelajaran dan tenggat", icon: "event_note", aliases: ["today", "jadwal", "pelajaran", "tenggat", "deadline"] },
+    { cmd: "tab:calendar", name: "Kalender", short: "Notch · kalender sebulan", icon: "calendar_month", aliases: ["calendar", "bulan", "agenda", "acara", "event"] },
     { cmd: "lyrics", name: "Lirik di layar", short: "Tampilkan atau sembunyikan lirik besar", icon: "lyrics", aliases: ["lyrics overlay", "lirik layar", "lyric wheel"] },
     { cmd: "settings", name: "Settings", short: "Pengaturan Islet", icon: "settings", aliases: ["pengaturan", "setelan", "preferences"] }
 ];

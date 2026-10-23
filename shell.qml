@@ -338,7 +338,7 @@ ShellRoot {
 
     // The notch lives on one monitor: the configured one, else the first.
     // The notch's tabs, by name.
-    readonly property var tabs: ["media", "focus", "checklist", "shelf", "today"]
+    readonly property var tabs: ["media", "focus", "checklist", "shelf", "today", "calendar"]
 
     // Starts the background update check.
     readonly property var updates: UpdateService

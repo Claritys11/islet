@@ -60,9 +60,10 @@ PanelWindow {
     WlrLayershell.namespace: "islet-notch"
     // Above its click-catcher (shell.qml), which is on Top.
     WlrLayershell.layer: island.island && !island.closesOnClickOutside && !island.hotkey ? WlrLayer.Top : WlrLayer.Overlay
-    // Finder (and the Finder key) take the keyboard at once, so you can
-    // type straight away.
-    WlrLayershell.keyboardFocus: island.mode === "find" || (island.mode === "open" && island.hotkey) ? WlrKeyboardFocus.Exclusive : island.mode === "open" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // Finder, the Finder key and a notch opened by a click take the keyboard
+    // at once, so you can type (or ← → through the tabs) straight away. A
+    // pinned notch doesn't: you keep typing elsewhere.
+    WlrLayershell.keyboardFocus: island.mode === "find" || (island.mode === "open" && (island.hotkey || island.closesOnClickOutside)) ? WlrKeyboardFocus.Exclusive : island.mode === "open" ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     // In bar mode a closed island is invisible and must not catch clicks.
     mask: island.barMode && island.mode === "closed" ? noInput : islandRegion

@@ -13,6 +13,9 @@ test("a name or alias, from its start, finds the tab", () => {
     assert.deepEqual(ids("hari ini"), ["tab:today"]);
     assert.deepEqual(ids("jadwal"), ["tab:today"]);
     assert.deepEqual(ids("ini"), ["tab:today"]);
+    assert.deepEqual(ids("kalender"), ["tab:calendar"]);
+    assert.deepEqual(ids("calendar"), ["tab:calendar"]);
+    assert.deepEqual(ids("bulan"), ["tab:calendar"]);
     assert.deepEqual(ids("setting"), ["settings"]);
 });
 

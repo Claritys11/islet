@@ -12,6 +12,7 @@ Item {
     readonly property var t: TodayService
     property alias inputFocused: input.activeFocus
     property alias draft: input.text
+    signal calendarRequested
 
     readonly property color late: Theme.danger
     readonly property color tomorrow: "#ffd58a"
@@ -102,7 +103,7 @@ Item {
                 icon: "calendar_month"
                 size: 26
                 tint: Theme.subtext
-                onClicked: DcalService.show()
+                onClicked: root.calendarRequested()
             }
         }
 
@@ -143,7 +144,7 @@ Item {
             Layout.fillHeight: true
             spacing: 16
 
-            // ── Lessons ───────────────────────────────────────────
+            // ── Lessons and Google events ─────────────────────────
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -151,7 +152,7 @@ Item {
                 spacing: 4
                 RowLayout {
                     Text {
-                        text: `PELAJARAN · ${["MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"][new Date(t.now).getDay()]}`
+                        text: `JADWAL · ${["MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"][new Date(t.now).getDay()]}`
                         color: Theme.subtext
                         font.family: Theme.font
                         font.pixelSize: 11
@@ -161,7 +162,7 @@ Item {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: t.lessonsToday.length ? `${t.lessonsToday.filter(l => !l.past).length} sisa` : ""
+                        text: t.scheduleToday.length ? `${t.scheduleToday.filter(l => !l.past).length} sisa` : ""
                         color: Theme.subtext
                         font.family: Theme.font
                         font.pixelSize: 11
@@ -172,12 +173,12 @@ Item {
                     Layout.fillHeight: true
                     clip: true
                     spacing: 2
-                    model: t.lessonsToday
+                    model: t.scheduleToday
                     boundsBehavior: Flickable.StopAtBounds
                     Text {
                         anchors.centerIn: parent
                         visible: parent.count === 0
-                        text: "Tidak ada pelajaran hari ini"
+                        text: "Tidak ada jadwal hari ini"
                         color: Theme.subtext
                         font.family: Theme.font
                         font.pixelSize: 12
@@ -185,6 +186,7 @@ Item {
                     delegate: Rectangle {
                         id: lesson
                         required property var modelData
+                        readonly property bool event: modelData.kind === "event"
                         width: ListView.view.width
                         height: 30
                         radius: 10
@@ -196,12 +198,21 @@ Item {
                             anchors.rightMargin: 6
                             spacing: 8
                             Text {
-                                Layout.preferredWidth: 78
-                                text: `${lesson.modelData.start.replace(":", ".")}–${lesson.modelData.end.replace(":", ".")}`
+                                Layout.preferredWidth: 80
+                                text: lesson.modelData.time
+                                elide: Text.ElideRight
                                 color: lesson.modelData.now ? Theme.primary : Theme.subtext
                                 font.family: Theme.font
                                 font.pixelSize: 11
                                 font.features: ({ tnum: 1 })
+                            }
+                            // A Google event: its calendar's colour.
+                            Rectangle {
+                                visible: lesson.event
+                                width: 8
+                                height: 8
+                                radius: 4
+                                color: lesson.modelData.color ?? "transparent"
                             }
                             Text {
                                 Layout.fillWidth: true
@@ -215,6 +226,11 @@ Item {
                                 visible: lesson.modelData.clash
                                 text: "bentrok"
                                 tint: Theme.danger
+                            }
+                            Chip {
+                                visible: lesson.modelData.until !== "" && !lesson.modelData.now
+                                text: lesson.modelData.until.replace(/ \d\d\.\d\d$/, "")
+                                tint: Theme.subtext
                             }
                             Chip {
                                 visible: lesson.modelData.now
