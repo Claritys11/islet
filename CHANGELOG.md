@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.7.0 — 2026-10-23
+
+### Added
+- **Kalender** tab: the whole month (dots in each calendar's colour, red Sundays) and the chosen day's
+  events, Classroom assignments, Notion deadlines and lessons. ‹ › or the mouse wheel turn the months.
+- **Add an event** from the Kalender tab in one line, e.g. `Rapat OSIS 19.00-20.30` (also `jam 16`,
+  `7:30 sampai 9:00`; no time = all day). A preview shows what Enter will save to Google Calendar.
+- **← →** go through the notch's tabs. A notch opened by a click takes the keyboard (Esc or a click
+  outside closes it; a pinned one doesn't take it).
+- Finder: `kalender` opens the new tab; `islet notch calendar` too.
+
+### Fixed
+- **Hari ini** didn't show events made in Google Calendar: they're now listed with the lessons, in their
+  calendar's colour, and one about to start shows in the pill.
+
+### Changed
+- Only the open tab shows its name, so six tabs fit.
+
 ## 1.6.3 — 2026-10-21
 
 ### Added

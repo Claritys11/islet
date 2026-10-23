@@ -338,6 +338,19 @@ Singleton {
         });
     }
     signal eventsLoaded
+
+    // A new event from one line ("Rapat 19.00-20.30") on `day`, in the
+    // calendar Islet syncs to. cb(ok, errorText).
+    function addEvent(text, day, cb) {
+        const e = Agenda.parseEvent(text, day, o.todayEventMinutes);
+        if (!e || !targetCalendar)
+            return cb(false, !e ? "Tulis nama acaranya" : "Tidak ada kalender Google yang bisa ditulisi");
+        DcalService.call("events.create", { calendarId: targetCalendar, summary: e.title, start: e.start, end: e.end, allDay: e.allDay ? "true" : "false" }, (ok, r) => {
+            if (ok)
+                loadEvents();
+            cb(ok, ok ? "" : r);
+        });
+    }
     Connections {
         target: DcalService
         function onRefreshed() {

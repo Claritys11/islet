@@ -99,3 +99,55 @@ test("monthGrid: six Monday-first weeks around the month", () => {
     // Months roll over the year.
     assert.ok(sameDay(monthGrid(2026, 12)[0], new Date(2026, 11, 28)));
 });
+
+import { parseEvent } from "../today/agenda.mjs";
+
+test("parseEvent: a title with a time range", () => {
+    const e = parseEvent("Rapat OSIS 19.00-20.30", day, 60);
+    assert.equal(e.title, "Rapat OSIS");
+    assert.equal(e.allDay, false);
+    assert.equal(e.start, new Date(2026, 9, 23, 19, 0).toISOString());
+    assert.equal(e.end, new Date(2026, 9, 23, 20, 30).toISOString());
+    assert.equal(e.label, "Jum 23 Okt · 19.00–20.30");
+});
+
+test("parseEvent: other ways to write times", () => {
+    const at = (text, h1, m1, h2, m2) => {
+        const e = parseEvent(text, day, 60);
+        assert.deepEqual([e.title, e.start, e.end], [e.title, new Date(2026, 9, 23, h1, m1).toISOString(), new Date(2026, 9, 23, h2, m2).toISOString()], text);
+        return e.title;
+    };
+    assert.equal(at("Les gitar jam 16", 16, 0, 17, 0), "Les gitar");
+    assert.equal(at("pukul 7.30 Upacara", 7, 30, 8, 30), "Upacara");
+    assert.equal(at("Futsal 15:00 – 17:00", 15, 0, 17, 0), "Futsal");
+    assert.equal(at("Belajar 13.00 sampai 14.15", 13, 0, 14, 15), "Belajar");
+    assert.equal(at("Nonton 20.00 s/d 22.00", 20, 0, 22, 0), "Nonton");
+});
+
+test("parseEvent: no end takes the default length; an end before the start is the next day", () => {
+    const e = parseEvent("Main 19.00", day, 90);
+    assert.equal(e.end, new Date(2026, 9, 23, 20, 30).toISOString());
+    const late = parseEvent("Ronda 22.00-01.00", day, 60);
+    assert.equal(late.end, new Date(2026, 9, 24, 1, 0).toISOString());
+    assert.equal(late.label, "Jum 23 Okt · 22.00–01.00");
+});
+
+test("parseEvent: no time is an all-day event, sent as dcal wants dates", () => {
+    const e = parseEvent("  Hari Guru  ", day, 60);
+    assert.equal(e.title, "Hari Guru");
+    assert.equal(e.allDay, true);
+    assert.equal(e.start, "2026-10-23T00:00:00Z");
+    assert.equal(e.end, "2026-10-24T00:00:00Z");
+    assert.equal(e.label, "Jum 23 Okt · sepanjang hari");
+    // Month and year ends roll over.
+    assert.equal(parseEvent("Tahun baru", new Date(2026, 11, 31), 60).end, "2027-01-01T00:00:00Z");
+});
+
+test("parseEvent: nothing to call it, or only a time, is not an event; a bad hour is just words", () => {
+    assert.equal(parseEvent("", day, 60), null);
+    assert.equal(parseEvent("   ", day, 60), null);
+    assert.equal(parseEvent("19.00-20.00", day, 60), null);
+    const e = parseEvent("Kelas 10.12 bahas 25.99", day, 60);
+    assert.equal(e.title, "Kelas bahas 25.99");
+    assert.equal(e.start, new Date(2026, 9, 23, 10, 12).toISOString());
+});

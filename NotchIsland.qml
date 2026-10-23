@@ -188,7 +188,7 @@ Item {
         id: unvisitedTimer
         interval: 5000
         running: win.barMode && win.mode === "open" && !hover.hovered && !win.keepOpen
-        onTriggered: if (!checklist.inputFocused && !todayTab.inputFocused)
+        onTriggered: if (!checklist.inputFocused && !todayTab.inputFocused && !calendarTab.inputFocused)
             win.close()
     }
 
@@ -199,7 +199,7 @@ Item {
             if (win.keepOpen)
                 return;
             // Don't snatch the panel away while you're typing a task.
-            if (win.mode === "open" && ((checklist.inputFocused && checklist.draft !== "") || (todayTab.inputFocused && todayTab.draft !== "")))
+            if (win.mode === "open" && ((checklist.inputFocused && checklist.draft !== "") || (todayTab.inputFocused && todayTab.draft !== "") || (calendarTab.inputFocused && calendarTab.draft !== "")))
                 return;
             win.close();
         }
@@ -696,6 +696,7 @@ Item {
                         onCalendarRequested: win.tab = 5
                     }
                     NotchCalendar {
+                        id: calendarTab
                         active: win.mode === "open" && win.tab === 5
                     }
                 }
@@ -732,12 +733,12 @@ Item {
             // ← → go through the tabs (not while typing in a field).
             Shortcut {
                 sequence: "Left"
-                enabled: win.mode === "open" && !checklist.inputFocused && !todayTab.inputFocused
+                enabled: win.mode === "open" && !checklist.inputFocused && !todayTab.inputFocused && !calendarTab.inputFocused
                 onActivated: win.tab = (win.tab + win.tabCount - 1) % win.tabCount
             }
             Shortcut {
                 sequence: "Right"
-                enabled: win.mode === "open" && !checklist.inputFocused && !todayTab.inputFocused
+                enabled: win.mode === "open" && !checklist.inputFocused && !todayTab.inputFocused && !calendarTab.inputFocused
                 onActivated: win.tab = (win.tab + 1) % win.tabCount
             }
             Shortcut {

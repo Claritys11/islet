@@ -1,6 +1,6 @@
 # Maintainer: Claritys11 <https://github.com/Claritys11>
 pkgname=islet-git
-pkgver=1.6.3
+pkgver=1.7.0
 pkgrel=1
 pkgdesc="Notchy-style dynamic island, synced karaoke lyrics, Pomodoro and Notion checklist for Quickshell"
 arch=('any')

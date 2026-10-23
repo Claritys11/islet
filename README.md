@@ -168,7 +168,8 @@ colour; one that runs past midnight says until when). Tick a deadline to mark it
 
 The **Kalender** tab next to it shows the whole month: dots in each calendar's colour, red Sundays, and
 for the day you pick its events, Classroom assignments, Notion deadlines and lessons. ‹ › or the mouse
-wheel turn the months; *Hari ini* jumps back.
+wheel turn the months; *Hari ini* jumps back. Add an event there in one line — `Rapat OSIS 19.00-20.30`,
+`Les jam 16`, or just `Hari Guru` for all day — and Enter saves it to Google Calendar.
 
 In the open notch, **← →** go through the tabs (Esc closes it).
 

@@ -95,3 +95,39 @@ export function monthGrid(year, month) {
     const start = addDays(first, -((first.getDay() + 6) % 7));
     return Array.from({ length: 42 }, (_, i) => addDays(start, i));
 }
+
+const MONTH = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+// A time: "19.00", "7:30", "jam 16", "pukul 7.30" (4 groups).
+const TIME = "(?:(?:jam|pukul)\\s*(\\d{1,2})(?:[.:](\\d{2}))?|(\\d{1,2})[.:](\\d{2}))";
+const RANGE = new RegExp(`(^|\\s)${TIME}(?:\\s*(?:-|–|—|sampai|hingga|s/d)\\s*${TIME})?(?=\\s|$)`, "gi");
+
+function clock(g) {
+    const h = Number(g[0] ?? g[2]), m = Number(g[1] ?? g[3] ?? 0);
+    return g[0] === undefined && g[2] === undefined || h > 23 || m > 59 ? null : { h, m };
+}
+const dateStamp = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00:00Z`;
+
+// "Rapat OSIS 19.00-20.30" on `day` → { title, allDay, start, end, label },
+// times as dcal's events.create takes them (all-day: the dates, end
+// exclusive). No time: all day; no end: `minutes` long; an end before the
+// start: the next day. null when there's nothing to call it.
+export function parseEvent(text, day, minutes) {
+    let found = null, m;
+    RANGE.lastIndex = 0;
+    while (!found && (m = RANGE.exec(text))) {
+        const a = clock(m.slice(2, 6)), b = clock(m.slice(6, 10));
+        if (a)
+            found = { a, b: m[6] !== undefined || m[8] !== undefined ? b : null, at: m.index, len: m[0].length };
+    }
+    const title = (found ? text.slice(0, found.at) + " " + text.slice(found.at + found.len) : text).replace(/\s+/g, " ").trim();
+    if (!title)
+        return null;
+    const when = `${SHORT[day.getDay()]} ${day.getDate()} ${MONTH[day.getMonth()]}`;
+    if (!found)
+        return { title, allDay: true, start: dateStamp(day), end: dateStamp(addDays(day, 1)), label: `${when} · sepanjang hari` };
+    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), found.a.h, found.a.m);
+    let end = found.b ? new Date(day.getFullYear(), day.getMonth(), day.getDate(), found.b.h, found.b.m) : new Date(start.getTime() + minutes * 60000);
+    if (end <= start)
+        end = new Date(end.getTime() + 864e5);
+    return { title, allDay: false, start: start.toISOString(), end: end.toISOString(), label: `${when} · ${hm(start)}–${hm(end)}` };
+}

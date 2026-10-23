@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import "today/agenda.mjs" as Agenda
 import "today/timetable.mjs" as Timetable
 
@@ -10,6 +11,8 @@ Item {
     id: root
 
     readonly property var t: TodayService
+    property alias inputFocused: input.activeFocus
+    property alias draft: input.text
     // Shown on screen: load the month's events.
     property bool active: false
 
@@ -433,6 +436,51 @@ Item {
                         }
                     }
                 }
+            }
+
+            // ＋ a new event on the chosen day, typed in one line.
+            TextField {
+                id: input
+                readonly property var parsed: Agenda.parseEvent(text, root.selected, root.t.o.todayEventMinutes)
+                property bool saving: false
+                property string problem: ""
+                Layout.fillWidth: true
+                enabled: DcalService.available && root.t.targetCalendar !== "" && !saving
+                placeholderText: "＋ Acara baru — mis. Rapat 19.00-20.30"
+                placeholderTextColor: Theme.subtext
+                color: Theme.text
+                font.family: Theme.font
+                font.pixelSize: 13
+                leftPadding: 14
+                background: Rectangle {
+                    radius: 12
+                    color: Theme.raised
+                    border.width: input.activeFocus ? 1 : 0
+                    border.color: Theme.primary
+                }
+                onTextChanged: problem = ""
+                onAccepted: {
+                    if (!parsed)
+                        return;
+                    saving = true;
+                    root.t.addEvent(text, root.selected, (ok, err) => {
+                        saving = false;
+                        if (!ok)
+                            return problem = err;
+                        text = "";
+                        root.load();
+                    });
+                }
+            }
+            // What Enter will save, or why it couldn't.
+            Text {
+                Layout.fillWidth: true
+                visible: input.text !== "" || input.problem !== "" || input.saving
+                elide: Text.ElideRight
+                text: input.problem ? input.problem : input.saving ? "Menyimpan…" : input.parsed ? `${input.parsed.label} · Enter untuk simpan` : "Tulis nama acaranya"
+                color: input.problem ? Theme.danger : Theme.subtext
+                font.family: Theme.font
+                font.pixelSize: 11
             }
         }
     }
