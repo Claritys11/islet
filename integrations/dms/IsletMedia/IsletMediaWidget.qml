@@ -9,7 +9,7 @@ import qs.Modules.Plugins
 // Islet in the DankMaterialShell bar. Islet runs separately and streams its
 // state over $XDG_RUNTIME_DIR/islet.sock; this pill only displays it and
 // sends clicks back. Left click opens Islet's island under the pill, right
-// click plays/pauses.
+// click plays/pauses, scrolling turns the playing app's volume.
 PluginComponent {
     id: root
 
@@ -29,6 +29,15 @@ PluginComponent {
     readonly property bool hasDue: !hasTrack && !hasTimer && !hasSoon && due > 0
     readonly property bool hasWeather: linked && !hasTrack && !hasTimer && !hasSoon && !hasDue && !!st.weather
     readonly property bool isLyric: hasTrack && st.line !== "" && st.bar?.text !== "title"
+    // The playing app's volume (%), -1 when it can't be turned; shown in place
+    // of the lyric for a moment after scrolling.
+    readonly property int volume: hasTrack ? (st.volume ?? -1) : -1
+    property bool showVolume: false
+    Timer {
+        id: volumeShown
+        interval: 1200
+        onTriggered: root.showVolume = false
+    }
 
     function send(msg) {
         if (!link.connected)
@@ -75,6 +84,24 @@ PluginComponent {
             readonly property real cap: root.st?.bar?.width ?? 300
             readonly property real others: [art, dueCount, viz, timer].reduce((w, i) => w + (i.visible ? i.width + pillRow.spacing : 0), 0) + (todayIcon.visible ? todayIcon.width + Theme.spacingXS : 0)
             readonly property real room: Math.max(60, cap - others)
+
+            // Scrolling turns the playing app's volume, 5% a notch (a
+            // touchpad's small steps add up to one).
+            WheelHandler {
+                enabled: root.volume >= 0
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                property real acc: 0
+                onWheel: event => {
+                    acc += event.angleDelta.y;
+                    const steps = acc > 0 ? Math.floor(acc / 120) : Math.ceil(acc / 120);
+                    root.showVolume = true;
+                    volumeShown.restart();
+                    if (steps === 0)
+                        return;
+                    acc -= steps * 120;
+                    root.send({ cmd: "volume", steps });
+                }
+            }
 
             // Files dragged onto the pill open Islet's shelf right below it,
             // and dropping them here parks them on the shelf.
@@ -154,9 +181,43 @@ PluginComponent {
                     }
                 }
 
+                // The volume, for a moment after scrolling.
+                Row {
+                    id: volumeRow
+                    visible: root.showVolume && root.volume >= 0 && !root.hasSoon
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Theme.spacingS
+                    DankIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        name: root.volume === 0 ? "volume_off" : root.volume < 50 ? "volume_down" : "volume_up"
+                        size: Theme.iconSize - 4
+                        color: Theme.surfaceText
+                    }
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(90, pill.room - 60)
+                        height: 4
+                        radius: 2
+                        color: Theme.surfaceVariant
+                        Rectangle {
+                            width: parent.width * Math.max(0, root.volume) / 100
+                            height: parent.height
+                            radius: 2
+                            color: Theme.primary
+                        }
+                    }
+                    StyledText {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: `${root.volume}%`
+                        color: Theme.surfaceText
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.features: ({ tnum: 1 })
+                    }
+                }
+
                 Item {
                     id: lyric
-                    visible: root.hasTrack && !root.hasSoon
+                    visible: root.hasTrack && !root.hasSoon && !volumeRow.visible
                     anchors.verticalCenter: parent.verticalCenter
                     width: Math.min(base.implicitWidth, pill.room)
                     height: base.implicitHeight

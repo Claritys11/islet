@@ -303,6 +303,7 @@ This adds the **Islet Media** plugin to DMS and puts it where DMS's own media wi
 settings are backed up to `settings.json.islet-backup`). The bar pill shows the artwork, the lyric being
 sung with its karaoke fill, the visualizer and your focus timer, all in your DMS theme.
 **Left click** drops Islet's Media / Focus / Checklist island right under it; **right click** plays/pauses.
+**Scroll** on it turns the playing app's own volume (5% a notch; not the system volume), shown in the pill for a moment.
 Islet's own floating pill goes away.
 
 Undo with `islet dms uninstall`. Width, visualizer and timer are under **Settings → Notch → Bar widget**.

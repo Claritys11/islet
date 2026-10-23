@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **DMS bar**: scrolling on Islet's pill turns the playing app's own volume, 5% a notch, and shows it in
+  the pill for a moment. It moves the app's PipeWire stream (like a mixer's per-app slider), so it works
+  for Spotify, browsers and other players alike.
+
 ## 1.7.0 — 2026-10-23
 
 ### Added

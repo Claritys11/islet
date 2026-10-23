@@ -10,6 +10,7 @@ import Quickshell.Io
 //   → {"v":1,"hasTrack":true,"title":…,"line":…,"progress":0.42,"timer":{…},…}
 //   ← {"cmd":"toggle","tab":"media","x":812,"y":44,"width":300}
 //   ← {"cmd":"play-pause"} | {"cmd":"next"} | {"cmd":"previous"}
+//   ← {"cmd":"volume","steps":1}  (the playing app's volume, ±5% a step)
 //   ← {"cmd":"shelf-add","urls":["file:///…"]} | {"cmd":"open","tab":"shelf",x,y,width}
 Singleton {
     id: root
@@ -46,6 +47,8 @@ Singleton {
             weather: o.weatherEnabled && WeatherService.ready ? { temp: WeatherService.tempText, icon: WeatherService.icon, text: WeatherService.description } : null,
             // Today: a lesson about to start (beats the song), deadlines due today.
             today: o.todayEnabled ? { soon: TodayService.soon ? `${TodayService.soon.title} · mulai ${Math.max(1, Math.ceil((TodayService.soon.startAt - Date.now()) / 60000))} mnt lagi` : "", due: TodayService.dueToday, dueText: TodayService.dueToday === 1 ? (d => d ? `${d.title} · ${d.label}` : "")(TodayService.deadlines.find(x => x.urgency === "today" || x.urgency === "overdue")) : `${TodayService.dueToday} tenggat hari ini` } : null,
+            // The playing app's volume in %, or -1 when it can't be turned.
+            volume: PlayerVolume.level < 0 ? -1 : Math.round(PlayerVolume.level * 100),
             notchOpen: root.notchOpen
         });
     }
@@ -78,6 +81,9 @@ Singleton {
             break;
         case "previous":
             player?.previous();
+            break;
+        case "volume":
+            PlayerVolume.nudge(Math.max(-4, Math.min(4, Math.round(Number(msg.steps) || 0))));
             break;
         case "shelf-add":
             ShelfService.add(msg.urls ?? []);
