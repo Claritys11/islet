@@ -22,6 +22,7 @@ Usage: islet <command>
        --reindex | --print text | --open text | --copy text | --status | --bind
   today [status|list|add text|preview|confirm|sync|reload]
                                   Today's lessons and deadlines (Notion ⇄ Google Calendar)
+  notion template [PAGE-ID]       Islet's Notion databases, made in a page you shared (no id: list pages)
   shelf [FILE…|paste|clear]       Put files on the notch's shelf (paste: what you copied); without files, list it
   share [copy|save]               A picture of the song and lyric playing now, to copy or save
   todo [text]                     Add a task, or list tasks without text
@@ -119,6 +120,22 @@ case "$1" in
         if [ $# -gt 0 ]; then call islet open "$*"; else call islet settings; fi ;;
     set) call islet set "$2" "$3" ;;
     get) call islet get "$2" ;;
+    notion)
+        # Islet's Notion template: `islet notion template` lists the pages it
+        # can go in, `islet notion template PAGE-ID` makes it there.
+        case "$2" in
+            template)
+                if [ -z "$3" ]; then call notion places; sleep 3; call notion places
+                else
+                    call notion template "$3" >/dev/null
+                    while :; do
+                        st="$(call notion templateStatus)"
+                        case "$st" in working*) sleep 1 ;; *) break ;; esac
+                    done
+                    printf '%s\n' "$st"
+                fi ;;
+            *) echo "usage: islet notion template [PAGE-ID]" >&2; exit 1 ;;
+        esac ;;
     start) start ;;
     stop) stop ;;
     restart) stop; start ;;

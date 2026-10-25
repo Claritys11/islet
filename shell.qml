@@ -210,6 +210,24 @@ ShellRoot {
         }
     }
 
+    // Islet's Notion template (Settings → Calendar & Notion).
+    IpcHandler {
+        target: "notion"
+
+        function places(): string {
+            NotionTemplate.loadPlaces();
+            return NotionTemplate.places.map(p => `${p.id}\t${p.title}`).join("\n");
+        }
+        // Makes it in that page (an id from places); `templateStatus` follows.
+        function template(parent: string): string {
+            NotionTemplate.create(parent);
+            return NotionTemplate.status;
+        }
+        function templateStatus(): string {
+            return [NotionTemplate.status, NotionTemplate.step, NotionTemplate.error, NotionTemplate.url, NotionTemplate.took.join(",")].join("\t");
+        }
+    }
+
     // Share card for the song playing now.
     IpcHandler {
         target: "share"

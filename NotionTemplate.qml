@@ -108,17 +108,26 @@ Singleton {
     property var took: []
     function use(ids, checklistId) {
         const took = [];
+        // The ones in use are pinned: left to find them by itself, Islet would
+        // take the template's newer, empty ones on its next load.
         if (TodayService.timetableDb === "") {
             Config.set("todayTimetableDb", ids.jadwal);
             took.push("timetable");
+        } else {
+            Config.set("todayTimetableDb", TodayService.timetableDb);
         }
         if (TodayService.tasksDb === "") {
             Config.set("todayTasksDb", ids.tasks);
             took.push("tasks");
+        } else {
+            Config.set("todayTasksDb", TodayService.tasksDb);
         }
-        if ((Config.opts.notesDb ?? "") === "" && NotesService.dbId === "") {
+        const ownNotes = TodayService.databases.find(d => (d.title ?? []).map(t => t.plain_text).join("").trim().toLowerCase() === "notes" && d.id !== ids.notes);
+        if ((Config.opts.notesDb ?? "") === "" && !ownNotes) {
             Config.set("notesDb", ids.notes);
             took.push("notes");
+        } else if ((Config.opts.notesDb ?? "") === "") {
+            Config.set("notesDb", ownNotes.id);
         }
         if (ChecklistService.pageId === "") {
             Config.set("notionPage", checklistId.replace(/-/g, ""));
