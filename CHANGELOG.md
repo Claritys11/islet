@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.1 — 2026-10-25
+
+### Fixed
+- `islet update` said "up to date" when Islet was on a branch that follows nothing on GitHub (a development
+  branch), so such a checkout never got new releases. It now says which branch it's on and how to get back to
+  releases (`git switch main`); the update check in Settings follows.
+
 ## 1.8.0 — 2026-10-25
 
 ### Added
