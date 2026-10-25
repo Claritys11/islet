@@ -26,6 +26,12 @@ Singleton {
     property var shelf: null
     property var checklist: null
     property var _json: ({})
+    // Islet's language (Settings → Notch): "en" or "id". Words are written
+    // as both: IsletClient.t("No classes", "Tidak ada jadwal").
+    readonly property string lang: state?.lang === "id" ? "id" : "en"
+    function t(en, id) {
+        return lang === "id" ? id : en;
+    }
 
     function _take(msg) {
         root.state = msg;

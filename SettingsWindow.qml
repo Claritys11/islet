@@ -46,7 +46,7 @@ FloatingWindow {
     readonly property var pages: [
         { icon: "dashboard", title: "Overview", subtitle: "Modules and quick looks", keys: ["maxFps"] },
         { icon: "lyrics", title: "Lyrics", subtitle: "Synced lyrics on the screen edge", keys: ["lyricsEnabled", "karaoke", "fillSpeed", "unsungOpacity", "feather", "glow", "glowColor", "bgVocals", "bgScale", "bgOpacity", "bgItalic", "bgLinger", "activeColor", "textColor", "fontFamily", "fontSize", "minFontSize", "longLines", "restingWeight", "activeWeight", "spacing", "curve", "tilt", "blur", "fade", "visibleLines", "smoothing", "side", "width", "viewHeight", "viewOffset", "edgeFade", "inset", "marginTop", "marginBottom", "marginSide", "layer", "screens", "clickThrough", "shadow", "backdrop", "showTrackInfo", "hideWhenPaused", "hideWhenNoLyrics", "player", "samplePreview", "lyricsSource", "spicyOffsetMs", "offsetMs", "lrclibUrl"] },
-        { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose", "notchCloseDelay", "vizMode", "vizIdleSeconds", "weatherEnabled", "weatherCity", "weatherUnit"] },
+        { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["language", "notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose", "notchCloseDelay", "vizMode", "vizIdleSeconds", "weatherEnabled", "weatherCity", "weatherUnit"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes", "breakTips"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
         { icon: "event_note", title: "Calendar & Notion", subtitle: "Lessons, deadlines, Google sync", keys: ["todayEnabled", "todaySync", "todaySyncLessons", "todayCalendar", "todayTimetableDb", "todayTasksDb", "notesDb", "todayColumns", "todayDays", "todayMorningOpen", "todayMorningSeconds", "todayNudges", "todayEventMinutes", "todaySemesterEnd", "todaySyncMinutes"] },
@@ -101,6 +101,7 @@ FloatingWindow {
         { words: "fill speed karaoke too fast slow sweep", title: "Karaoke fill too fast or slow", answer: "Fill speed changes how quickly a line lights up (for songs without word timing).", key: "fillSpeed" },
         { words: "wrong lyrics version different song live remix", title: "Wrong lyrics for this song", answer: "Pick another version from LRCLIB for the song playing now.", key: "lyricsSource" },
         { words: "bar dms dankmaterialshell panel widget top media", title: "Put Islet in the DankMaterialShell bar", answer: "Choose 'In the DMS bar', then 'Set up DMS bar widget'.", key: "notchMode" },
+        { words: "language bahasa indonesia english inggris translate terjemah words", title: "Notch in English or Bahasa Indonesia", answer: "Pick the language on the Notch page.", key: "language" },
         { words: "floating island notch top pill", title: "Floating island instead of the bar", answer: "Choose 'Floating island'.", key: "notchMode" },
         { words: "desktop widget widgets dms clock jam calendar kalender notes catatan todo pomodoro github glass end4 wallpaper", title: "Widgets on the desktop", answer: "On the DankMaterialShell page: 'Put them on the desktop' adds Lyrics, To-Do, Notes, Pomodoro, Calendar and a clock, laid out for you.", action: "page:DankMaterialShell" },
         { words: "notepad toolbar bold format markdown dms", title: "Formatting toolbar in DMS's notepad", answer: "On the DankMaterialShell page: 'Add the toolbar'.", action: "page:DankMaterialShell" },
@@ -1583,6 +1584,18 @@ FloatingWindow {
 
                 // ── Notch ─────────────────────────────────────────
                 Page {
+                    Card {
+                        title: "Language"
+                        hint: "The words in the notch, the Islet pill in your bar, Islet's DMS cards and desktop widgets, and its notifications."
+                        ChoiceSetting {
+                            key: "language"
+                            label: "Language"
+                            choices: [
+                                { text: "English", value: "en" },
+                                { text: "Bahasa Indonesia", value: "id" }
+                            ]
+                        }
+                    }
                     Card {
                         title: "Where it lives"
                         hint: "As a floating island at the top of the screen, or as a widget in your DankMaterialShell bar (in place of DMS's media widget). In the bar, clicking the widget drops Islet down right under it. Inside DMS, it opens Islet's tab in DMS's dashboard instead — in DMS's Island if you use one — and Islet's own island only shows for Finder and the visualizer when you're away."

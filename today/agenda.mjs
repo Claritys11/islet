@@ -3,9 +3,15 @@
 import { dueDate } from "./deadlines.mjs";
 import { TAG } from "./sync.mjs";
 
-const SHORT = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+const SHORT = { id: ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"], en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] };
 const pad = n => String(n).padStart(2, "0");
-const hm = d => `${pad(d.getHours())}.${pad(d.getMinutes())}`;
+// "08.00" in Indonesian, "08:00" in English (lang "en").
+const hm = (d, lang) => `${pad(d.getHours())}${lang === "en" ? ":" : "."}${pad(d.getMinutes())}`;
+const WORDS = {
+    id: { allDay: "sepanjang hari", until: "s/d", untitled: "(tanpa judul)", due: "tenggat" },
+    en: { allDay: "all day", until: "until", untitled: "(untitled)", due: "due" }
+};
+const words = lang => WORDS[lang === "en" ? "en" : "id"];
 
 function startOfDay(d) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -34,7 +40,8 @@ function span(e) {
 // with words for its time: "08.00–09.00", "20.00 →" (runs past midnight),
 // "→ 20.00" (began before today), "sepanjang hari"; and `until` when it
 // lasts beyond the day ("s/d Min 20.00").
-export function eventsOn(events, day, now, calendars) {
+export function eventsOn(events, day, now, calendars, lang = "id") {
+    const w = words(lang), short = SHORT[lang === "en" ? "en" : "id"];
     const from = startOfDay(day), to = addDays(from, 1);
     const cal = {};
     for (const c of calendars ?? [])
@@ -52,13 +59,13 @@ export function eventsOn(events, day, now, calendars) {
             continue;
         seen.add(key);
         const before = start < from, after = end > to;
-        const time = e.allDay || (before && after) ? "sepanjang hari" : before ? `→ ${hm(end)}` : after ? `${hm(start)} →` : `${hm(start)}–${hm(end)}`;
+        const time = e.allDay || (before && after) ? w.allDay : before ? `→ ${hm(end, lang)}` : after ? `${hm(start, lang)} →` : `${hm(start, lang)}–${hm(end, lang)}`;
         const last = e.allDay ? addDays(end, -1) : end;
         const c = cal[e.calendarId];
         out.push({
             key,
             id: e.id,
-            title: e.summary || "(tanpa judul)",
+            title: e.summary || w.untitled,
             calendar: c?.name ?? "",
             color: c?.color || "#8ab4f8",
             readOnly: !!c?.readOnly,
@@ -67,7 +74,7 @@ export function eventsOn(events, day, now, calendars) {
             start,
             end,
             time,
-            until: after ? `s/d ${SHORT[last.getDay()]}${e.allDay ? "" : " " + hm(end)}` : "",
+            until: after ? `${w.until} ${short[last.getDay()]}${e.allDay ? "" : " " + hm(end, lang)}` : "",
             now: start <= now && now < end,
             past: end <= now
         });
@@ -77,14 +84,14 @@ export function eventsOn(events, day, now, calendars) {
 
 // Unfinished Notion tasks due on `day`: timed ones by time, then the ones
 // due "by the end of the day".
-export function tasksOn(tasks, day) {
+export function tasksOn(tasks, day, lang = "id") {
     return tasks.filter(t => !t.done && t.due && sameDay(dueDate(t.due), day)).map(t => ({
         key: `notion:${t.pageId}`,
         pageId: t.pageId,
         title: t.title,
         priority: t.priority ?? "",
         due: dueDate(t.due),
-        time: t.dueHasTime ? hm(dueDate(t.due)) : "tenggat"
+        time: t.dueHasTime ? hm(dueDate(t.due), lang) : words(lang).due
     })).sort((a, b) => a.due - b.due);
 }
 
@@ -96,7 +103,7 @@ export function monthGrid(year, month) {
     return Array.from({ length: 42 }, (_, i) => addDays(start, i));
 }
 
-const MONTH = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const MONTH = { id: ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"], en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] };
 // A time: "19.00", "7:30", "jam 16", "pukul 7.30" (4 groups).
 const TIME = "(?:(?:jam|pukul)\\s*(\\d{1,2})(?:[.:](\\d{2}))?|(\\d{1,2})[.:](\\d{2}))";
 const RANGE = new RegExp(`(^|\\s)${TIME}(?:\\s*(?:-|–|—|sampai|hingga|s/d)\\s*${TIME})?(?=\\s|$)`, "gi");
@@ -111,7 +118,8 @@ const dateStamp = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getD
 // times as dcal's events.create takes them (all-day: the dates, end
 // exclusive). No time: all day; no end: `minutes` long; an end before the
 // start: the next day. null when there's nothing to call it.
-export function parseEvent(text, day, minutes) {
+export function parseEvent(text, day, minutes, lang = "id") {
+    const L = lang === "en" ? "en" : "id";
     let found = null, m;
     RANGE.lastIndex = 0;
     while (!found && (m = RANGE.exec(text))) {
@@ -122,12 +130,12 @@ export function parseEvent(text, day, minutes) {
     const title = (found ? text.slice(0, found.at) + " " + text.slice(found.at + found.len) : text).replace(/\s+/g, " ").trim();
     if (!title)
         return null;
-    const when = `${SHORT[day.getDay()]} ${day.getDate()} ${MONTH[day.getMonth()]}`;
+    const when = `${SHORT[L][day.getDay()]} ${day.getDate()} ${MONTH[L][day.getMonth()]}`;
     if (!found)
-        return { title, allDay: true, start: dateStamp(day), end: dateStamp(addDays(day, 1)), label: `${when} · sepanjang hari` };
+        return { title, allDay: true, start: dateStamp(day), end: dateStamp(addDays(day, 1)), label: `${when} · ${words(L).allDay}` };
     const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), found.a.h, found.a.m);
     let end = found.b ? new Date(day.getFullYear(), day.getMonth(), day.getDate(), found.b.h, found.b.m) : new Date(start.getTime() + minutes * 60000);
     if (end <= start)
         end = new Date(end.getTime() + 864e5);
-    return { title, allDay: false, start: start.toISOString(), end: end.toISOString(), label: `${when} · ${hm(start)}–${hm(end)}` };
+    return { title, allDay: false, start: start.toISOString(), end: end.toISOString(), label: `${when} · ${hm(start, L)}–${hm(end, L)}` };
 }

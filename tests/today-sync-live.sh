@@ -19,7 +19,7 @@ sleep 2
 islet today reload >/dev/null; sleep 6
 p=$(islet today preview) || fail "preview: $p"
 echo "preview: $p"
-echo "$p" | grep -q "buat 26 event" || fail "expected 26 new events (23 lessons + 3 tasks)"
+echo "$p" | grep -qE "buat 26 event|create 26 events" || fail "expected 26 new events (23 lessons + 3 tasks)"
 [ "$(count)" = "0 0" ] || fail "preview wrote to the calendar: $(count)"
 islet today confirm >/dev/null
 islet today sync >/dev/null
@@ -34,6 +34,6 @@ echo "sync: $s"
 islet today status | grep -q "^linked: 26" || fail "not every row linked: $(islet today status | grep linked)"
 p2=$(islet today preview)
 echo "second preview: $p2"
-echo "$p2" | grep -q "^tidak ada perubahan" || fail "second sync would change: $p2"
+echo "$p2" | grep -qE "^(tidak ada perubahan|no changes)" || fail "second sync would change: $p2"
 islet set todayCalendar "$saved" >/dev/null
 echo PASS

@@ -1,8 +1,10 @@
 // Deadlines for the Today tab: what's due soon, in plain words, and which
 // things overlap. Plain functions; times are local.
 
-const SHORT = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+const SHORT = { id: ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"], en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] };
 const pad = n => String(n).padStart(2, "0");
+// "23.59" in Indonesian, "23:59" in English.
+const clock = (d, lang) => `${pad(d.getHours())}${lang === "en" ? ":" : "."}${pad(d.getMinutes())}`;
 
 function startOfDay(d) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -18,21 +20,25 @@ export function dueDate(value) {
     return m ? new Date(+m[1], +m[2] - 1, +m[3], 23, 59, 59) : new Date(value);
 }
 
-// "hari ini 23.59", "besok", "Jum, 2 hari", "terlambat 1 hari"
-export function label(due, hasTime, now) {
-    const time = hasTime ? ` ${pad(due.getHours())}.${pad(due.getMinutes())}` : "";
+// "hari ini 23.59", "besok", "Jum, 2 hari", "terlambat 1 hari"; in English
+// (lang "en") "today 23:59", "tomorrow", "Fri, 2 days", "1 day late".
+export function label(due, hasTime, now, lang = "id") {
+    const en = lang === "en";
+    const time = hasTime ? ` ${clock(due, lang)}` : "";
     const days = daysBetween(now, due);
     if (due < now) {
         if (days < 0)
-            return `terlambat ${-days} hari`;
+            return en ? `${-days} day${days === -1 ? "" : "s"} late` : `terlambat ${-days} hari`;
         const mins = Math.round((now - due) / 60000);
-        return mins < 60 ? `terlambat ${mins} mnt` : `terlambat ${Math.round(mins / 60)} jam`;
+        if (mins < 60)
+            return en ? `${mins} min late` : `terlambat ${mins} mnt`;
+        return en ? `${Math.round(mins / 60)} h late` : `terlambat ${Math.round(mins / 60)} jam`;
     }
     if (days === 0)
-        return `hari ini${time}`;
+        return `${en ? "today" : "hari ini"}${time}`;
     if (days === 1)
-        return `besok${time}`;
-    return `${SHORT[due.getDay()]}, ${days} hari`;
+        return `${en ? "tomorrow" : "besok"}${time}`;
+    return en ? `${SHORT.en[due.getDay()]}, ${days} days` : `${SHORT.id[due.getDay()]}, ${days} hari`;
 }
 
 function urgency(due, now) {
@@ -44,7 +50,7 @@ function urgency(due, now) {
 
 // Unfinished Notion tasks and Classroom assignments due by the end of
 // `days` days from today (overdue ones included), soonest first.
-export function dueSoon(tasks, classroom, now, days) {
+export function dueSoon(tasks, classroom, now, days, lang = "id") {
     const until = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days + 1);
     const out = [];
     for (const t of tasks) {
@@ -56,7 +62,7 @@ export function dueSoon(tasks, classroom, now, days) {
         const due = e.allDay ? dueDate(String(e.start).slice(0, 10)) : new Date(e.start);
         out.push({ key: `classroom:${e.id}`, title: e.title, source: "classroom", due, hasTime: !e.allDay, priority: "" });
     }
-    return out.filter(d => d.due < until).sort((a, b) => a.due - b.due).map(d => Object.assign(d, { label: label(d.due, d.hasTime, now), urgency: urgency(d.due, now) }));
+    return out.filter(d => d.due < until).sort((a, b) => a.due - b.due).map(d => Object.assign(d, { label: label(d.due, d.hasTime, now, lang), urgency: urgency(d.due, now) }));
 }
 
 // Keys of items whose time overlaps another's (back-to-back isn't a clash).

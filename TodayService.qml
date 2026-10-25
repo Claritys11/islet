@@ -53,7 +53,7 @@ Singleton {
             clash: clashKeys.includes("lesson:" + l.pageId)
         }));
     }
-    readonly property var deadlines: Deadlines.dueSoon(tasks, classroom, new Date(now), o.todayDays).map(d => Object.assign(d, { clash: clashKeys.includes("task:" + d.pageId) }))
+    readonly property var deadlines: Deadlines.dueSoon(tasks, classroom, new Date(now), o.todayDays, Lang.code).map(d => Object.assign(d, { clash: clashKeys.includes("task:" + d.pageId) }))
     // Things that overlap today: lessons and timed task plans.
     readonly property var clashKeys: {
         const day = new Date(now);
@@ -76,13 +76,13 @@ Singleton {
     property var events: []
     // Today's events from calendars you write to (Classroom's read-only
     // ones are deadlines already).
-    readonly property var agendaToday: Agenda.eventsOn(events, new Date(now), new Date(now), DcalService.calendars).filter(e => !e.readOnly)
+    readonly property var agendaToday: Agenda.eventsOn(events, new Date(now), new Date(now), DcalService.calendars, Lang.code).filter(e => !e.readOnly)
     // Lessons and events together, by start time. `startAt` only for things
     // that begin today at a time (what "starts in N min" can be said of).
     readonly property var scheduleToday: {
         const day = new Date(now);
         const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
-        const lessons = lessonsToday.map(l => Object.assign({ kind: "lesson", key: "lesson:" + l.pageId, time: `${l.start.replace(":", ".")}–${l.end.replace(":", ".")}`, until: "", sortAt: l.startAt }, l));
+        const lessons = lessonsToday.map(l => Object.assign({ kind: "lesson", key: "lesson:" + l.pageId, time: Lang.id ? `${l.start.replace(":", ".")}–${l.end.replace(":", ".")}` : `${l.start}–${l.end}`, until: "", sortAt: l.startAt }, l));
         const evs = agendaToday.map(e => Object.assign({ kind: "event", sortAt: e.start.getTime(), startAt: !e.allDay && e.start.getTime() >= dayStart ? e.start.getTime() : 0, clash: false }, e));
         return lessons.concat(evs).sort((a, b) => a.sortAt - b.sortAt);
     }
@@ -313,7 +313,7 @@ Singleton {
             morningOpen();
         const n = dueToday;
         if (o.todayNudges && n > 0)
-            notify(`${n} tenggat hari ini`, deadlines.filter(x => x.urgency === "today" || x.urgency === "overdue").map(x => `${x.title} (${x.label})`).join(" · "));
+            notify(Lang.t(`${n} due today`, `${n} tenggat hari ini`), deadlines.filter(x => x.urgency === "today" || x.urgency === "overdue").map(x => `${x.title} (${x.label})`).join(" · "));
     }
 
     IdleMonitor {
@@ -337,7 +337,7 @@ Singleton {
                 continue;
             sent[d.key] = now;
             changedAny = true;
-            notify(`Tenggat ${d.label}`, d.title);
+            notify(Lang.t(`Due ${d.label}`, `Tenggat ${d.label}`), d.title);
         }
         // Forget nudges older than two weeks.
         for (const k in sent)
@@ -373,9 +373,9 @@ Singleton {
     // A new event from one line ("Rapat 19.00-20.30") on `day`, in the
     // calendar Islet syncs to. cb(ok, errorText).
     function addEvent(text, day, cb) {
-        const e = Agenda.parseEvent(text, day, o.todayEventMinutes);
+        const e = Agenda.parseEvent(text, day, o.todayEventMinutes, Lang.code);
         if (!e || !targetCalendar)
-            return cb(false, !e ? "Tulis nama acaranya" : "Tidak ada kalender Google yang bisa ditulisi");
+            return cb(false, !e ? Lang.t("Give the event a name", "Tulis nama acaranya") : Lang.t("No Google calendar Islet can write to", "Tidak ada kalender Google yang bisa ditulisi"));
         DcalService.call("events.create", { calendarId: targetCalendar, summary: e.title, start: e.start, end: e.end, allDay: e.allDay ? "true" : "false" }, (ok, r) => {
             if (ok)
                 loadEvents();
@@ -515,18 +515,18 @@ Singleton {
         const n = op => actions.filter(a => a.op === op).length;
         const parts = [];
         if (n("createEvent"))
-            parts.push(`buat ${n("createEvent")} event`);
+            parts.push(Lang.t(`create ${n("createEvent")} events`, `buat ${n("createEvent")} event`));
         if (n("updateEvent") + n("endSeries"))
-            parts.push(`ubah ${n("updateEvent") + n("endSeries")} event`);
+            parts.push(Lang.t(`change ${n("updateEvent") + n("endSeries")} events`, `ubah ${n("updateEvent") + n("endSeries")} event`));
         if (n("deleteEvent"))
-            parts.push(`hapus ${n("deleteEvent")} event`);
+            parts.push(Lang.t(`delete ${n("deleteEvent")} events`, `hapus ${n("deleteEvent")} event`));
         if (n("updateNotion") + n("clearStart"))
-            parts.push(`ubah ${n("updateNotion") + n("clearStart")} baris Notion`);
+            parts.push(Lang.t(`change ${n("updateNotion") + n("clearStart")} Notion rows`, `ubah ${n("updateNotion") + n("clearStart")} baris Notion`));
         if (n("conflict"))
-            parts.push(`tabrakan ${n("conflict")}`);
+            parts.push(Lang.t(`${n("conflict")} clashes`, `tabrakan ${n("conflict")}`));
         if (n("removedInGoogle"))
-            parts.push(`dihapus di Google ${n("removedInGoogle")}`);
-        return parts.length ? parts.join(" · ") : "tidak ada perubahan";
+            parts.push(Lang.t(`${n("removedInGoogle")} deleted in Google`, `dihapus di Google ${n("removedInGoogle")}`));
+        return parts.length ? parts.join(" · ") : Lang.t("no changes", "tidak ada perubahan");
     }
 
     function preview(cb) {
@@ -563,7 +563,7 @@ Singleton {
                 lastSync = Date.now();
                 if (held > 0 && syncStatus === "done") {
                     syncStatus = "held";
-                    syncError = `${held} event akan dihapus/diakhiri sekaligus — ditahan. Izinkan di Settings → Calendar & Notion.`;
+                    syncError = Lang.t(`${held} events would be deleted or ended at once — held. Allow it in Settings → Calendar & Notion.`, `${held} event akan dihapus/diakhiri sekaligus — ditahan. Izinkan di Settings → Calendar & Notion.`);
                 }
                 // What Islet wrote to Notion: read it back before the next
                 // sync may run, so it isn't taken for a new change.
@@ -609,7 +609,7 @@ Singleton {
             if (i >= actions.length) {
                 Store.db.todaySync = state;
                 syncStatus = errors.length ? "error" : "done";
-                syncError = errors.length ? `${errors.length} perubahan gagal: ${errors[0]}` : "";
+                syncError = errors.length ? Lang.t(`${errors.length} changes failed: ${errors[0]}`, `${errors.length} perubahan gagal: ${errors[0]}`) : "";
                 return done();
             }
             applyOne(actions[i], state, rrules, (ok, err) => {
@@ -691,10 +691,10 @@ Singleton {
         case "clearStart":
             return NotionDbService.update(a.pageId, Notion.taskPatch(m, { start: "", gcalId: "" }), cb);
         case "conflict":
-            notify(`Tabrakan: ${a.title}`, `Dipakai versi Google Calendar. Versi Notion disimpan — buka tab Hari ini untuk memakainya.`);
+            notify(Lang.t(`Clash: ${a.title}`, `Tabrakan: ${a.title}`), Lang.t("Google Calendar's version was kept. Notion's is saved — open the Today tab to use it instead.", "Dipakai versi Google Calendar. Versi Notion disimpan — buka tab Hari ini untuk memakainya."));
             return cb(true);
         case "removedInGoogle":
-            notify(`${a.title} dihapus di Google Calendar`, "Notion tidak diubah. Buka Settings → Calendar & Notion untuk mengembalikan atau menghapusnya.");
+            notify(Lang.t(`${a.title} was deleted in Google Calendar`, `${a.title} dihapus di Google Calendar`), Lang.t("Notion wasn't changed. Open Settings → Calendar & Notion to bring it back or delete it.", "Notion tidak diubah. Buka Settings → Calendar & Notion untuk mengembalikan atau menghapusnya."));
             return cb(true);
         }
         cb(true);
@@ -727,7 +727,7 @@ Singleton {
     // start-up a stand-in empty record would overwrite the real one).
     function ready() {
         if (targetCalendar === "" || status !== "ready" || Store.db.todaySync?.calendar !== targetCalendar) {
-            flash("Belum siap — coba lagi sebentar lagi");
+            flash(Lang.t("Not ready yet — try again in a moment", "Belum siap — coba lagi sebentar lagi"));
             return false;
         }
         return true;

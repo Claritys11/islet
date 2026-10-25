@@ -122,7 +122,7 @@ DesktopPluginComponent {
 
     function tabTitle(tab): string {
         const t = Md.draftTitle(tab.id === root.loadedId && root.writing ? editor.text : (root.texts[tab.id] ?? ""));
-        return tab.isTemporary ? (t || "Catatan baru") : tab.title;
+        return tab.isTemporary ? (t || IsletClient.t("New note", "Catatan baru")) : tab.title;
     }
 
     function setText(id, text): void {
@@ -186,7 +186,7 @@ DesktopPluginComponent {
             Qt.callLater(() => editor.forceActiveFocus());
         }, () => {
             if (root)
-                root.error = "File terlalu besar untuk widget — buka di Notepad";
+                root.error = IsletClient.t("Too big for the widget — open it in Notepad", "File terlalu besar untuk widget — buka di Notepad");
         });
     }
 
@@ -329,7 +329,7 @@ DesktopPluginComponent {
             if (index >= 0) {
                 root.pendingMigration = null;
                 NotepadStorageService.saveTabContent(index, p.text);
-                NotepadStorageService.renameTab(index, Md.draftTitle(p.text) || "Catatan");
+                NotepadStorageService.renameTab(index, Md.draftTitle(p.text) || IsletClient.t("Note", "Catatan"));
                 root.setText(p.id, p.text);
                 Qt.callLater(root.migrateNext);
             }
@@ -486,7 +486,7 @@ DesktopPluginComponent {
                             required property int index
                             readonly property bool isCurrent: modelData.id === root.loadedId
                             text: root.tabTitle(modelData)
-                                + (modelData.id === root.sendingId ? "  ⏳" : isCurrent ? (root.confirmDiscard === modelData.id ? "  hapus?" : "  ×") : "")
+                                + (modelData.id === root.sendingId ? "  ⏳" : isCurrent ? (root.confirmDiscard === modelData.id ? IsletClient.t("  delete?", "  hapus?") : "  ×") : "")
                             active: isCurrent
                             danger: root.confirmDiscard === modelData.id
                             onClicked: isCurrent ? root.discard(modelData.id) : root.show(index)
@@ -551,7 +551,7 @@ DesktopPluginComponent {
                         Keys.onPressed: event => root.onKey(event)
                         Text {
                             visible: !editor.text
-                            text: "Judul di baris pertama\nPilih teks lalu pakai toolbar atau Ctrl+B, Ctrl+I…\nTab untuk sub-list"
+                            text: IsletClient.t("Title on the first line\nSelect text, then the toolbar or Ctrl+B, Ctrl+I…\nTab for a sub-list", "Judul di baris pertama\nPilih teks lalu pakai toolbar atau Ctrl+B, Ctrl+I…\nTab untuk sub-list")
                             color: Qt.alpha(Theme.onPrimaryContainer, 0.45)
                             font: editor.font
                         }
@@ -571,7 +571,7 @@ DesktopPluginComponent {
                     textFormat: Text.PlainText
                     elide: Text.ElideRight
                     text: root.error !== "" ? root.error : root.hint !== "" ? root.hint
-                        : root.loadedTab && !root.loadedTab.isTemporary ? root.loadedTab.title + " · Ctrl+S simpan" : "Tersimpan otomatis · juga di Notepad DMS"
+                        : root.loadedTab && !root.loadedTab.isTemporary ? root.loadedTab.title + IsletClient.t(" · Ctrl+S saves", " · Ctrl+S simpan") : IsletClient.t("Saved by itself · also in DMS's Notepad", "Tersimpan otomatis · juga di Notepad DMS")
                     color: root.error !== "" ? Theme.error : Qt.alpha(Theme.onPrimaryContainer, 0.6)
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall - 1
@@ -587,7 +587,7 @@ DesktopPluginComponent {
                     Text {
                         id: sendText
                         anchors.centerIn: parent
-                        text: root.sendingId !== -1 ? "Mengirim…" : "Kirim ke Notion"
+                        text: root.sendingId !== -1 ? IsletClient.t("Sending…", "Mengirim…") : IsletClient.t("Send to Notion", "Kirim ke Notion")
                         color: Theme.onPrimary
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeSmall
@@ -596,7 +596,7 @@ DesktopPluginComponent {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         hoverEnabled: true
-                        onContainsMouseChanged: root.hint = containsMouse ? "Kirim · Ctrl+Enter" : ""
+                        onContainsMouseChanged: root.hint = containsMouse ? IsletClient.t("Send · Ctrl+Enter", "Kirim · Ctrl+Enter") : ""
                         onClicked: root.send()
                     }
                 }
@@ -758,7 +758,7 @@ DesktopPluginComponent {
                             visible: card.open && root.openCut
                             width: body.width
                             wrapMode: Text.WordWrap
-                            text: "… catatan ini panjang — buka ↗ untuk sisanya"
+                            text: IsletClient.t("… a long note — open ↗ for the rest", "… catatan ini panjang — buka ↗ untuk sisanya")
                             color: Qt.alpha(card.fg, 0.7)
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSizeSmall - 1

@@ -34,7 +34,7 @@ ColumnLayout {
         StyledText {
             anchors.centerIn: parent
             visible: parent.count === 0
-            text: "Nothing to do 🎉"
+            text: IsletClient.t("Nothing to do 🎉", "Tidak ada yang perlu dikerjakan 🎉")
             color: Theme.surfaceVariantText
             font.pixelSize: Theme.fontSizeMedium
         }
@@ -93,7 +93,7 @@ ColumnLayout {
         DTextField {
             id: todoField
             Layout.fillWidth: true
-            placeholderText: root.checklist?.source === "notion" ? "＋ To-do baru (Notion)" : "＋ To-do baru"
+            placeholderText: root.checklist?.source === "notion" ? IsletClient.t("＋ New to-do (Notion)", "＋ To-do baru (Notion)") : IsletClient.t("＋ New to-do", "＋ To-do baru")
             onAccepted: {
                 if (todoField.text.trim() === "")
                     return;

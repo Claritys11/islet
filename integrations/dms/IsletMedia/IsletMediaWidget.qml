@@ -300,7 +300,7 @@ PluginComponent {
                     id: dueCount
                     visible: root.hasTrack && !root.hasSoon && root.due > 0
                     anchors.verticalCenter: parent.verticalCenter
-                    text: `${root.due} tenggat`
+                    text: IsletClient.t(`${root.due} due`, `${root.due} tenggat`)
                     color: Theme.error
                     font.pixelSize: Theme.fontSizeSmall
                 }

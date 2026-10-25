@@ -110,7 +110,8 @@ A dynamic island at the top of your screen, in the spirit of [Notchy](https://no
 | <img src="docs/media/notch-media.png" width="300" alt="Media tab"> | <img src="docs/media/notch-focus.png" width="300" alt="Focus tab"> | <img src="docs/media/notch-checklist.png" width="300" alt="Checklist tab"> |
 | Scrubber, shuffle, repeat, and the current lyric with karaoke fill | Pomodoro with short & long breaks, a continuous mode, pause clock, elapsed and focused-time stats | Saved on your computer — or **synced with a Notion page** |
 
-Click the pill to open it. It follows your DankMaterialShell / Matugen wallpaper colours, or stays pure black.
+Click the pill to open it. It follows your DankMaterialShell / Matugen wallpaper colours, or stays pure black,
+and speaks English or Bahasa Indonesia (*Settings → Notch → Language*).
 
 - **📥 Shelf** — drop files on the notch (or on the Islet pill in your DMS bar), or copy them and press
   **Ctrl+V** in the Shelf tab, to keep them close; then drag them out into any app. Files stay where they

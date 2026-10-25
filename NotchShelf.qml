@@ -23,14 +23,14 @@ Item {
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: ShelfService.pasteNote || "Drop files here to keep them close"
+            text: ShelfService.pasteNote || Lang.t("Drop files here to keep them close", "Taruh file di sini supaya selalu dekat")
             color: Theme.text
             font.family: Theme.font
             font.pixelSize: 14
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "…or copy them and press Ctrl+V. Drag them out again into any app."
+            text: Lang.t("…or copy them and press Ctrl+V. Drag them out again into any app.", "…atau copy lalu tekan Ctrl+V. Seret keluar lagi ke aplikasi mana pun.")
             color: Theme.subtext
             font.family: Theme.font
             font.pixelSize: 12
@@ -54,7 +54,7 @@ Item {
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Paste"
+                    text: Lang.t("Paste", "Tempel")
                     color: Theme.text
                     font.family: Theme.font
                     font.pixelSize: 13
@@ -79,7 +79,7 @@ Item {
             Layout.fillWidth: true
             Text {
                 Layout.fillWidth: true
-                text: ShelfService.pasteNote || `${root.items.length} file${root.items.length === 1 ? "" : "s"} · drag one out, or click to open`
+                text: ShelfService.pasteNote || Lang.t(`${root.items.length} file${root.items.length === 1 ? "" : "s"} · drag one out, or click to open`, `${root.items.length} file · seret keluar, atau klik untuk membuka`)
                 color: ShelfService.pasteNote ? Theme.primary : Theme.subtext
                 font.family: Theme.font
                 font.pixelSize: 12
@@ -153,7 +153,7 @@ Item {
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
                             anchors.margins: 6
-                            text: tile.modelData.missing ? "tidak ditemukan" : tile.modelData.name
+                            text: tile.modelData.missing ? Lang.t("not found", "tidak ditemukan") : tile.modelData.name
                             color: tile.modelData.missing ? Theme.danger : Theme.text
                             elide: Text.ElideMiddle
                             horizontalAlignment: Text.AlignHCenter

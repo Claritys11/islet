@@ -41,7 +41,7 @@ ColumnLayout {
         }
         StyledText {
             Layout.fillWidth: true
-            text: root.pomo?.paused ? "Paused" : root.pomo?.label ?? "Focus"
+            text: root.pomo?.paused ? IsletClient.t("Paused", "Dijeda") : root.pomo?.label ?? IsletClient.t("Focus", "Fokus")
             elide: Text.ElideRight
             wrapMode: Text.NoWrap
             color: Theme.surfaceVariantText
@@ -66,7 +66,7 @@ ColumnLayout {
         Layout.alignment: Qt.AlignHCenter
         spacing: Theme.spacingXS
         Repeater {
-            model: [{ id: "focus", text: "Focus" }, { id: "short", text: "Short" }, { id: "long", text: "Long" }]
+            model: [{ id: "focus", text: IsletClient.t("Focus", "Fokus") }, { id: "short", text: IsletClient.t("Short", "Pendek") }, { id: "long", text: IsletClient.t("Long", "Panjang") }]
             Rectangle {
                 required property var modelData
                 readonly property bool on: (root.pomo?.mode ?? "focus") === modelData.id
@@ -132,7 +132,7 @@ ColumnLayout {
             }
             StyledText {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: root.pomo?.paused ? "Paused" : root.pomo?.label ?? "Focus"
+                text: root.pomo?.paused ? IsletClient.t("Paused", "Dijeda") : root.pomo?.label ?? IsletClient.t("Focus", "Fokus")
                 color: Theme.surfaceVariantText
                 font.pixelSize: Theme.fontSizeSmall
             }
@@ -160,7 +160,7 @@ ColumnLayout {
     StyledText {
         visible: !root.compact
         Layout.alignment: Qt.AlignHCenter
-        text: `Hari ini: ${root.pomo?.todayCount ?? 0} sesi · ${root.pomo?.todayFocused ?? 0} mnt`
+        text: IsletClient.t(`Today: ${root.pomo?.todayCount ?? 0} sessions · ${root.pomo?.todayFocused ?? 0} min`, `Hari ini: ${root.pomo?.todayCount ?? 0} sesi · ${root.pomo?.todayFocused ?? 0} mnt`)
         color: Theme.surfaceVariantText
         font.pixelSize: Theme.fontSizeSmall
     }

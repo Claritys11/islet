@@ -30,8 +30,8 @@ Item {
     readonly property var soon: o.todayEnabled ? TodayService.soon : null
     readonly property bool showSoon: soon !== null
     readonly property bool showDue: o.todayEnabled && !hasMusic && !hasTimer && !showSoon && TodayService.dueToday > 0
-    readonly property string todayText: showSoon ? `${soon.title} · mulai ${Math.max(1, Math.ceil((soon.startAt - TodayService.now) / 60000))} mnt lagi`
-        : showDue ? (TodayService.dueToday === 1 ? `${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.title ?? ""} · ${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.label ?? ""}` : `${TodayService.dueToday} tenggat hari ini`) : ""
+    readonly property string todayText: showSoon ? Lang.startsIn(soon.title, soon.startAt, TodayService.now)
+        : showDue ? (TodayService.dueToday === 1 ? `${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.title ?? ""} · ${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.label ?? ""}` : Lang.dueToday(TodayService.dueToday)) : ""
     // Nothing playing and no timer: the weather keeps the pill company.
     readonly property bool showWeather: !hasMusic && !hasTimer && !showSoon && !showDue && o.weatherEnabled && WeatherService.ready
     readonly property bool idle: !hasMusic && !hasTimer && !showWeather && !showSoon && !showDue
@@ -390,7 +390,7 @@ Item {
                 // Deadlines due today, small, while music plays.
                 Text {
                     visible: win.hasMusic && win.o.todayEnabled && TodayService.dueToday > 0
-                    text: `${TodayService.dueToday} tenggat`
+                    text: Lang.due(TodayService.dueToday)
                     color: Theme.danger
                     font.family: Theme.font
                     font.pixelSize: 11
@@ -618,11 +618,11 @@ Item {
                     Repeater {
                         model: [
                             { icon: "music_note", text: "Media" },
-                            { icon: "timer", text: "Focus" },
+                            { icon: "timer", text: Lang.t("Focus", "Fokus") },
                             { icon: "checklist", text: "Checklist" },
                             { icon: "inventory_2", text: "Shelf" },
-                            { icon: "today", text: "Hari ini" },
-                            { icon: "calendar_month", text: "Kalender" }
+                            { icon: "today", text: Lang.t("Today", "Hari ini") },
+                            { icon: "calendar_month", text: Lang.t("Calendar", "Kalender") }
                         ]
                         Rectangle {
                             id: tabButton

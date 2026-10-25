@@ -35,7 +35,7 @@ Singleton {
     readonly property real progress: total > 0 ? 1 - remaining / total : 0
     // Shown in the pill once you've started a session, until you reset.
     readonly property bool active: running || _pausedLeft < total - 0.5
-    readonly property string label: mode === "focus" ? "Focus" : mode === "short" ? "Short break" : "Long break"
+    readonly property string label: mode === "focus" ? Lang.t("Focus", "Fokus") : mode === "short" ? Lang.t("Short break", "Istirahat pendek") : Lang.t("Long break", "Istirahat panjang")
     readonly property string clock: format(Math.ceil(remaining))
 
     readonly property bool paused: !running && _pausedAt > 0
@@ -187,19 +187,19 @@ Singleton {
         const ended = label;
         advance(true);
         const tipText = mode !== "focus" && o.breakTips ? ` ${tip.text}` : "";
-        notify(`${ended} finished`, mode === "focus" ? "Back to focus." : `Time for a ${label.toLowerCase()}.${tipText}`);
+        notify(Lang.t(`${ended} finished`, `${ended} selesai`), mode === "focus" ? Lang.t("Back to focus.", "Kembali fokus.") : Lang.t(`Time for a ${label.toLowerCase()}.${tipText}`, `Waktunya ${label.toLowerCase()}.${tipText}`));
     }
 
     // Something good to do with a break; a different one each time.
     readonly property var tips: [
-        { icon: "self_improvement", text: "Stand up and stretch your back and shoulders." },
-        { icon: "water_full", text: "Drink a glass of water." },
-        { icon: "visibility", text: "Rest your eyes: look at something 6 metres away for 20 seconds." },
-        { icon: "directions_walk", text: "Walk around for a minute." },
-        { icon: "air", text: "Breathe slowly: in for 4, hold for 4, out for 6." },
-        { icon: "accessibility_new", text: "Roll your neck and wrists gently." },
-        { icon: "light_mode", text: "Get some daylight — open a window or step outside." },
-        { icon: "music_note", text: "Sing along to one song. You've earned it." }
+        { icon: "self_improvement", text: Lang.t("Stand up and stretch your back and shoulders.", "Berdiri dan regangkan punggung serta bahu.") },
+        { icon: "water_full", text: Lang.t("Drink a glass of water.", "Minum segelas air.") },
+        { icon: "visibility", text: Lang.t("Rest your eyes: look at something 6 metres away for 20 seconds.", "Istirahatkan mata: lihat sesuatu sejauh 6 meter selama 20 detik.") },
+        { icon: "directions_walk", text: Lang.t("Walk around for a minute.", "Jalan-jalan sebentar, satu menit.") },
+        { icon: "air", text: Lang.t("Breathe slowly: in for 4, hold for 4, out for 6.", "Bernapas pelan: tarik 4 detik, tahan 4, buang 6.") },
+        { icon: "accessibility_new", text: Lang.t("Roll your neck and wrists gently.", "Putar leher dan pergelangan tangan pelan-pelan.") },
+        { icon: "light_mode", text: Lang.t("Get some daylight — open a window or step outside.", "Cari cahaya matahari — buka jendela atau keluar sebentar.") },
+        { icon: "music_note", text: Lang.t("Sing along to one song. You've earned it.", "Nyanyikan satu lagu. Kamu pantas mendapatkannya.") }
     ]
     property var tip: tips[0]
     property int _tipIndex: -1

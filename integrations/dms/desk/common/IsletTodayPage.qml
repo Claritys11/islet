@@ -31,7 +31,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: !(root.day?.enabled ?? false) || (root.day?.status ?? "") === "setup"
         wrapMode: Text.WordWrap
-        text: !(root.day?.enabled ?? false) ? "Hari ini is off in Islet Settings." : (root.day?.error || "Set up Notion in Islet Settings → Calendar & Notion.")
+        text: !(root.day?.enabled ?? false) ? IsletClient.t("Today is off in Islet Settings.", "Hari ini dimatikan di Islet Settings.") : (root.day?.error || IsletClient.t("Set up Notion in Islet Settings → Calendar & Notion.", "Siapkan Notion di Islet Settings → Calendar & Notion."))
         color: Theme.surfaceVariantText
         font.pixelSize: Theme.fontSizeMedium
     }
@@ -55,7 +55,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 elide: Text.ElideRight
                 wrapMode: Text.NoWrap
-                text: root.day?.soon ? `${root.day.soon.title} · mulai ${Math.max(1, Math.ceil((root.day.soon.startAt - Date.now()) / 60000))} mnt lagi` : ""
+                text: root.day?.soon ? IsletClient.t(`${root.day.soon.title} · in ${Math.max(1, Math.ceil((root.day.soon.startAt - Date.now()) / 60000))} min`, `${root.day.soon.title} · mulai ${Math.max(1, Math.ceil((root.day.soon.startAt - Date.now()) / 60000))} mnt lagi`) : ""
                 color: Theme.surfaceText
                 font.pixelSize: Theme.fontSizeMedium
             }
@@ -76,7 +76,7 @@ ColumnLayout {
             Layout.preferredWidth: 1
             spacing: Theme.spacingXS
             StyledText {
-                text: "JADWAL"
+                text: IsletClient.t("SCHEDULE", "JADWAL")
                 color: Theme.surfaceVariantText
                 font.pixelSize: Theme.fontSizeSmall
                 font.weight: Theme.fontWeightMedium
@@ -90,7 +90,7 @@ ColumnLayout {
                 StyledText {
                     anchors.centerIn: parent
                     visible: parent.count === 0
-                    text: "Tidak ada jadwal"
+                    text: IsletClient.t("Nothing on today", "Tidak ada jadwal")
                     color: Theme.surfaceVariantText
                     font.pixelSize: Theme.fontSizeSmall
                 }
@@ -133,7 +133,7 @@ ColumnLayout {
                         }
                         StyledText {
                             visible: slot.modelData.until !== "" || slot.modelData.clash
-                            text: slot.modelData.clash ? "bentrok" : slot.modelData.until.replace(/ \d\d\.\d\d$/, "")
+                            text: slot.modelData.clash ? IsletClient.t("clash", "bentrok") : slot.modelData.until.replace(/ \d\d[.:]\d\d$/, "")
                             color: slot.modelData.clash ? Theme.error : Theme.surfaceVariantText
                             font.pixelSize: Theme.fontSizeSmall
                         }
@@ -148,7 +148,7 @@ ColumnLayout {
             Layout.preferredWidth: 1
             spacing: Theme.spacingXS
             StyledText {
-                text: "TENGGAT DEKAT"
+                text: IsletClient.t("DUE SOON", "TENGGAT DEKAT")
                 color: Theme.surfaceVariantText
                 font.pixelSize: Theme.fontSizeSmall
                 font.weight: Theme.fontWeightMedium
@@ -162,7 +162,7 @@ ColumnLayout {
                 StyledText {
                     anchors.centerIn: parent
                     visible: parent.count === 0
-                    text: "Tidak ada tenggat dekat ✨"
+                    text: IsletClient.t("Nothing due soon ✨", "Tidak ada tenggat dekat ✨")
                     color: Theme.surfaceVariantText
                     font.pixelSize: Theme.fontSizeSmall
                 }
@@ -217,7 +217,7 @@ ColumnLayout {
             id: taskField
             Layout.fillWidth: true
             enabled: root.day?.canAdd ?? false
-            placeholderText: "＋ Tugas baru — Enter menyimpannya di Notion"
+            placeholderText: IsletClient.t("＋ New task — Enter saves it to Notion", "＋ Tugas baru — Enter menyimpannya di Notion")
             onAccepted: {
                 const text = taskField.text.trim();
                 if (text === "")

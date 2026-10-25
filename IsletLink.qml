@@ -70,10 +70,12 @@ Singleton {
             fill: singing ? { keys: root.fillKeys, clock: root.anchor() } : null,
             source: L.source,
             timer: P.active ? { clock: P.clock, mode: P.mode, running: P.running, paused: P.paused, pausedFor: P.paused ? P.format(P.pausedFor) : "", progress: Math.round(P.progress * 1000) / 1000 } : null,
+            // The words the DMS pill, tab and cards use.
+            lang: Lang.code,
             bar: { notch: o.notchMode, width: o.barPillWidth, text: o.notchPillText, viz: o.barShowVisualizer, timer: o.barShowTimer, accent: Theme.primary.toString() },
             weather: o.weatherEnabled && WeatherService.ready ? { temp: WeatherService.tempText, icon: WeatherService.icon, text: WeatherService.description } : null,
             // Today: a lesson about to start (beats the song), deadlines due today.
-            today: o.todayEnabled ? { soon: TodayService.soon ? `${TodayService.soon.title} · mulai ${Math.max(1, Math.ceil((TodayService.soon.startAt - Date.now()) / 60000))} mnt lagi` : "", due: TodayService.dueToday, dueText: TodayService.dueToday === 1 ? (d => d ? `${d.title} · ${d.label}` : "")(TodayService.deadlines.find(x => x.urgency === "today" || x.urgency === "overdue")) : `${TodayService.dueToday} tenggat hari ini` } : null,
+            today: o.todayEnabled ? { soon: TodayService.soon ? Lang.startsIn(TodayService.soon.title, TodayService.soon.startAt, Date.now()) : "", due: TodayService.dueToday, dueText: TodayService.dueToday === 1 ? (d => d ? `${d.title} · ${d.label}` : "")(TodayService.deadlines.find(x => x.urgency === "today" || x.urgency === "overdue")) : Lang.dueToday(TodayService.dueToday) } : null,
             // The playing app's volume in %, or -1 when it can't be turned.
             volume: PlayerVolume.level < 0 ? -1 : Math.round(PlayerVolume.level * 100),
             notchOpen: root.notchOpen,
@@ -105,13 +107,13 @@ Singleton {
         const T = TodayService, o = Config.opts;
         const ago = ms => {
             const m = Math.round((T.now - ms) / 60000);
-            return m < 1 ? "baru saja" : `${m} mnt lalu`;
+            return Lang.ago(ms, T.now);
         };
-        const sync = !o.todaySync ? "Sinkron Google Calendar mati"
-            : T.syncStatus === "waiting" ? "Sinkron pertama menunggu konfirmasi (Islet Settings)"
+        const sync = !o.todaySync ? Lang.t("Google Calendar sync is off", "Sinkron Google Calendar mati")
+            : T.syncStatus === "waiting" ? Lang.t("First sync waits for you (Islet Settings)", "Sinkron pertama menunggu konfirmasi (Islet Settings)")
             : T.syncStatus === "error" || T.syncStatus === "held" ? T.syncError
-            : T.syncStatus === "syncing" ? "Menyinkronkan…"
-            : T.lastSync ? `Tersinkron ${ago(T.lastSync)}` : "";
+            : T.syncStatus === "syncing" ? Lang.t("Syncing…", "Menyinkronkan…")
+            : T.lastSync ? Lang.t(`Synced ${ago(T.lastSync)}`, `Tersinkron ${ago(T.lastSync)}`) : "";
         return Desk.todayView({ schedule: T.scheduleToday, deadlines: T.deadlines, soon: T.soon, enabled: o.todayEnabled, status: T.status, error: T.error || T.message, sync, tasksDb: T.tasksDb });
     }
     readonly property var shelfView: Desk.shelfView(ShelfService.items)
@@ -224,7 +226,7 @@ Singleton {
             DcalService.listEvents(new Date(y, m, 1), new Date(y, m + 1, 1), "", (ok, evs) => {
                 if (!ok)
                     return root.reply(client, msg.req, false, evs || "Dank Calendar didn't answer");
-                root.reply(client, msg.req, true, Desk.monthEvents(evs, y, m, DcalService.calendars, new Date()));
+                root.reply(client, msg.req, true, Desk.monthEvents(evs, y, m, DcalService.calendars, new Date(), Lang.code));
             });
             break;
         }

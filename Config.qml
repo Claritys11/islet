@@ -75,6 +75,9 @@ Singleton {
             // Notch
             notchEnabled: true,
             notchMode: "island",
+            // Words in the notch, the DMS bar pill and Islet's DMS cards:
+            // "en" (English) or "id" (Bahasa Indonesia).
+            language: "en",
             barPillWidth: 300,
             barShowVisualizer: true,
             barShowTimer: true,
@@ -281,6 +284,7 @@ Singleton {
 
             property bool notchEnabled: root.defaults.notchEnabled
             property string notchMode: root.defaults.notchMode
+            property string language: root.defaults.language
             property int barPillWidth: root.defaults.barPillWidth
             property bool barShowVisualizer: root.defaults.barShowVisualizer
             property bool barShowTimer: root.defaults.barShowTimer

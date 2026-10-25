@@ -22,11 +22,11 @@ DesktopPluginComponent {
     readonly property bool hasTrack: !!root.st?.hasTrack
     readonly property var lyr: IsletClient.lyrics
     readonly property bool ready: root.lyr?.status === "ready" && (root.lyr?.lines?.length ?? 0) > 0
-    readonly property string statusText: !IsletClient.connected ? "islet isn't running"
+    readonly property string statusText: !IsletClient.connected ? IsletClient.t("islet isn't running", "islet tidak berjalan")
         : !root.hasTrack ? ""
-        : root.lyr?.status === "loading" ? "Looking for lyrics…"
-        : root.lyr?.status === "notfound" ? "No lyrics for this song"
-        : root.lyr?.status === "error" ? "Couldn't load lyrics"
+        : root.lyr?.status === "loading" ? IsletClient.t("Looking for lyrics…", "Mencari lirik…")
+        : root.lyr?.status === "notfound" ? IsletClient.t("No lyrics for this song", "Tidak ada lirik untuk lagu ini")
+        : root.lyr?.status === "error" ? IsletClient.t("Couldn't load lyrics", "Lirik gagal dimuat")
         : ""
 
     DeskCard {
@@ -57,13 +57,13 @@ DesktopPluginComponent {
             Column {
                 anchors.verticalCenter: parent.verticalCenter
                 Text {
-                    text: IsletClient.connected ? "Nothing playing" : "Lyrics"
+                    text: IsletClient.connected ? IsletClient.t("Nothing playing", "Tidak ada yang diputar") : IsletClient.t("Lyrics", "Lirik")
                     color: Theme.onPrimaryContainer
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeLarge
                 }
                 Text {
-                    text: IsletClient.connected ? "Play something" : root.statusText
+                    text: IsletClient.connected ? IsletClient.t("Play something", "Putar sesuatu") : root.statusText
                     color: Qt.alpha(Theme.onPrimaryContainer, 0.7)
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall

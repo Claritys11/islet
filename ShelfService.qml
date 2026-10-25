@@ -58,7 +58,7 @@ Singleton {
         onExited: code => {
             const paths = code === 0 ? pasted.text.split("\n").filter(l => l.startsWith("/")) : [];
             const n = paths.length ? root.add(paths) : 0;
-            root.pasteNote = code !== 0 ? "Nothing to paste — copy a file, picture or text first" : n === 0 ? "Already on the shelf" : n === 1 ? "Pasted" : `Pasted ${n} files`;
+            root.pasteNote = code !== 0 ? Lang.t("Nothing to paste — copy a file, picture or text first", "Tidak ada yang bisa ditempel — copy file, gambar atau teks dulu") : n === 0 ? Lang.t("Already on the shelf", "Sudah ada di Shelf") : n === 1 ? Lang.t("Pasted", "Ditempel") : Lang.t(`Pasted ${n} files`, `${n} file ditempel`);
             noteTimer.restart();
         }
     }

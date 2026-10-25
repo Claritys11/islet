@@ -31,7 +31,7 @@ ColumnLayout {
         Layout.fillWidth: true
         StyledText {
             Layout.fillWidth: true
-            text: root.shelf.length ? `${root.shelf.length} file · klik untuk membuka` : "Copy a file and press Paste, or drop files on Islet's pill"
+            text: root.shelf.length ? IsletClient.t(`${root.shelf.length} file${root.shelf.length === 1 ? "" : "s"} · click to open`, `${root.shelf.length} file · klik untuk membuka`) : IsletClient.t("Copy a file and press Paste, or drop files on Islet's pill", "Copy file lalu tekan Tempel, atau taruh file di pill Islet")
             elide: Text.ElideRight
             wrapMode: Text.NoWrap
             color: Theme.surfaceVariantText
@@ -63,7 +63,7 @@ ColumnLayout {
             StyledText {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: parent.count === 0
-                text: "Copy a file, then Paste"
+                text: IsletClient.t("Copy a file, then Paste", "Copy file, lalu Tempel")
                 wrapMode: Text.NoWrap
                 color: Theme.surfaceVariantText
                 font.pixelSize: Theme.fontSizeSmall
@@ -152,7 +152,7 @@ ColumnLayout {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.margins: 6
-                text: tile.modelData.missing ? "tidak ditemukan" : tile.modelData.name
+                text: tile.modelData.missing ? IsletClient.t("not found", "tidak ditemukan") : tile.modelData.name
                 elide: Text.ElideMiddle
                 wrapMode: Text.NoWrap
                 horizontalAlignment: Text.AlignHCenter

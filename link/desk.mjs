@@ -111,11 +111,11 @@ export function checklistView(items, notion, error) {
 
 // A month of events (month0: 0 = January): how many per day, and the list
 // for each day, worked out with the same rules as the Today tab.
-export function monthEvents(events, year, month0, calendars, now) {
+export function monthEvents(events, year, month0, calendars, now, lang = "id") {
     const days = {}, byDay = {};
     const last = new Date(year, month0 + 1, 0).getDate();
     for (let d = 1; d <= last; d++) {
-        const list = eventsOn(events ?? [], new Date(year, month0, d), now, calendars);
+        const list = eventsOn(events ?? [], new Date(year, month0, d), now, calendars, lang);
         if (list.length === 0)
             continue;
         days[d] = list.length;

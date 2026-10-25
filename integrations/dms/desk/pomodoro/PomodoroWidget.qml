@@ -168,7 +168,7 @@ DesktopPluginComponent {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: controls.bottom
                 anchors.topMargin: 6
-                text: `Hari ini: ${root.p?.todayCount ?? 0} sesi · ${root.p?.todayFocused ?? 0} mnt`
+                text: IsletClient.t(`Today: ${root.p?.todayCount ?? 0} sessions · ${root.p?.todayFocused ?? 0} min`, `Hari ini: ${root.p?.todayCount ?? 0} sesi · ${root.p?.todayFocused ?? 0} mnt`)
                 color: Qt.alpha(Theme.onPrimaryContainer, 0.7)
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall

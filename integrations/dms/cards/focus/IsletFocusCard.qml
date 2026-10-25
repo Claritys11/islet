@@ -28,7 +28,7 @@ DashCardComponent {
             }
             StyledText {
                 Layout.fillWidth: true
-                text: IsletClient.connected ? "Focus" : "Focus · Islet isn't running"
+                text: IsletClient.connected ? IsletClient.t("Focus", "Fokus") : IsletClient.t("Focus · Islet isn't running", "Fokus · Islet tidak berjalan")
                 color: root.contentColor
                 font.pixelSize: Theme.fontSizeMedium
                 font.weight: Theme.fontWeightMedium

@@ -27,7 +27,7 @@ Item {
         }
         StyledText {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "Islet isn't running"
+            text: IsletClient.t("Islet isn't running", "Islet tidak berjalan")
             color: Theme.surfaceVariantText
             font.pixelSize: Theme.fontSizeMedium
         }
@@ -43,8 +43,8 @@ Item {
             Layout.fillWidth: true
             currentIndex: root.page
             model: [
-                { text: "Focus", icon: "timer" },
-                { text: "Hari ini", icon: "today" },
+                { text: IsletClient.t("Focus", "Fokus"), icon: "timer" },
+                { text: IsletClient.t("Today", "Hari ini"), icon: "today" },
                 { text: "Shelf", icon: "inventory_2" },
                 { text: "Checklist", icon: "checklist" }
             ]

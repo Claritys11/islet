@@ -92,7 +92,7 @@ Item {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: input.text === ""
-                    text: "Find files and folders — type part of a name"
+                    text: Lang.t("Find files and folders — type part of a name", "Cari file dan folder — ketik sebagian namanya")
                     color: Theme.subtext
                     font.family: Theme.font
                     font.pixelSize: 16
@@ -236,11 +236,11 @@ Item {
                 anchors.centerIn: parent
                 visible: root.results.length === 0
                 horizontalAlignment: Text.AlignHCenter
-                text: FinderService.status === "missing-tools" ? "Install fd and fzf to search your files"
-                    : FinderService.status === "no-folders" ? "None of the folders in Settings → Finder exist"
-                    : FinderService.counts.files === 0 ? "Indexing your files…"
-                    : input.text === "" ? "Type part of a name — \"isw\" finds islet-windows"
-                    : "No matches"
+                text: FinderService.status === "missing-tools" ? Lang.t("Install fd and fzf to search your files", "Pasang fd dan fzf untuk mencari file")
+                    : FinderService.status === "no-folders" ? Lang.t("None of the folders in Settings → Finder exist", "Tidak ada folder di Settings → Finder yang ditemukan")
+                    : FinderService.counts.files === 0 ? Lang.t("Indexing your files…", "Mengindeks file…")
+                    : input.text === "" ? Lang.t("Type part of a name — \"isw\" finds islet-windows", "Ketik sebagian nama — \"isw\" menemukan islet-windows")
+                    : Lang.t("No matches", "Tidak ditemukan")
                 color: Theme.subtext
                 font.family: Theme.font
                 font.pixelSize: 13
@@ -254,7 +254,7 @@ Item {
             spacing: 11
 
             Repeater {
-                model: [["Enter", "Open"], ["Ctrl+T", "Terminal"], ["Ctrl+E", "Editor"], ["Alt+Enter", "Folder"], ["Ctrl+C", "Copy"]]
+                model: [["Enter", Lang.t("Open", "Buka")], ["Ctrl+T", "Terminal"], ["Ctrl+E", "Editor"], ["Alt+Enter", "Folder"], ["Ctrl+C", Lang.t("Copy", "Salin")]]
                 Row {
                     required property var modelData
                     spacing: 5
@@ -292,7 +292,7 @@ Item {
                 property real now: Date.now()
                 readonly property int mins: Math.max(0, Math.round((now - FinderService.indexedAt) / 60000))
                 text: FinderService.message !== "" ? FinderService.message
-                    : FinderService.status === "indexing" ? "Indexing…"
+                    : FinderService.status === "indexing" ? Lang.t("Indexing…", "Mengindeks…")
                     : FinderService.indexedAt > 0 ? `${Math.round((FinderService.counts.dirs + FinderService.counts.files) / 1000)}k items · ${mins < 1 ? "now" : mins + " min ago"}`
                     : ""
                 color: FinderService.message !== "" ? Theme.primary : Theme.subtext

@@ -21,11 +21,11 @@ DesktopPluginComponent {
     // can be undone; tasks finished elsewhere don't fill the list (review M6).
     property var tickedHere: ({})
     readonly property var items: (root.tasks?.items ?? []).filter(t => !t.done || root.tickedHere[t.id])
-    readonly property string statusText: !IsletClient.connected ? "islet isn't running"
+    readonly property string statusText: !IsletClient.connected ? IsletClient.t("islet isn't running", "islet tidak berjalan")
         : root.tasks === null ? "…"
-        : root.tasks.status === "loading" && root.items.length === 0 ? "Loading tasks…"
+        : root.tasks.status === "loading" && root.items.length === 0 ? IsletClient.t("Loading tasks…", "Memuat tugas…")
         : root.tasks.status === "error" || root.tasks.status === "setup" ? (root.tasks.error || "Set up Today in islet")
-        : root.items.length === 0 ? "Nothing to do 🎉"
+        : root.items.length === 0 ? IsletClient.t("Nothing to do 🎉", "Tidak ada tugas 🎉")
         : root.tasks.message || ""
     property bool adding: false
     property bool saving: false
@@ -43,7 +43,7 @@ DesktopPluginComponent {
         const day = new Date(d);
         day.setHours(0, 0, 0, 0);
         const diff = Math.round((day - today) / 864e5);
-        return diff < 0 ? "Terlambat" : diff === 0 ? "Hari ini" : diff === 1 ? "Besok" : Qt.formatDate(d, "d MMM");
+        return diff < 0 ? IsletClient.t("Late", "Terlambat") : diff === 0 ? IsletClient.t("Today", "Hari ini") : diff === 1 ? IsletClient.t("Tomorrow", "Besok") : Qt.formatDate(d, "d MMM");
     }
 
     // Keeps the text until islet says Notion has the task (review I2).
@@ -135,7 +135,7 @@ DesktopPluginComponent {
                     Text {
                         visible: !field.text
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.saving ? "Saving…" : "New task, Enter to add"
+                        text: root.saving ? IsletClient.t("Saving…", "Menyimpan…") : IsletClient.t("New task, Enter to add", "Tugas baru, Enter untuk menambah")
                         color: Qt.alpha(Theme.onPrimaryContainer, 0.5)
                         font: field.font
                     }
@@ -239,7 +239,7 @@ DesktopPluginComponent {
                         Text {
                             id: delText
                             anchors.centerIn: parent
-                            text: del.asking ? "Hapus?" : "🗑"
+                            text: del.asking ? IsletClient.t("Delete?", "Hapus?") : "🗑"
                             color: del.asking ? Theme.onError : pill.fg
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSizeSmall
@@ -264,12 +264,12 @@ DesktopPluginComponent {
                         width: visible ? dueText.implicitWidth + 14 : 0
                         height: 22
                         radius: 11
-                        color: label === "Terlambat" ? Theme.error : Qt.alpha(pill.fg, 0.15)
+                        color: label === IsletClient.t("Late", "Terlambat") ? Theme.error : Qt.alpha(pill.fg, 0.15)
                         Text {
                             id: dueText
                             anchors.centerIn: parent
                             text: due.label
-                            color: due.label === "Terlambat" ? Theme.onPrimary : pill.fg
+                            color: due.label === IsletClient.t("Late", "Terlambat") ? Theme.onPrimary : pill.fg
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSizeSmall - 1
                         }

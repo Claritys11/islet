@@ -28,6 +28,9 @@
   is also a **card on DMS's overview** (its own plugin, `integrations/dms/cards`), placed so they fit a 1080 px
   screen and showing fewer details when small. New notch mode *Inside DMS*: the pill opens the tab, Islet keeps
   no notch window (Finder and the away visualizer aside). `islet dms` picks it on DMS 1.7+.
+- **English or Bahasa Indonesia** (*Settings → Notch → Language*, English by default): the notch, the Islet pill,
+  Islet's DMS tab, cards and desktop widgets, deadlines ("tomorrow 07:00", "1 day late"), events ("all day",
+  "until Sun 20:00") and notifications. Changes at once.
 - **Mod+Z for DMS's overview** (and its Island): `islet dms bind [FILE] [KEY]`, or a button in Settings →
   DankMaterialShell. Same safe edit as Finder's key: backup, `niri validate`, never a key already taken.
 - Much lighter while music plays: a lyric line goes to the bar once (with its karaoke timing) instead of the
@@ -37,6 +40,7 @@
   as they are; a copied picture or text is saved to `~/.local/share/islet/shelf` first.
 
 ### Fixed
+- The cookie clock's hands turned about a point below the centre (the bottom of their round end, not its middle).
 - The DMS bar pill's lyric looked doubled (the sung copy was bolder, so wider, than the line under it).
 - The Arch package left out the modules and scripts Hari ini, Finder, the Shelf and Settings' buttons need.
 - Ticking a task in a task list whose Status column is a select (not Notion's status type) failed; new

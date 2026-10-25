@@ -84,8 +84,12 @@ DesktopPluginComponent {
             }
         }
 
-        // Hand: a rounded bar rotating about the centre.
+        // Hand: a rounded bar rotating about the centre. Its round end sits on
+        // the centre, so it turns about that end's middle — half a width up
+        // from its bottom edge — not the edge itself, which would swing the
+        // hand around a point below the centre.
         component Hand: Rectangle {
+            id: hand
             property real angle: 0
             property real length: 0.3
             width: root.size * 0.06
@@ -93,11 +97,14 @@ DesktopPluginComponent {
             radius: width / 2
             x: root.size / 2 - width / 2
             y: root.size / 2 - height + width / 2
-            transformOrigin: Item.Bottom
-            rotation: angle
             antialiasing: true
-            Behavior on rotation {
-                RotationAnimation { duration: 400; direction: RotationAnimation.Shortest; easing.type: Easing.OutCubic }
+            transform: Rotation {
+                origin.x: hand.width / 2
+                origin.y: hand.height - hand.width / 2
+                angle: hand.angle
+                Behavior on angle {
+                    RotationAnimation { duration: 400; direction: RotationAnimation.Shortest; easing.type: Easing.OutCubic }
+                }
             }
         }
 
