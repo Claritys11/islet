@@ -13,7 +13,11 @@ export function splitState(msg) {
         },
         lyrics: msg?.lyrics ?? null,
         tasks: msg?.tasks ?? null,
-        pomodoro: msg?.pomodoro ?? null
+        pomodoro: msg?.pomodoro ?? null,
+        // Islet's notch in the DMS dashboard (tab and card).
+        day: msg?.day ?? null,
+        shelf: msg?.shelf ?? null,
+        checklist: msg?.checklist ?? null
     };
 }
 

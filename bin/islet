@@ -30,6 +30,7 @@ Usage: islet <command>
   dms widgets [install|uninstall|status]
                                   Desktop widgets for DMS: Lyrics, To-Do, Notes, Pomodoro,
                                   Calendar, cookie Clock, GitHub (solid or glass)
+  dms bind [FILE] [KEY]           A key (Mod+Z) for DMS's overview, in its Island when it has one (niri)
   dms notepad [install|uninstall|status]
                                   The Notes widget's formatting toolbar in DMS's own notepad
   spicetify [install|uninstall|status]
@@ -68,22 +69,27 @@ stop() {
 
 call() { start && qs -c "$CFG" ipc call "$@"; }
 
-# `islet find --bind [FILE]`: Mod+G opens Finder in niri. Adds one line to the
-# first binds { } block of FILE (default: user-binds.kdl if there is one,
-# else config.kdl; a backup is kept), checks the config with `niri validate`,
-# and puts the file back if niri rejects it. Messages, errors too, go to
-# stdout so Settings can show them.
-find_bind() {
-    file=$1
-    line='    Mod+G hotkey-overlay-title="Islet Finder" { spawn "islet" "find"; }'
+# `niri_bind FILE KEY TITLE WHAT SPAWN…`: KEY runs SPAWN in niri. Adds one
+# line to the first binds { } block of FILE (a backup is kept), checks the
+# config with `niri validate`, and puts the file back if niri rejects it.
+# Refuses a key that's already bound. WHAT says what the key does, for the
+# messages. Messages, errors too, go to stdout so Settings can show them.
+niri_bind() {
+    file=$1 key=$2 title=$3 what=$4
+    shift 4
+    spawn=""
+    for a; do spawn="$spawn \"$a\""; done
+    line="    $key hotkey-overlay-title=\"$title\" { spawn$spawn; }"
     [ -f "$file" ] || { echo "No niri binds file at $file"; return 1; }
-    if grep -q 'spawn "islet" "find"' "$file"; then
-        echo "Finder shortcut already set up in $file"
+    if grep -qF "{ spawn$spawn; }" "$file"; then
+        echo "That shortcut is already set up in $file"
         return 0
     fi
-    taken=$(grep -rnE '^[[:space:]]*(Mod|Super)\+G[[:space:]{]' "$(dirname "$file")" --include='*.kdl' 2>/dev/null | head -n 1)
+    # Mod is Super in niri: Mod+G and Super+G are the same key.
+    rest=${key#*+}
+    taken=$(grep -rnE "^[[:space:]]*(Mod|Super)\+$(printf '%s' "$rest" | sed 's/[+]/\\+/g')[[:space:]{]" "$(dirname "$file")" --include='*.kdl' 2>/dev/null | head -n 1)
     if [ -n "$taken" ]; then
-        echo "Mod+G is already used: $taken"
+        echo "$key is already used: $taken"
         echo "Pick another key and add this line to your binds yourself:"
         echo "$line"
         return 1
@@ -110,7 +116,18 @@ find_bind() {
         echo "niri didn't accept the change; $file is back as it was"
         return 1
     fi
-    echo "Done: Mod+G opens Finder (backup: $file.islet-backup)"
+    echo "Done: $key $what (backup: $file.islet-backup)"
+}
+
+# `islet find --bind [FILE]`: Mod+G opens Finder.
+find_bind() {
+    niri_bind "$1" Mod+G "Islet Finder" "opens Finder" islet find
+}
+
+# The niri binds file: user-binds.kdl if there is one, else config.kdl.
+binds_file() {
+    d="${XDG_CONFIG_HOME:-$HOME/.config}/niri"
+    [ -f "$d/user-binds.kdl" ] && echo "$d/user-binds.kdl" || echo "$d/config.kdl"
 }
 
 case "$1" in
@@ -167,10 +184,7 @@ case "$1" in
             --open | --copy) a=${1#--}; shift; call finder pick -- "$*" "$a" ;;
             --bind)
                 shift
-                d=${XDG_CONFIG_HOME:-$HOME/.config}/niri
-                f=$d/user-binds.kdl
-                [ -f "$f" ] || f=$d/config.kdl
-                find_bind "${1:-$f}" ;;
+                find_bind "${1:-$(binds_file)}" ;;
             --print)
                 shift
                 q="$*"
@@ -240,6 +254,12 @@ case "$1" in
     dms)
         # Put Islet in the DankMaterialShell bar in place of DMS's media widget.
         command -v dms >/dev/null || { echo "DankMaterialShell (dms) isn't installed" >&2; exit 1; }
+        # `islet dms bind [FILE] [KEY]`: KEY (Mod+Z) opens DMS's dashboard on
+        # its overview — in DMS's Island when there is one.
+        if [ "$2" = bind ]; then
+            niri_bind "${3:-$(binds_file)}" "${4:-Mod+Z}" "DMS Overview" "opens DMS's overview" dms ipc call dash toggle overview
+            exit
+        fi
         plugins="${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/plugins"
         settings="${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/settings.json"
         src=""
@@ -269,6 +289,9 @@ print(changed)
 PY
         }
         desk="${src%/IsletMedia}/desk"
+        cards="${src%/IsletMedia}/cards"
+        dmscards="today focus checklist shelf"
+        card_id() { echo "islet$(echo "$1" | cut -c1 | tr a-z A-Z)$(echo "$1" | cut -c2-)"; }
         dmsconf="${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell"
         dmssession="${XDG_STATE_HOME:-$HOME/.local/state}/dms/session.json"
         widgets="clock calendar lyrics todo pomodoro notes github"
@@ -361,13 +384,43 @@ PY
                 if [ "$n" = "0" ] && ! grep -q '"isletMedia"' "$settings"; then
                     echo "No DMS media widget to replace — add 'Islet Media' in DMS Settings → DankBar."
                 fi
-                call islet set notchMode bar >/dev/null
-                echo "Islet is now in your DMS bar (left click: open, right click: play/pause)."
+                # DMS 1.7+ takes plugin dashboard tabs: Islet's notch goes inside
+                # DMS (its dashboard, and its Island); older DMS, under the pill.
+                v="$(dms version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)"
+                if [ -n "$v" ] && [ "$(printf '%s\n1.7\n' "$v" | sort -V | head -1)" = "1.7" ]; then
+                    call islet set notchMode dms >/dev/null
+                    # Each of the notch's tabs as a card on DMS's overview too.
+                    for c in $dmscards; do ln -sfn "$cards/$c" "$plugins/islet-$c"; done
+                    dms ipc call plugin-scan scan >/dev/null 2>&1
+                    sleep 1
+                    for c in $dmscards; do dms ipc call plugins enable "$(card_id "$c")" >/dev/null 2>&1; done
+                    # DMS rewrites its settings while it runs: placed with it stopped.
+                    if systemctl --user is-active -q dms; then
+                        systemctl --user stop dms
+                        python3 -I "$cards/place_cards.py" install "$settings"
+                        systemctl --user start dms
+                    fi
+                    echo "Islet is now in your DMS bar and dashboard: click the pill for Islet's tab (Focus, Hari ini, Shelf,"
+                    echo "Checklist), right click to play/pause, scroll for volume. The same four are cards on DMS's overview"
+                    echo "(move or resize them in the dashboard's edit mode). A key for the overview: islet dms bind (Mod+Z)."
+                else
+                    call islet set notchMode bar >/dev/null
+                    echo "Islet is now in your DMS bar (left click: open, right click: play/pause)."
+                fi
                 echo "Your previous DMS settings are saved in $settings.islet-backup" ;;
             uninstall)
                 swap isletMedia music >/dev/null
                 dms ipc call plugins disable isletMedia >/dev/null 2>&1
                 rm -f "$plugins/isletMedia"
+                for c in $dmscards; do
+                    dms ipc call plugins disable "$(card_id "$c")" >/dev/null 2>&1
+                    [ -L "$plugins/islet-$c" ] && rm -f "$plugins/islet-$c"
+                done
+                if grep -q '"plugin_islet' "$settings" 2>/dev/null && systemctl --user is-active -q dms; then
+                    systemctl --user stop dms
+                    python3 -I "${src%/IsletMedia}/cards/place_cards.py" uninstall "$settings"
+                    systemctl --user start dms
+                fi
                 running && call islet set notchMode island >/dev/null
                 echo "Restored DMS's media widget." ;;
             status)
@@ -411,7 +464,7 @@ PY
         if running; then stop; start; fi
         # DMS caches plugin code until it restarts.
         dmsplugins="${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/plugins"
-        if { [ -L "$dmsplugins/isletMedia" ] || [ -L "$dmsplugins/deskw-notes" ]; } && changed integrations/dms &&
+        if { [ -L "$dmsplugins/isletMedia" ] || [ -L "$dmsplugins/deskw-notes" ] || [ -L "$dmsplugins/islet-today" ]; } && changed integrations/dms &&
             systemctl --user is-active --quiet dms 2>/dev/null; then
             systemctl --user restart dms && echo "Restarted DankMaterialShell for the new bar and desktop widgets."
         fi

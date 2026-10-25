@@ -1585,18 +1585,19 @@ FloatingWindow {
                 Page {
                     Card {
                         title: "Where it lives"
-                        hint: "As a floating island at the top of the screen, or as a widget in your DankMaterialShell bar (in place of DMS's media widget). In the bar, clicking the widget drops Islet down right under it."
+                        hint: "As a floating island at the top of the screen, or as a widget in your DankMaterialShell bar (in place of DMS's media widget). In the bar, clicking the widget drops Islet down right under it. Inside DMS, it opens Islet's tab in DMS's dashboard instead — in DMS's Island if you use one — and Islet's own island only shows for Finder and the visualizer when you're away."
                         ChoiceSetting {
                             key: "notchMode"
                             label: "Show as"
                             choices: [
                                 { text: "Floating island", value: "island" },
-                                { text: "In the DMS bar", value: "bar" }
+                                { text: "In the DMS bar", value: "bar" },
+                                { text: "Inside DMS (dashboard & Island)", value: "dms" }
                             ]
                         }
                         RowLayout {
                             Layout.fillWidth: true
-                            visible: win.o.notchMode === "bar"
+                            visible: win.o.notchMode === "bar" || win.o.notchMode === "dms"
                             Button {
                                 text: "Set up DMS bar widget"
                                 onClicked: Quickshell.execDetached([Qt.resolvedUrl("bin/islet").toString().replace(/^file:\/\//, ""), "dms", "install"])
@@ -1613,7 +1614,7 @@ FloatingWindow {
                     }
                     Card {
                         title: "Bar widget"
-                        visible: win.o.notchMode === "bar"
+                        visible: win.o.notchMode === "bar" || win.o.notchMode === "dms"
                         SliderSetting {
                             key: "barPillWidth"
                             label: "Max width"
@@ -2472,7 +2473,7 @@ FloatingWindow {
                     Card {
                         visible: dmsPage.hasDms
                         title: "Islet in the bar"
-                        hint: "Islet's pill in place of DMS's media widget: the line being sung, your timer and today's deadlines. Click it to drop the notch down, scroll on it to turn the music's volume, drop files on it for the Shelf."
+                        hint: "Islet's pill in place of DMS's media widget: the line being sung, your timer and today's deadlines; scroll on it to turn the music's volume, drop files on it for the Shelf. On DMS 1.7+ Islet's notch goes inside DMS too: an Islet tab in the dashboard (and the Island), and Focus, Hari ini, Shelf and Checklist as cards on the overview."
                         DmsPart {
                             statusArgs: ["dms", "status"]
                             installArgs: ["dms", "install"]
@@ -2481,6 +2482,49 @@ FloatingWindow {
                             inText: "In the bar"
                             outText: "Not in the bar"
                             installText: "Put it in the bar"
+                        }
+                    }
+                    Card {
+                        id: dashKeyCard
+                        visible: dmsPage.hasDms
+                        title: "A key for DMS's overview"
+                        hint: "Opens DMS's dashboard on its overview — Islet's cards are there — or DMS's Island when you use one. Adds Mod+Z to niri (a backup is kept; it won't take a key that's already used)."
+                        property bool confirming: false
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: dashKeyProc.running ? "Adding…" : dashKeyOut.text.trim() || (dashKeyCard.confirming ? "Add Mod+Z to your niri binds?" : "")
+                                color: win.subtext
+                                font.family: win.font
+                                font.pixelSize: 12
+                            }
+                            Button {
+                                visible: dashKeyCard.confirming
+                                text: "Cancel"
+                                flat: true
+                                onClicked: dashKeyCard.confirming = false
+                            }
+                            Button {
+                                text: dashKeyCard.confirming ? "Yes, add it" : "Set it up"
+                                enabled: !dashKeyProc.running
+                                onClicked: {
+                                    if (!dashKeyCard.confirming) {
+                                        dashKeyCard.confirming = true;
+                                        return;
+                                    }
+                                    dashKeyCard.confirming = false;
+                                    dashKeyProc.running = true;
+                                }
+                            }
+                        }
+                        Process {
+                            id: dashKeyProc
+                            command: ["sh", decodeURIComponent(String(Qt.resolvedUrl("bin/islet")).replace(/^file:\/\//, "")), "dms", "bind"]
+                            stdout: StdioCollector {
+                                id: dashKeyOut
+                            }
                         }
                     }
                     Card {

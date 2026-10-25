@@ -53,6 +53,62 @@ export function pomodoroView(p) {
     };
 }
 
+// The Hari ini tab for the DMS dashboard: today's lessons and events, close
+// deadlines, the lesson about to start — plain values that survive JSON.
+export function todayView(t) {
+    return {
+        enabled: !!t.enabled,
+        status: t.status ?? "",
+        error: t.error ?? "",
+        sync: t.sync ?? "",
+        canAdd: !!t.tasksDb,
+        soon: t.soon ? { title: t.soon.title, startAt: t.soon.startAt } : null,
+        schedule: (t.schedule ?? []).map(s => ({
+            kind: s.kind,
+            key: s.key,
+            title: s.title,
+            time: s.time,
+            until: s.until ?? "",
+            now: !!s.now,
+            past: !!s.past,
+            clash: !!s.clash,
+            color: s.kind === "event" ? String(s.color ?? "") : ""
+        })),
+        deadlines: (t.deadlines ?? []).map(d => ({
+            id: d.pageId ?? "",
+            key: d.key,
+            title: d.title,
+            source: d.source,
+            priority: d.priority ?? "",
+            label: d.label,
+            urgency: d.urgency,
+            tickable: d.source === "notion"
+        }))
+    };
+}
+
+const PICTURE = /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
+
+// The Shelf's files: name, folder or picture (for a thumbnail), gone missing.
+export function shelfView(items) {
+    return (items ?? []).map(i => ({
+        path: i.path,
+        name: i.name,
+        dir: !!i.dir,
+        image: !i.dir && PICTURE.test(i.name ?? ""),
+        missing: !!i.missing
+    }));
+}
+
+// The Checklist's to-dos, and whether they're in Notion or kept by Islet.
+export function checklistView(items, notion, error) {
+    return {
+        source: notion ? "notion" : "local",
+        error: error ?? "",
+        items: (items ?? []).map(i => ({ id: String(i.id), text: i.text, checked: !!i.checked }))
+    };
+}
+
 // A month of events (month0: 0 = January): how many per day, and the list
 // for each day, worked out with the same rules as the Today tab.
 export function monthEvents(events, year, month0, calendars, now) {

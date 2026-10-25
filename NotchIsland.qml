@@ -38,7 +38,14 @@ Item {
     readonly property bool island: o.notchShape === "island" || barMode
     // "bar": no pill of its own — a bar widget (e.g. in DankMaterialShell)
     // shows the activities and opens the island as a dropdown.
-    readonly property bool barMode: o.notchMode === "bar"
+    // "dms": Islet's notch is the Islet tab of DankMaterialShell's dashboard
+    // (inside DMS's Island when it has one); opening the notch opens that.
+    // This window still shows Finder and the away visualizer.
+    readonly property bool dmsMode: o.notchMode === "dms"
+    readonly property bool barMode: o.notchMode === "bar" || dmsMode
+    function dmsDash(how) {
+        Quickshell.execDetached(["dms", "ipc", "call", "dash", how, "plugin_isletMedia"]);
+    }
     readonly property string pillText: {
         const l = LyricsService.lines[LyricsService.currentIndex];
         if (o.notchPillText === "lyrics" && LyricsService.status === "ready" && LyricsService.synced && l && !l.interlude)
@@ -90,6 +97,8 @@ Item {
     }
 
     function open(t) {
+        if (dmsMode)
+            return dmsDash("open");
         if (t !== undefined)
             tab = t;
         mode = "open";
@@ -97,6 +106,8 @@ Item {
     }
 
     function toggle() {
+        if (dmsMode && mode !== "find")
+            return dmsDash("toggle");
         mode === "open" || mode === "find" ? close() : open();
     }
 
@@ -104,6 +115,9 @@ Item {
     function summon() {
         if (mode === "find" || (mode === "open" && hotkey))
             return close();
+        // No notch of Islet's own to type into: straight to Finder.
+        if (dmsMode)
+            return find("");
         hotkey = true;
         open();
         Qt.callLater(() => typeCatcher.forceActiveFocus());

@@ -7,6 +7,7 @@ import qs.Widgets
 import qs.Modules.Plugins
 import qs.Services
 import "fill.mjs" as Fill
+import "common"
 
 // Islet in the DankMaterialShell bar. Islet runs separately and streams its
 // state over $XDG_RUNTIME_DIR/islet.sock; this pill only displays it and
@@ -17,9 +18,10 @@ PluginComponent {
 
     layerNamespacePlugin: "islet-media"
 
-    // Latest state from Islet (see IsletLink.qml in the Islet repo).
-    property var st: null
-    readonly property bool linked: link.connected && st !== null
+    // Latest state from Islet (see IsletLink.qml in the Islet repo), through
+    // the one connection this plugin's tab, card and the desktop widgets share.
+    readonly property var st: IsletClient.state
+    readonly property bool linked: IsletClient.connected && st !== null
     readonly property bool hasTrack: linked && st.hasTrack
     readonly property bool hasTimer: linked && st.timer !== null && (st.bar?.timer ?? true)
     readonly property string text: !hasTrack ? "" : st.line !== "" && st.bar?.text !== "title" ? st.line : `${st.title}  ·  ${st.artist}`
@@ -98,37 +100,18 @@ PluginComponent {
     }
 
     function send(msg) {
-        if (!link.connected)
-            return;
-        link.write(JSON.stringify(msg) + "\n");
-        link.flush();
+        IsletClient.send(msg);
     }
 
-    pillClickAction: (x, y, width, section, screen) => send({ cmd: "toggle", tab: hasSoon || hasDue ? "today" : hasTrack ? "media" : "focus", x, y, width })
+    // Islet's notch: in DMS mode the Islet tab of DMS's dashboard (in the
+    // Island when DMS has one), else Islet's own island under the pill.
+    pillClickAction: (x, y, width, section, screen) => {
+        if (st?.bar?.notch === "dms")
+            Quickshell.execDetached(["dms", "ipc", "call", "dash", "toggle", "plugin_isletMedia"]);
+        else
+            send({ cmd: "toggle", tab: hasSoon || hasDue ? "today" : hasTrack ? "media" : "focus", x, y, width });
+    }
     pillRightClickAction: () => send({ cmd: "play-pause" })
-
-    Socket {
-        id: link
-        path: `${Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"}/islet.sock`
-        connected: true
-        parser: SplitParser {
-            onRead: line => {
-                try {
-                    root.st = JSON.parse(line);
-                } catch (e) {}
-            }
-        }
-        onConnectedChanged: if (!connected)
-            root.st = null
-    }
-
-    // Islet not running (yet)? Keep knocking.
-    Timer {
-        running: !link.connected
-        repeat: true
-        interval: 2000
-        onTriggered: link.connected = true
-    }
 
     horizontalBarPill: Component {
         Item {

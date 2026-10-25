@@ -22,13 +22,16 @@ Singleton {
     property var lyrics: null
     property var tasks: null
     property var pomodoro: null
+    property var day: null
+    property var shelf: null
+    property var checklist: null
     property var _json: ({})
 
     function _take(msg) {
         root.state = msg;
         const parts = Slices.splitState(msg);
         const json = {};
-        for (const key of ["track", "lyrics", "tasks", "pomodoro"]) {
+        for (const key of ["track", "lyrics", "tasks", "pomodoro", "day", "shelf", "checklist"]) {
             json[key] = JSON.stringify(parts[key]);
             if (json[key] !== root._json[key])
                 root[key] = parts[key];
@@ -42,6 +45,9 @@ Singleton {
         root.lyrics = null;
         root.tasks = null;
         root.pomodoro = null;
+        root.day = null;
+        root.shelf = null;
+        root.checklist = null;
         root._json = {};
     }
 

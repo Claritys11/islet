@@ -96,7 +96,10 @@ If `spicetify apply` reports *"Preprocessed Spotify data is outdated"*, run
 
 If the user runs DankMaterialShell (`command -v dms`) and would rather have Islet in the bar than as a
 floating notch, run `islet dms` (it replaces DMS's media widget; a backup of DMS's settings is kept) and
-check `islet dms status` shows the plugin as `loaded`. If DMS reports the plugin failed to load after an
+check `islet dms status` shows the plugin as `loaded`. On DMS 1.7+ it also sets the notch mode *Inside DMS*:
+Islet's notch becomes an Islet tab in DMS's dashboard/Island (`dms ipc call dash open plugin_isletMedia`
+opens it) and puts Hari ini, Checklist, Focus and Shelf cards on DMS's overview (DMS stops for a few seconds).
+Offer a key for the overview — ask first, it edits niri's binds: `islet dms bind` (Mod+Z; refuses a taken key). If DMS reports the plugin failed to load after an
 Islet update, `systemctl --user restart dms` clears DMS's QML cache.
 
 Desktop widgets (Lyrics, To-Do, Notes, Pomodoro, Calendar, Clock; GitHub on request): ask first, then

@@ -168,3 +168,49 @@ test("walkBlocks: a failing first page is an error", async () => {
     const out = await new Promise(res => walkBlocks((id, c, cb) => cb(false, "nope"), "root", {}, (ok, data) => res({ ok, data })));
     assert.deepEqual(out, { ok: false, data: "nope" });
 });
+
+import { todayView, shelfView, checklistView } from "../link/desk.mjs";
+
+test("todayView: the day's schedule and deadlines, plain values only", () => {
+    const due = new Date(2026, 9, 25, 23, 59);
+    const v = todayView({
+        schedule: [
+            { kind: "lesson", key: "lesson:a", title: "KKA", time: "07.00–08.30", until: "", now: false, past: true, clash: false },
+            { kind: "event", key: "gcal:x", title: "CTF", time: "20.00 →", until: "s/d Min 20.00", now: true, past: false, color: "#9fe1e7", start: new Date() }
+        ],
+        deadlines: [{ key: "notion:p1", pageId: "p1", title: "Essay", source: "notion", due, hasTime: true, priority: "Tinggi", label: "hari ini 23.59", urgency: "today" }],
+        soon: { title: "KKA", startAt: Date.parse("2026-10-25T07:00:00+07:00") },
+        enabled: true, status: "ready", error: "", sync: "Tersinkron 2 mnt lalu", tasksDb: "db"
+    });
+    assert.deepEqual(v.schedule[1], { kind: "event", key: "gcal:x", title: "CTF", time: "20.00 →", until: "s/d Min 20.00", now: true, past: false, clash: false, color: "#9fe1e7" });
+    assert.equal(v.schedule[0].color, "");
+    assert.deepEqual(v.deadlines[0], { id: "p1", key: "notion:p1", title: "Essay", source: "notion", priority: "Tinggi", label: "hari ini 23.59", urgency: "today", tickable: true });
+    assert.deepEqual(v.soon, { title: "KKA", startAt: Date.parse("2026-10-25T07:00:00+07:00") });
+    assert.equal(v.canAdd, true);
+    assert.equal(v.sync, "Tersinkron 2 mnt lalu");
+    // Through JSON unchanged: nothing that doesn't survive it.
+    assert.deepEqual(JSON.parse(JSON.stringify(v)), v);
+});
+
+test("todayView: off, or nothing yet", () => {
+    const v = todayView({ schedule: [], deadlines: [], soon: null, enabled: false, status: "setup", error: "x", sync: "", tasksDb: "" });
+    assert.deepEqual(v, { enabled: false, status: "setup", error: "x", sync: "", canAdd: false, soon: null, schedule: [], deadlines: [] });
+});
+
+test("shelfView: name, folder or picture, and whether it went missing", () => {
+    const v = shelfView([
+        { path: "/home/a/foto.JPG", name: "foto.JPG", dir: false },
+        { path: "/home/a/Docs", name: "Docs", dir: true, missing: true },
+        { path: "/home/a/x.pdf", name: "x.pdf" }
+    ]);
+    assert.deepEqual(v, [
+        { path: "/home/a/foto.JPG", name: "foto.JPG", dir: false, image: true, missing: false },
+        { path: "/home/a/Docs", name: "Docs", dir: true, image: false, missing: true },
+        { path: "/home/a/x.pdf", name: "x.pdf", dir: false, image: false, missing: false }
+    ]);
+});
+
+test("checklistView: its items and where they live", () => {
+    assert.deepEqual(checklistView([{ id: "1", text: "Beli tinta", checked: true, extra: 1 }], true, ""), { source: "notion", error: "", items: [{ id: "1", text: "Beli tinta", checked: true }] });
+    assert.deepEqual(checklistView(undefined, false, ""), { source: "local", error: "", items: [] });
+});

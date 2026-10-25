@@ -31,6 +31,14 @@ import "link/fill.mjs" as Fill
 //     {"reply":req,"ok":bool,"data"|"error"}: "notes-list" {limit?, tipe?},
 //     "note-get" {id} → {blocks, cut}, "note-create" {markdown}, "task-delete" {id},
 //     "calendar-month" {year, month}
+//
+// For the DMS dashboard tab and card (Islet's notch inside DMS):
+//   → also "day" (link/desk.mjs todayView: schedule, deadlines, soon, sync),
+//     "shelf" [{path, name, dir, image, missing}], "checklist" {source, items}
+//   ← {"cmd":"today-refresh"} | {"cmd":"shelf-open"|"shelf-remove","path":…}
+//     | {"cmd":"shelf-paste"} | {"cmd":"shelf-clear"}
+//     | {"cmd":"checklist-add","text":…} | {"cmd":"checklist-check","id":…,"checked":bool}
+//     | {"cmd":"checklist-remove","id":…} | {"cmd":"checklist-clear-done"}
 Singleton {
     id: root
 
@@ -62,7 +70,7 @@ Singleton {
             fill: singing ? { keys: root.fillKeys, clock: root.anchor() } : null,
             source: L.source,
             timer: P.active ? { clock: P.clock, mode: P.mode, running: P.running, paused: P.paused, pausedFor: P.paused ? P.format(P.pausedFor) : "", progress: Math.round(P.progress * 1000) / 1000 } : null,
-            bar: { width: o.barPillWidth, text: o.notchPillText, viz: o.barShowVisualizer, timer: o.barShowTimer, accent: Theme.primary.toString() },
+            bar: { notch: o.notchMode, width: o.barPillWidth, text: o.notchPillText, viz: o.barShowVisualizer, timer: o.barShowTimer, accent: Theme.primary.toString() },
             weather: o.weatherEnabled && WeatherService.ready ? { temp: WeatherService.tempText, icon: WeatherService.icon, text: WeatherService.description } : null,
             // Today: a lesson about to start (beats the song), deadlines due today.
             today: o.todayEnabled ? { soon: TodayService.soon ? `${TodayService.soon.title} · mulai ${Math.max(1, Math.ceil((TodayService.soon.startAt - Date.now()) / 60000))} mnt lagi` : "", due: TodayService.dueToday, dueText: TodayService.dueToday === 1 ? (d => d ? `${d.title} · ${d.label}` : "")(TodayService.deadlines.find(x => x.urgency === "today" || x.urgency === "overdue")) : `${TodayService.dueToday} tenggat hari ini` } : null,
@@ -72,7 +80,11 @@ Singleton {
             // The DMS desktop widgets.
             lyrics: root.lyricsView,
             tasks: root.tasksView,
-            pomodoro: Desk.pomodoroView(P)
+            pomodoro: Desk.pomodoroView(P),
+            // The DMS dashboard tab and card.
+            day: root.dayView,
+            shelf: root.shelfView,
+            checklist: root.checklistView
         });
     }
 
@@ -88,6 +100,22 @@ Singleton {
             _anchor = { t: Math.round(t * 1000) / 1000, at: now, playing: L.isPlaying, rate: 1 };
         return _anchor;
     }
+
+    readonly property var dayView: {
+        const T = TodayService, o = Config.opts;
+        const ago = ms => {
+            const m = Math.round((T.now - ms) / 60000);
+            return m < 1 ? "baru saja" : `${m} mnt lalu`;
+        };
+        const sync = !o.todaySync ? "Sinkron Google Calendar mati"
+            : T.syncStatus === "waiting" ? "Sinkron pertama menunggu konfirmasi (Islet Settings)"
+            : T.syncStatus === "error" || T.syncStatus === "held" ? T.syncError
+            : T.syncStatus === "syncing" ? "Menyinkronkan…"
+            : T.lastSync ? `Tersinkron ${ago(T.lastSync)}` : "";
+        return Desk.todayView({ schedule: T.scheduleToday, deadlines: T.deadlines, soon: T.soon, enabled: o.todayEnabled, status: T.status, error: T.error || T.message, sync, tasksDb: T.tasksDb });
+    }
+    readonly property var shelfView: Desk.shelfView(ShelfService.items)
+    readonly property var checklistView: Desk.checklistView(ChecklistService.items, ChecklistService.useNotion, ChecklistService.error)
 
     readonly property var lyricsView: Object.assign(Desk.lyricWindow(LyricsService.lines, LyricsService.currentIndex), { status: LyricsService.status, synced: LyricsService.synced })
     readonly property var tasksView: ({ status: TodayService.status, error: TodayService.error, message: TodayService.message, items: Desk.openTasks(TodayService.tasks) })
@@ -124,6 +152,34 @@ Singleton {
             break;
         case "task-delete":
             TodayService.remove(String(msg.id ?? ""), (ok, err) => root.reply(client, msg.req, ok, ok ? null : err));
+            break;
+        case "today-refresh":
+            TodayService.load();
+            break;
+        case "shelf-open":
+            if (ShelfService.items.some(i => i.path === msg.path))
+                Qt.openUrlExternally(ShelfService.url(msg.path));
+            break;
+        case "shelf-remove":
+            ShelfService.remove(String(msg.path ?? ""));
+            break;
+        case "shelf-paste":
+            ShelfService.paste();
+            break;
+        case "shelf-clear":
+            ShelfService.clear();
+            break;
+        case "checklist-add":
+            ChecklistService.add(String(msg.text ?? ""));
+            break;
+        case "checklist-check":
+            ChecklistService.setChecked(String(msg.id ?? ""), !!msg.checked);
+            break;
+        case "checklist-remove":
+            ChecklistService.remove(String(msg.id ?? ""));
+            break;
+        case "checklist-clear-done":
+            ChecklistService.clearDone();
             break;
         case "task-done":
             if (msg.id)

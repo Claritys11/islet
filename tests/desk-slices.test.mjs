@@ -32,3 +32,11 @@ test("art: islet's file:// URL is kept as is, a bare path gets file://", () => {
     assert.equal(splitState(Object.assign({}, base, { art: "/c/a.img" })).track.art, "file:///c/a.img");
     assert.equal(splitState(Object.assign({}, base, { art: "" })).track.art, "");
 });
+
+test("the DMS dashboard's parts: day, shelf and checklist pass through, null when absent", () => {
+    const day = { enabled: true, schedule: [], deadlines: [] }, shelf = [{ path: "/a", name: "a" }], checklist = { source: "local", items: [] };
+    const p = splitState(Object.assign({}, base, { day, shelf, checklist }));
+    assert.deepEqual([p.day, p.shelf, p.checklist], [day, shelf, checklist]);
+    const q = splitState(base);
+    assert.deepEqual([q.day, q.shelf, q.checklist], [null, null, null]);
+});

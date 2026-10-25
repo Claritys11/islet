@@ -23,10 +23,22 @@
 - **Islet's Notion template** — *Settings → Calendar & Notion → Make Islet's databases*: an Islet page with
   Mata Pelajaran, Jadwal Pelajaran, Tasks and Notes, linked, plus a Checklist page, in a page you shared;
   Islet starts using whichever of them you didn't have yet. The Notes database can be picked there too.
+- **Islet inside DankMaterialShell** (DMS 1.7+): the bar plugin also gives DMS's dashboard an **Islet tab**
+  (Focus, Hari ini, Shelf, Checklist in DMS's own look; in DMS's Island when there is one), and each of the four
+  is also a **card on DMS's overview** (its own plugin, `integrations/dms/cards`), placed so they fit a 1080 px
+  screen and showing fewer details when small. New notch mode *Inside DMS*: the pill opens the tab, Islet keeps
+  no notch window (Finder and the away visualizer aside). `islet dms` picks it on DMS 1.7+.
+- **Mod+Z for DMS's overview** (and its Island): `islet dms bind [FILE] [KEY]`, or a button in Settings →
+  DankMaterialShell. Same safe edit as Finder's key: backup, `niri validate`, never a key already taken.
+- Much lighter while music plays: a lyric line goes to the bar once (with its karaoke timing) instead of the
+  whole state 30 times a second, and Islet's clock runs every frame only while something of Islet's shows it
+  moving. With Islet in the DMS bar: Islet ~12% → under 1% CPU, DMS ~12% → ~7%.
 - **Shelf: paste** — Ctrl+V in the Shelf tab, its paste button, or `islet shelf paste`. Copied files go on
   as they are; a copied picture or text is saved to `~/.local/share/islet/shelf` first.
 
 ### Fixed
+- The DMS bar pill's lyric looked doubled (the sung copy was bolder, so wider, than the line under it).
+- The Arch package left out the modules and scripts Hari ini, Finder, the Shelf and Settings' buttons need.
 - Ticking a task in a task list whose Status column is a select (not Notion's status type) failed; new
   tasks there now start as To do.
 - The Notes widget kept the first Notes database it found after you picked another.

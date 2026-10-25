@@ -245,6 +245,7 @@ islet todo "Buy milk"                           add a task (no text = list them)
 islet set <key> <value> · islet get <key>
 islet dms [install|uninstall|status]            Islet in the DankMaterialShell bar
 islet dms widgets [install|uninstall|status]    desktop widgets (laid out for you)
+islet dms bind [FILE] [KEY]                     a key (Mod+Z) for DMS's overview and Island (niri)
 islet dms notepad [install|uninstall|status]    formatting toolbar in DMS's notepad
 islet spicetify [install|uninstall|status]      Spicy Lyrics lyrics & timing
 islet status · islet refetch · islet update [--check] · islet start|stop|restart
@@ -314,6 +315,16 @@ sung with its karaoke fill, the visualizer and your focus timer, all in your DMS
 **Left click** drops Islet's Media / Focus / Checklist island right under it; **right click** plays/pauses.
 **Scroll** on it turns the playing app's own volume (5% a notch; not the system volume), shown in the pill for a moment.
 Islet's own floating pill goes away.
+
+**Islet inside DMS.** On DMS 1.7 or newer, `islet dms` also puts Islet's notch *inside* DMS: an **Islet tab** in
+DMS's dashboard — Focus timer, Hari ini (lessons, Google events, Notion deadlines, ＋ new task), Shelf and
+Checklist, drawn with DMS's own look — that opens in **DMS's Island** if you use one. Clicking the pill opens it;
+Islet then keeps no notch of its own (only Finder and the away visualizer still pop up). Each of those four is
+also a **card on DMS's overview** — Hari ini and Checklist side by side, Focus and the Shelf as one-row strips
+below — placed for you; move or resize them in the dashboard's edit mode (pencil), or add them again from *Add
+widget*. They show fewer details when small. **Mod+Z** opens the overview (in DMS's Island if you use one):
+`islet dms bind` adds it to niri (or *Settings → DankMaterialShell → A key for DMS's overview*). Prefer Islet's
+own island under the pill? *Settings → Notch → Show as → In the DMS bar*.
 
 Undo with `islet dms uninstall`. Width, visualizer and timer are under **Settings → Notch → Bar widget**.
 Works with top bars; the widget talks to Islet over `$XDG_RUNTIME_DIR/islet.sock`, so other shells can
