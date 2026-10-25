@@ -310,6 +310,32 @@ Undo with `islet dms uninstall`. Width, visualizer and timer are under **Setting
 Works with top bars; the widget talks to Islet over `$XDG_RUNTIME_DIR/islet.sock`, so other shells can
 integrate the same way (see `IsletLink.qml`).
 
+### Desktop widgets
+
+end4-style widgets for the DankMaterialShell desktop, all fed by Islet (your Notion token never leaves it):
+
+```sh
+islet dms widgets            # links and enables them; then DMS Settings → Desktop Widgets to place them
+```
+
+| Widget | What it shows |
+|---|---|
+| **Lyrics** | Cover, title, controls and the synced lines around the one being sung |
+| **To-Do** | Today's Notion tasks: tick, add with **+**, 🗑 twice to move one to Notion's trash |
+| **Notes** | Your Notion *Notes* database with its formatting; ↗ opens the Notion app if it's running. **+** writes a note with a toolbar and Notion's shortcuts (Ctrl+B/I/U/E/K, Ctrl+Shift+1–6…); drafts are DMS Notepad's own tabs, so they show in both until you send one with Ctrl+Enter |
+| **Pomodoro** | Islet's focus timer with modes, ring, play/pause, reset, skip |
+| **Calendar** | The month with dots on days with Dux Calendar events, and the chosen day's list |
+| **Clock** | A wavy cookie clock with the date |
+| **GitHub** | A year of contributions from your public calendar (set your name in its settings) |
+
+Any widget's settings → **Tampilan semua widget deskw** switches all of them between **Solid** and
+**Glass** (see-through with the desktop blurred behind it — needs a compositor with background blur:
+niri, KDE, Hyprland), with its opacity and a hairline border.
+
+Want the same toolbar in DMS's own notepad? `islet dms notepad` runs DMS from a patched copy of its UI,
+rebuilt by itself after each DMS update (and skipped if the patch doesn't fit); `islet dms notepad uninstall`
+puts DMS's own back. Remove the widgets with `islet dms widgets uninstall`.
+
 ## 🌶 Spicy Lyrics integration
 
 [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics) looks perfectly in time because it has

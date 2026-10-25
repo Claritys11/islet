@@ -11,6 +11,11 @@
   of children (paged past Notion's 100 blocks), and create from Markdown: headings, lists with sub-items,
   to-dos (`[ ]` and `- [ ]`), quotes, code fences, `---`, bold/italic/strikethrough/underline/code and links.
 - Tasks can be deleted (into Notion's trash) from a socket client.
+- **DMS desktop widgets** (`islet dms widgets`): Lyrics, To-Do, Notes, Pomodoro, Calendar, cookie Clock and
+  GitHub, in `integrations/dms/desk`. Solid or **glass** (see-through, compositor blur) for all at once.
+  Notes drafts are DMS Notepad's tabs; a formatting toolbar with Notion's shortcuts.
+- **DMS notepad toolbar** (`islet dms notepad`): the same toolbar in DMS's own notepad, through a patched
+  copy of DMS's UI that rebuilds itself after DMS updates and falls back to DMS's own when it can't.
 
 ## 1.7.1 — 2026-10-23
 

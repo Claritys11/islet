@@ -1,0 +1,8 @@
+singleton IsletClient 1.0 IsletClient.qml
+DeskCard 1.0 DeskCard.qml
+CookieShape 1.0 CookieShape.qml
+Requester 1.0 Requester.qml
+FormatBar 1.0 FormatBar.qml
+singleton DeskStyle 1.0 DeskStyle.qml
+Glass 1.0 Glass.qml
+StyleSettings 1.0 StyleSettings.qml

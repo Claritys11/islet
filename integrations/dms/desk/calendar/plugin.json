@@ -1,0 +1,14 @@
+{
+    "id": "deskwCalendar",
+    "name": "Calendar (deskw)",
+    "description": "end4-style month calendar with your Dux Calendar events (through islet).",
+    "version": "1.0.0",
+    "author": "Claritys11",
+    "type": "desktop",
+    "capabilities": ["desktop-widget"],
+    "component": "./CalendarWidget.qml",
+    "icon": "calendar_month",
+    "settings": "./CalendarSettings.qml",
+    "requires_dms": ">=1.2.0",
+    "permissions": ["settings_read", "settings_write"]
+}

@@ -26,6 +26,11 @@ Usage: islet <command>
   share [copy|save]               A picture of the song and lyric playing now, to copy or save
   todo [text]                     Add a task, or list tasks without text
   dms [install|uninstall|status]  Islet in the DankMaterialShell bar instead of DMS's media widget
+  dms widgets [install|uninstall|status]
+                                  Desktop widgets for DMS: Lyrics, To-Do, Notes, Pomodoro,
+                                  Calendar, cookie Clock, GitHub (solid or glass)
+  dms notepad [install|uninstall|status]
+                                  The Notes widget's formatting toolbar in DMS's own notepad
   spicetify [install|uninstall|status]
                                   Get lyrics + timing from Spicy Lyrics (needs Spicetify)
   update [--check]                Update Islet and restart it (--check: only show what's new)
@@ -245,7 +250,65 @@ import os; os.replace(path + ".tmp", path)
 print(changed)
 PY
         }
+        desk="${src%/IsletMedia}/desk"
+        widgets="clock calendar lyrics todo pomodoro notes github"
+        id_of() { echo "deskw$(echo "$1" | cut -c1 | tr a-z A-Z)$(echo "$1" | cut -c2-)"; }
         case "${2:-install}" in
+            widgets)
+                [ -d "$desk" ] || { echo "Islet's desktop widgets weren't found" >&2; exit 1; }
+                case "${3:-install}" in
+                    install)
+                        mkdir -p "$plugins"
+                        for w in $widgets; do ln -sfn "$desk/$w" "$plugins/deskw-$w"; done
+                        dms ipc call plugin-scan scan >/dev/null 2>&1
+                        sleep 1
+                        for w in $widgets; do dms ipc call plugins enable "$(id_of "$w")" >/dev/null 2>&1; done
+                        echo "Installed 7 desktop widgets. Put them on the desktop from DMS Settings → Desktop Widgets."
+                        echo "Glass look: any widget's settings → \"Tampilan semua widget deskw\"."
+                        echo "They need Islet running; Notes and To-Do need Today set up with Notion (islet setup)." ;;
+                    uninstall)
+                        for w in $widgets; do
+                            dms ipc call plugins disable "$(id_of "$w")" >/dev/null 2>&1
+                            [ -L "$plugins/deskw-$w" ] && rm -f "$plugins/deskw-$w"
+                        done
+                        echo "Removed Islet's desktop widgets." ;;
+                    status)
+                        for w in $widgets; do
+                            if [ -L "$plugins/deskw-$w" ]; then echo "$(id_of "$w"): installed"; else echo "$(id_of "$w"): not installed"; fi
+                        done ;;
+                    *) echo "usage: islet dms widgets [install|uninstall|status]" >&2; exit 1 ;;
+                esac ;;
+            notepad)
+                # DMS's notepad is built into dms: it runs a patched copy of
+                # DMS's UI (integrations/dms/notepad), rebuilt by itself after
+                # every DMS update and skipped whenever the patch doesn't fit.
+                notepad="${src%/IsletMedia}/notepad"
+                dropin="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/dms.service.d/islet-notepad.conf"
+                case "${3:-install}" in
+                    install)
+                        systemctl --user cat dms.service >/dev/null 2>&1 || { echo "DMS doesn't run as the dms systemd user service; can't patch its notepad" >&2; exit 1; }
+                        [ -d "$desk/common" ] || { echo "Islet's desktop widgets weren't found" >&2; exit 1; }
+                        mkdir -p "$(dirname "$dropin")"
+                        printf '%s\n' "# Islet: DMS through dms-run-ui so its notepad gets the formatting toolbar." \
+                            "# Remove with: islet dms notepad uninstall" "[Service]" "ExecStart=" \
+                            "ExecStart=$notepad/dms-run-ui" "ExecStartPost=-$notepad/dms-ui-build" > "$dropin"
+                        systemctl --user daemon-reload
+                        # DMS has unpacked its UI already: build the copy now.
+                        "$notepad/dms-ui-build"
+                        systemctl --user restart dms
+                        echo "DMS's notepad now has the formatting toolbar (Ctrl+B, Ctrl+Shift+1…)." ;;
+                    uninstall)
+                        rm -f "$dropin"
+                        rmdir "$(dirname "$dropin")" 2>/dev/null
+                        rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/islet-dms-ui"
+                        systemctl --user daemon-reload
+                        systemctl --user try-restart dms
+                        echo "DMS runs its own notepad again." ;;
+                    status)
+                        [ -f "$dropin" ] && echo "notepad toolbar: installed" || echo "notepad toolbar: not installed"
+                        if pgrep -af "dms run" | grep -q -- " -c "; then echo "DMS: running the patched UI"; else echo "DMS: running its own UI"; fi ;;
+                    *) echo "usage: islet dms notepad [install|uninstall|status]" >&2; exit 1 ;;
+                esac ;;
             install)
                 [ -n "$src" ] || { echo "Islet's DMS plugin wasn't found" >&2; exit 1; }
                 mkdir -p "$plugins"
@@ -307,9 +370,10 @@ PY
         fi
         if running; then stop; start; fi
         # DMS caches plugin code until it restarts.
-        if [ -L "${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/plugins/isletMedia" ] && changed integrations/dms &&
+        dmsplugins="${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell/plugins"
+        if { [ -L "$dmsplugins/isletMedia" ] || [ -L "$dmsplugins/deskw-notes" ]; } && changed integrations/dms &&
             systemctl --user is-active --quiet dms 2>/dev/null; then
-            systemctl --user restart dms && echo "Restarted DankMaterialShell for the new bar widget."
+            systemctl --user restart dms && echo "Restarted DankMaterialShell for the new bar and desktop widgets."
         fi
         echo "Islet updated to $latest." ;;
     config) echo "${XDG_CONFIG_HOME:-$HOME/.config}/islet/config.json" ;;

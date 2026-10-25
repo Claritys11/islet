@@ -1,0 +1,14 @@
+{
+    "id": "deskwNotes",
+    "name": "Notes (deskw)",
+    "description": "Your Notion Notes with formatting; add notes in Markdown (through islet).",
+    "version": "1.0.0",
+    "author": "Claritys11",
+    "type": "desktop",
+    "capabilities": ["desktop-widget"],
+    "component": "./NotesWidget.qml",
+    "icon": "sticky_note_2",
+    "settings": "./NotesSettings.qml",
+    "requires_dms": ">=1.2.0",
+    "permissions": ["settings_read", "settings_write"]
+}

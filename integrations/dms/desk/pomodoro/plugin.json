@@ -1,0 +1,19 @@
+{
+  "id": "deskwPomodoro",
+  "name": "Pomodoro (deskw)",
+  "description": "islet focus timer on the desktop.",
+  "version": "1.0.0",
+  "author": "Claritys11",
+  "type": "desktop",
+  "capabilities": [
+    "desktop-widget"
+  ],
+  "component": "./PomodoroWidget.qml",
+  "icon": "timer",
+  "requires_dms": ">=1.2.0",
+  "permissions": [
+    "settings_read",
+    "settings_write"
+  ],
+  "settings": "./PomodoroSettings.qml"
+}

@@ -1,0 +1,34 @@
+#!/bin/sh
+# Runs after DMS started (ExecStartPost): if it started from its embedded
+# UI, copy that UI (DMS unpacks it to $XDG_RUNTIME_DIR/dms-shell/<hash>),
+# patch it, and mark it .ok only if every patch anchor was found; dms-run-ui
+# uses it from the next start on. Never fails the service.
+here=$(dirname "$(readlink -f "$0")")
+dms=$(command -v dms || echo /usr/bin/dms)
+key=$(sha256sum "$dms" | cut -c1-16)
+base="${XDG_DATA_HOME:-$HOME/.local/share}/islet-dms-ui"
+dir="$base/$key"
+[ -f "$dir/.ok" ] && exit 0
+src=""
+for i in $(seq 1 40); do
+    src=$(ls -dt "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/dms-shell/*/ 2>/dev/null | head -1)
+    [ -n "$src" ] && [ -f "$src/shell.qml" ] && break
+    sleep 0.5
+done
+[ -f "$src/shell.qml" ] || exit 0
+mkdir -p "$base"
+tmp="$base/.build-$key"
+rm -rf "$tmp"
+cp -r "$src" "$tmp" && chmod -R u+w "$tmp" || { rm -rf "$tmp"; exit 0; }
+if python3 -I "$here/patch-notepad.py" "$tmp" "$here/../desk/common"; then
+    rm -rf "$dir"
+    mv "$tmp" "$dir"
+    touch "$dir/.ok"
+    # Copies for older dms binaries aren't needed any more.
+    for old in "$base"/*/; do
+        [ "${old%/}" = "$dir" ] || rm -rf "$old"
+    done
+else
+    rm -rf "$tmp"
+fi
+exit 0
