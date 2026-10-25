@@ -65,7 +65,7 @@ health checks, and keybinds for niri, Hyprland and Sway.
 | **Desktop** | Wayland with layer-shell: **niri, Hyprland, Sway, KDE Plasma, river, Wayfire, labwc** |
 | **Quickshell** | 0.2 or newer — `pacman -S quickshell` (already there if you use DankMaterialShell) |
 | **Music** | Spotify desktop or any [MPRIS](https://specifications.freedesktop.org/mpris-spec/latest/) player (browsers, mpv, Tidal-hifi, …) |
-| Optional | [`cava`](https://github.com/karlstav/cava) for a real audio visualizer · [`fd`](https://github.com/sharkdp/fd) and [`fzf`](https://github.com/junegunn/fzf) for Finder |
+| Optional | [`cava`](https://github.com/karlstav/cava) for a real audio visualizer · [`fd`](https://github.com/sharkdp/fd) and [`fzf`](https://github.com/junegunn/fzf) for Finder · `wl-clipboard` to paste onto the Shelf · `python3` for the DankMaterialShell setup |
 
 > **Windows, macOS, GNOME?** Islet is built on Quickshell, which only runs on Linux Wayland compositors
 > that support layer-shell — GNOME, X11, Windows and macOS can't host it. On macOS, try
@@ -110,11 +110,13 @@ A dynamic island at the top of your screen, in the spirit of [Notchy](https://no
 | <img src="docs/media/notch-media.png" width="300" alt="Media tab"> | <img src="docs/media/notch-focus.png" width="300" alt="Focus tab"> | <img src="docs/media/notch-checklist.png" width="300" alt="Checklist tab"> |
 | Scrubber, shuffle, repeat, and the current lyric with karaoke fill | Pomodoro with short & long breaks, a continuous mode, pause clock, elapsed and focused-time stats | Saved on your computer — or **synced with a Notion page** |
 
-Click the pill to open it. It follows your DankMaterialShell / Matugen wallpaper colours, or stays pure black.
+Click the pill to open it. It follows your DankMaterialShell / Matugen wallpaper colours, or stays pure black,
+and speaks English or Bahasa Indonesia (*Settings → Notch → Language*).
 
-- **📥 Shelf** — drop files on the notch (or on the Islet pill in your DMS bar) to keep them close, then drag
-  them out into any app. Files stay where they are; the shelf only remembers them, and follows a file
-  that was moved.
+- **📥 Shelf** — drop files on the notch (or on the Islet pill in your DMS bar), or copy them and press
+  **Ctrl+V** in the Shelf tab, to keep them close; then drag them out into any app. Files stay where they
+  are; the shelf only remembers them, and follows a file that was moved. A copied picture (a screenshot)
+  or text is saved to `~/.local/share/islet/shelf` first.
 - **🌙 Visualizer mode** — step away while music plays and the notch becomes a big audio visualizer; touch
   anything and it's back. Fullscreen videos (idle inhibitors) are respected. `islet notch viz` toggles it by hand.
 - **🌤️ Weather** in the pill when nothing plays — from Open-Meteo, for your city or DankMaterialShell's weather
@@ -189,6 +191,12 @@ columns by itself (fix them there if it guessed wrong), shows what the first syn
 starts only when you press **Confirm**. It uses the same Notion integration as the Checklist — share
 your Notion page with it (••• → Connections).
 
+**No timetable or task list in Notion yet?** Press **Make Islet's databases** on the same page: Islet builds
+an *Islet* page in a page you shared, with **Mata Pelajaran**, **Jadwal Pelajaran** (your week; `Jam` like
+`07.00-08.30`), **Tasks** (with `Tenggat`, a days-left formula and priorities) and **Notes**, linked to each
+other, plus a **Checklist** page — exactly the columns Islet reads — and starts using them. Already have
+some? Islet keeps those and you can switch.
+
 ```
 islet today                 what Islet sees (Notion, Dank Calendar, sync)
 islet today list            today's lessons, events and deadlines
@@ -227,16 +235,19 @@ adds the Mod+G shortcut to niri for you (`islet find --bind`). Other compositors
 ```
 islet setup                                     the setup guide
 islet settings [page | words]                   open settings, on a page or searching: islet settings youtube
-islet notch [media|focus|checklist|shelf|today|viz]   toggle the notch / open a tab / visualizer
+islet notch [media|focus|checklist|shelf|today|calendar|viz]   toggle the notch / open a tab / visualizer
 islet today [list|add text|preview|sync]        lessons and deadlines (Notion ⇄ Google Calendar)
 islet find [text]                               Finder (also: --open/--copy text, --print text, --reindex, --status, --bind)
-islet shelf [FILE…|clear]                       put files on the shelf (no files = list)
+islet shelf [FILE…|paste|clear]                 put files on the shelf (paste: what you copied; no files = list)
 islet share [copy|save]                         share card of the song playing now
 islet toggle | show | hide                      the lyrics overlay
 islet pomodoro [toggle|reset|resetpause|skip|status]
 islet todo "Buy milk"                           add a task (no text = list them)
 islet set <key> <value> · islet get <key>
 islet dms [install|uninstall|status]            Islet in the DankMaterialShell bar
+islet dms widgets [install|uninstall|status]    desktop widgets (laid out for you)
+islet dms bind [FILE] [KEY]                     a key (Mod+Z) for DMS's overview and Island (niri)
+islet dms notepad [install|uninstall|status]    formatting toolbar in DMS's notepad
 islet spicetify [install|uninstall|status]      Spicy Lyrics lyrics & timing
 islet status · islet refetch · islet update [--check] · islet start|stop|restart
 ```
@@ -306,9 +317,49 @@ sung with its karaoke fill, the visualizer and your focus timer, all in your DMS
 **Scroll** on it turns the playing app's own volume (5% a notch; not the system volume), shown in the pill for a moment.
 Islet's own floating pill goes away.
 
+**Islet inside DMS.** On DMS 1.7 or newer, `islet dms` also puts Islet's notch *inside* DMS: an **Islet tab** in
+DMS's dashboard — Focus timer, Hari ini (lessons, Google events, Notion deadlines, ＋ new task), Shelf and
+Checklist, drawn with DMS's own look — that opens in **DMS's Island** if you use one. Clicking the pill opens it;
+Islet then keeps no notch of its own (only Finder and the away visualizer still pop up). Each of those four is
+also a **card on DMS's overview** — Hari ini and Checklist side by side, Focus and the Shelf as one-row strips
+below — placed for you; move or resize them in the dashboard's edit mode (pencil), or add them again from *Add
+widget*. They show fewer details when small. **Mod+Z** opens the overview (in DMS's Island if you use one):
+`islet dms bind` adds it to niri (or *Settings → DankMaterialShell → A key for DMS's overview*). Prefer Islet's
+own island under the pill? *Settings → Notch → Show as → In the DMS bar*.
+
 Undo with `islet dms uninstall`. Width, visualizer and timer are under **Settings → Notch → Bar widget**.
 Works with top bars; the widget talks to Islet over `$XDG_RUNTIME_DIR/islet.sock`, so other shells can
 integrate the same way (see `IsletLink.qml`).
+
+### Desktop widgets
+
+end4-style widgets for the DankMaterialShell desktop, all fed by Islet (your Notion token never leaves it):
+
+```sh
+islet dms widgets            # or Settings → DankMaterialShell → Put them on the desktop
+```
+
+| Widget | What it shows |
+|---|---|
+| **Lyrics** | Cover, title, controls and the synced lines around the one being sung |
+| **To-Do** | Today's Notion tasks: tick, add with **+**, 🗑 twice to move one to Notion's trash |
+| **Notes** | Your Notion *Notes* database with its formatting; ↗ opens the Notion app if it's running. **+** writes a note with a toolbar and Notion's shortcuts (Ctrl+B/I/U/E/K, Ctrl+Shift+1–6…); drafts are DMS Notepad's own tabs, so they show in both until you send one with Ctrl+Enter |
+| **Pomodoro** | Islet's focus timer with modes, ring, play/pause, reset, skip |
+| **Calendar** | The month with dots on days with Dank Calendar events, and the chosen day's list |
+| **Clock** | A wavy cookie clock with the date |
+| **GitHub** | A year of contributions from your public calendar (set your name in its settings) |
+
+Six of them land on your desktop at once, in two columns on the side away from Islet's lyrics on the screen
+edge (the bar blinks out for a few seconds while DMS takes them in); move them in DMS's widget edit mode.
+Add GitHub from DMS Settings → Desktop Widgets once you know your user name.
+
+Any widget's settings → **Tampilan semua widget Islet** switches all of them between **Solid** and
+**Glass** (see-through with the desktop blurred behind it — needs a compositor with background blur:
+niri, KDE, Hyprland), with its opacity and a hairline border.
+
+Want the same toolbar in DMS's own notepad? `islet dms notepad` runs DMS from a patched copy of its UI,
+rebuilt by itself after each DMS update (and skipped if the patch doesn't fit); `islet dms notepad uninstall`
+puts DMS's own back. Remove the widgets with `islet dms widgets uninstall`.
 
 ## 🌶 Spicy Lyrics integration
 
@@ -336,7 +387,8 @@ tiny local receiver). Remove with `islet spicetify uninstall`.
 2. Open the Notion page with your checklist → **•••** → **Connections** → add the integration.
 3. In **Islet Settings → Checklist**, choose **Notion**, paste the secret and the page link, press **Test connection**.
 
-Every to-do block on that page appears in the notch; ticking, adding and deleting sync back. The secret
+Every to-do block on that page appears in the notch; ticking, adding and deleting sync back. (Islet's
+Notion template — *Settings → Calendar & Notion → Make Islet's databases* — makes a Checklist page for you.) The secret
 stays on your computer (`~/.config/islet/notion-token`, readable only by you).
 
 ---
@@ -355,7 +407,8 @@ Islet is young and focused. Here's what carries over today:
 | Pomodoro focus sessions | ✅ |
 | Quick notes / reminders | ✅ Checklist, local or Notion |
 | Notch or pill shape, adjustable size | ✅ |
-| Clipboard history, file shelf, HUDs, weather, calendar… | 🔜 Not yet — [ideas welcome](https://github.com/Claritys11/islet/issues/new?template=feature_request.yml) |
+| File shelf, weather, calendar | ✅ Shelf (drop or paste), weather in the pill, Kalender tab |
+| Clipboard history, HUDs… | 🔜 Not yet — [ideas welcome](https://github.com/Claritys11/islet/issues/new?template=feature_request.yml) |
 
 ---
 

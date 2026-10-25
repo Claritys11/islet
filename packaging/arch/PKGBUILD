@@ -1,6 +1,6 @@
 # Maintainer: Claritys11 <https://github.com/Claritys11>
 pkgname=islet-git
-pkgver=1.7.1
+pkgver=1.8.0
 pkgrel=1
 pkgdesc="Notchy-style dynamic island, synced karaoke lyrics, Pomodoro and Notion checklist for Quickshell"
 arch=('any')
@@ -9,7 +9,8 @@ license=('MIT')
 depends=('quickshell' 'curl')
 makedepends=('git')
 optdepends=('cava: real audio visualizer in the notch'
-            'python: Spicy Lyrics bridge (islet spicetify)'
+            'python: Spicy Lyrics bridge, DankMaterialShell setup (islet spicetify, islet dms)'
+            'wl-clipboard: paste onto the Shelf'
             'spicetify-cli: Spicy Lyrics bridge'
             'libnotify: Pomodoro notifications'
             'pipewire: Pomodoro sound (pw-play)')
@@ -27,7 +28,9 @@ package() {
     cd islet
     # Quickshell finds configs in $XDG_CONFIG_DIRS, so `qs -c islet` works system-wide.
     install -d "$pkgdir/etc/xdg/quickshell/islet"
-    cp -r -- *.qml assets bridge spicetify integrations "$pkgdir/etc/xdg/quickshell/islet/"
+    # Everything the QML loads or runs next to itself (modules, scripts, the
+    # DMS plugins and their symlinks into link/).
+    cp -r -- *.qml assets bin bridge finder integrations link media shelf spicetify today "$pkgdir/etc/xdg/quickshell/islet/"
     install -Dm755 bin/islet "$pkgdir/usr/bin/islet"
     install -Dm644 dist/islet.service "$pkgdir/usr/lib/systemd/user/islet.service"
     install -Dm644 dist/islet-settings.desktop "$pkgdir/usr/share/applications/islet-settings.desktop"

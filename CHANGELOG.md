@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.8.0 — 2026-10-25
+
+### Added
+- **Socket for desktop widgets** (`$XDG_RUNTIME_DIR/islet.sock`, protocol v1, additive): the state line now
+  also carries `lyrics` (a few synced lines around the sung one), `tasks` (Today's Notion tasks) and
+  `pomodoro`. New commands `task-done` and `timer-*`; new requests answered only to the asking client —
+  `notes-list`, `note-get`, `note-create`, `calendar-month`, `task-add`, `task-delete`. The token stays in Islet.
+- **Notes** (`NotesService`): your Notion Notes database (found by its title) — list, read with any depth
+  of children (paged past Notion's 100 blocks), and create from Markdown: headings, lists with sub-items,
+  to-dos (`[ ]` and `- [ ]`), quotes, code fences, `---`, bold/italic/strikethrough/underline/code and links.
+- Tasks can be deleted (into Notion's trash) from a socket client.
+- **DMS desktop widgets** (`islet dms widgets`): Lyrics, To-Do, Notes, Pomodoro, Calendar, cookie Clock and
+  GitHub, in `integrations/dms/desk`. Solid or **glass** (see-through, compositor blur) for all at once.
+  Notes drafts are DMS Notepad's tabs; a formatting toolbar with Notion's shortcuts.
+- **DMS notepad toolbar** (`islet dms notepad`): the same toolbar in DMS's own notepad, through a patched
+  copy of DMS's UI that rebuilds itself after DMS updates and falls back to DMS's own when it can't.
+- `islet dms widgets` **puts six of them on the desktop**, laid out in two columns on the side away from
+  Islet's lyrics (GitHub waits for a user name); uninstall takes them away again.
+- **Settings → DankMaterialShell**: the bar pill, the desktop widgets and the notepad toolbar, each with
+  whether it's set up and one button.
+- **Islet's Notion template** — *Settings → Calendar & Notion → Make Islet's databases*: an Islet page with
+  Mata Pelajaran, Jadwal Pelajaran, Tasks and Notes, linked, plus a Checklist page, in a page you shared;
+  Islet starts using whichever of them you didn't have yet. The Notes database can be picked there too.
+- **Islet inside DankMaterialShell** (DMS 1.7+): the bar plugin also gives DMS's dashboard an **Islet tab**
+  (Focus, Hari ini, Shelf, Checklist in DMS's own look; in DMS's Island when there is one), and each of the four
+  is also a **card on DMS's overview** (its own plugin, `integrations/dms/cards`), placed so they fit a 1080 px
+  screen and showing fewer details when small. New notch mode *Inside DMS*: the pill opens the tab, Islet keeps
+  no notch window (Finder and the away visualizer aside). `islet dms` picks it on DMS 1.7+.
+- **English or Bahasa Indonesia** (*Settings → Notch → Language*, English by default): the notch, the Islet pill,
+  Islet's DMS tab, cards and desktop widgets, deadlines ("tomorrow 07:00", "1 day late"), events ("all day",
+  "until Sun 20:00") and notifications. Changes at once.
+- **Mod+Z for DMS's overview** (and its Island): `islet dms bind [FILE] [KEY]`, or a button in Settings →
+  DankMaterialShell. Same safe edit as Finder's key: backup, `niri validate`, never a key already taken.
+- Much lighter while music plays: a lyric line goes to the bar once (with its karaoke timing) instead of the
+  whole state 30 times a second, and Islet's clock runs every frame only while something of Islet's shows it
+  moving. With Islet in the DMS bar: Islet ~12% → under 1% CPU, DMS ~12% → ~7%.
+- **Shelf: paste** — Ctrl+V in the Shelf tab, its paste button, or `islet shelf paste`. Copied files go on
+  as they are; a copied picture or text is saved to `~/.local/share/islet/shelf` first.
+
+### Fixed
+- The cookie clock's hands turned about a point below the centre (the bottom of their round end, not its middle).
+- The DMS bar pill's lyric looked doubled (the sung copy was bolder, so wider, than the line under it).
+- The Arch package left out the modules and scripts Hari ini, Finder, the Shelf and Settings' buttons need.
+- Ticking a task in a task list whose Status column is a select (not Notion's status type) failed; new
+  tasks there now start as To do.
+- The Notes widget kept the first Notes database it found after you picked another.
+- "Tampilan semua widget Islet" (was "…deskw"); Dank Calendar in the README (was Dux).
+
 ## 1.7.1 — 2026-10-23
 
 ### Added

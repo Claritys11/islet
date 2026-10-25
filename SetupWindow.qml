@@ -408,8 +408,9 @@ FloatingWindow {
                         { icon: "search", text: "Want to change something? Open Settings and type what you're after, like “youtube” or “too fast”." },
                         { icon: "keyboard", text: "Bind keys to 'islet notch', 'islet toggle' or 'islet settings' — the README has examples for niri and Hyprland." },
                         { icon: "update", text: "Islet tells you when there's an update; one click installs it." },
-                        { icon: "event_note", text: "School timetable and tasks in Notion? Settings → Calendar & Notion shows today's lessons and deadlines in the notch and syncs them with Google Calendar." }
-                    ]
+                        { icon: "event_note", text: "School timetable and tasks in Notion? Settings → Calendar & Notion shows today's lessons and deadlines in the notch and syncs them with Google Calendar. No databases yet? 'Make Islet's databases' there builds them for you." },
+                        { icon: "widgets", text: "Settings → DankMaterialShell puts lyrics, to-dos, notes, a timer, a calendar and a clock on your desktop.", dms: true }
+                    ].filter(t => !t.dms || win.hasDms)
                     RowLayout {
                         required property var modelData
                         Layout.fillWidth: true

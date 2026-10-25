@@ -87,9 +87,9 @@ Item {
                 spacing: 6
                 Repeater {
                     model: [
-                        { mode: "focus", text: "Focus" },
-                        { mode: "short", text: "Short" },
-                        { mode: "long", text: "Long" }
+                        { mode: "focus", text: Lang.t("Focus", "Fokus") },
+                        { mode: "short", text: Lang.t("Short", "Pendek") },
+                        { mode: "long", text: Lang.t("Long", "Panjang") }
                     ]
                     Rectangle {
                         required property var modelData
@@ -200,7 +200,7 @@ Item {
                 }
                 Text {
                     leftPadding: 8
-                    text: `${root.pomo.todayCount} session${root.pomo.todayCount === 1 ? "" : "s"} · ${root.pomo.formatShort(root.pomo.todayFocused)} focused today`
+                    text: Lang.t(`${root.pomo.todayCount} session${root.pomo.todayCount === 1 ? "" : "s"} · ${root.pomo.formatShort(root.pomo.todayFocused)} focused today`, `${root.pomo.todayCount} sesi · ${root.pomo.formatShort(root.pomo.todayFocused)} fokus hari ini`)
                     color: Theme.subtext
                     font.family: Theme.font
                     font.pixelSize: 12
@@ -213,7 +213,7 @@ Item {
                 spacing: 4
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: `${root.pomo.format(root.pomo.elapsed)} elapsed  ·  ${root.pomo.formatShort(root.pomo.focused)} focus  ·  ${root.pomo.formatShort(root.pomo.pausedTotal)} paused`
+                    text: Lang.t(`${root.pomo.format(root.pomo.elapsed)} elapsed  ·  ${root.pomo.formatShort(root.pomo.focused)} focus  ·  ${root.pomo.formatShort(root.pomo.pausedTotal)} paused`, `${root.pomo.format(root.pomo.elapsed)} berlalu  ·  ${root.pomo.formatShort(root.pomo.focused)} fokus  ·  ${root.pomo.formatShort(root.pomo.pausedTotal)} jeda`)
                     color: Theme.subtext
                     font.family: Theme.font
                     font.pixelSize: 12

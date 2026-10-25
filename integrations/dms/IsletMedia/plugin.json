@@ -1,13 +1,27 @@
 {
     "id": "isletMedia",
-    "name": "Islet Media",
-    "description": "Islet in your bar: artwork, the lyric being sung with karaoke glow, a visualizer and your focus timer. Click to open Islet's Media, Focus and Checklist.",
-    "version": "1.0.0",
+    "name": "Islet",
+    "description": "Islet in DMS: in your bar the lyric being sung with karaoke glow, a visualizer, your focus timer and today's deadlines; in the dashboard (and the Island) an Islet tab with the Focus timer, Hari ini (lessons, Google events, Notion deadlines), Shelf and Checklist \u2014 each also a card of its own for the overview.",
+    "version": "2.0.0",
     "author": "Claritys11",
-    "type": "widget",
-    "capabilities": ["dankbar-widget", "media", "lyrics"],
-    "component": "./IsletMediaWidget.qml",
+    "type": "composite",
+    "capabilities": [
+        "dankbar-widget",
+        "dash-tab",
+        "media",
+        "lyrics"
+    ],
+    "components": {
+        "widget": "./IsletMediaWidget.qml",
+        "dash": "./IsletTab.qml"
+    },
     "icon": "lyrics",
-    "requires_dms": ">=1.0.0",
-    "permissions": ["settings_read"]
+    "dash": {
+        "title": "Islet",
+        "icon": "lyrics"
+    },
+    "requires_dms": ">=1.7.0",
+    "permissions": [
+        "settings_read"
+    ]
 }

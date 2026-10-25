@@ -12,6 +12,9 @@ import Quickshell.Wayland
 // it takes no input, so clicks pass through for the half minute it runs.
 PanelWindow {
     id: root
+    readonly property SmoothLyrics smooth: SmoothLyrics {
+        active: true
+    }
 
     property string outDir
     property int step: 0

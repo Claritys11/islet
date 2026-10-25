@@ -16,8 +16,8 @@ Item {
     // Shown on screen: load the month's events.
     property bool active: false
 
-    readonly property var monthNames: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
-    readonly property var dayNames: ["MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"]
+    readonly property var monthNames: Lang.months
+    readonly property var dayNames: Lang.days
 
     property int year: new Date().getFullYear()
     property int month: new Date().getMonth()
@@ -77,7 +77,7 @@ Item {
     readonly property var marks: {
         const out = {};
         for (const d of grid) {
-            const c = Agenda.eventsOn(events, d, today, DcalService.calendars).map(e => e.color);
+            const c = Agenda.eventsOn(events, d, today, DcalService.calendars, Lang.code).map(e => e.color);
             if (Agenda.tasksOn(t.tasks, d).length)
                 c.unshift(Theme.primary);
             if (c.length)
@@ -91,11 +91,11 @@ Item {
     }
     // The chosen day: events and deadlines by time, all-day ones first.
     readonly property var dayItems: {
-        const evs = Agenda.eventsOn(events, selected, today, DcalService.calendars).map(e => ({
+        const evs = Agenda.eventsOn(events, selected, today, DcalService.calendars, Lang.code).map(e => ({
             key: e.key,
             kind: e.readOnly ? "classroom" : "event",
             title: e.title,
-            time: e.readOnly && !e.allDay ? `tenggat ${e.time.slice(0, 5)}` : e.time,
+            time: e.readOnly && !e.allDay ? Lang.t(`due ${e.time.slice(0, 5)}`, `tenggat ${e.time.slice(0, 5)}`) : e.time,
             sub: e.calendar.includes("@") ? "Google" : e.calendar,
             until: e.until,
             color: e.color,
@@ -103,7 +103,7 @@ Item {
             past: e.past,
             sortAt: e.start.getTime() - (e.allDay ? 1 : 0)
         }));
-        const tasks = Agenda.tasksOn(t.tasks, selected).map(x => ({
+        const tasks = Agenda.tasksOn(t.tasks, selected, Lang.code).map(x => ({
             key: x.key,
             kind: "task",
             title: x.title,
@@ -175,7 +175,7 @@ Item {
                     Text {
                         id: todayText
                         anchors.centerIn: parent
-                        text: "Hari ini"
+                        text: Lang.t("Today", "Hari ini")
                         color: parent.here ? Theme.subtext : Theme.text
                         font.family: Theme.font
                         font.pixelSize: 11
@@ -199,7 +199,7 @@ Item {
             // Monday first; Sunday in red, as on Indonesian calendars.
             Row {
                 Repeater {
-                    model: ["S", "S", "R", "K", "J", "S", "M"]
+                    model: Lang.id ? ["S", "S", "R", "K", "J", "S", "M"] : ["M", "T", "W", "T", "F", "S", "S"]
                     Text {
                         required property string modelData
                         required property int index
@@ -341,7 +341,13 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     elide: Text.ElideRight
-                    text: root.dayLessons.length ? `${root.dayLessons.length} pelajaran · ${root.dayLessons[0].start.replace(":", ".")}–${root.dayLessons[root.dayLessons.length - 1].end.replace(":", ".")}` : ""
+                    text: {
+                        const l = root.dayLessons;
+                        if (!l.length)
+                            return "";
+                        const span = `${l[0].start}–${l[l.length - 1].end}`;
+                        return Lang.t(`${l.length} lessons · ${span}`, `${l.length} pelajaran · ${span.replace(/:/g, ".")}`);
+                    }
                     color: Theme.subtext
                     font.family: Theme.font
                     font.pixelSize: 12
@@ -371,7 +377,7 @@ Item {
                     }
                     Text {
                         Layout.alignment: Qt.AlignHCenter
-                        text: DcalService.available ? "Tidak ada acara" : "Dank Calendar tidak berjalan"
+                        text: DcalService.available ? Lang.t("No events", "Tidak ada acara") : Lang.t("Dank Calendar isn't running", "Dank Calendar tidak berjalan")
                         color: Theme.subtext
                         font.family: Theme.font
                         font.pixelSize: 12
@@ -441,12 +447,12 @@ Item {
             // ＋ a new event on the chosen day, typed in one line.
             TextField {
                 id: input
-                readonly property var parsed: Agenda.parseEvent(text, root.selected, root.t.o.todayEventMinutes)
+                readonly property var parsed: Agenda.parseEvent(text, root.selected, root.t.o.todayEventMinutes, Lang.code)
                 property bool saving: false
                 property string problem: ""
                 Layout.fillWidth: true
                 enabled: DcalService.available && root.t.targetCalendar !== "" && !saving
-                placeholderText: "＋ Acara baru — mis. Rapat 19.00-20.30"
+                placeholderText: Lang.t("＋ New event — e.g. Meeting 19:00-20:30", "＋ Acara baru — mis. Rapat 19.00-20.30")
                 placeholderTextColor: Theme.subtext
                 color: Theme.text
                 font.family: Theme.font
@@ -477,7 +483,7 @@ Item {
                 Layout.fillWidth: true
                 visible: input.text !== "" || input.problem !== "" || input.saving
                 elide: Text.ElideRight
-                text: input.problem ? input.problem : input.saving ? "Menyimpan…" : input.parsed ? `${input.parsed.label} · Enter untuk simpan` : "Tulis nama acaranya"
+                text: input.problem ? input.problem : input.saving ? Lang.t("Saving…", "Menyimpan…") : input.parsed ? Lang.t(`${input.parsed.label} · Enter to save`, `${input.parsed.label} · Enter untuk simpan`) : Lang.t("Give the event a name", "Tulis nama acaranya")
                 color: input.problem ? Theme.danger : Theme.subtext
                 font.family: Theme.font
                 font.pixelSize: 11

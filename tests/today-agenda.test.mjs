@@ -151,3 +151,15 @@ test("parseEvent: nothing to call it, or only a time, is not an event; a bad hou
     assert.equal(e.title, "Kelas bahas 25.99");
     assert.equal(e.start, new Date(2026, 9, 23, 10, 12).toISOString());
 });
+
+test("eventsOn and parseEvent in English", () => {
+    const [e] = eventsOn([ev("trip", "2026-10-23T13:00:00Z", "2026-10-25T13:00:00Z")], day, noon, cals, "en");
+    assert.equal(e.time, "20:00 →");
+    assert.equal(e.until, "until Sun 20:00");
+    const [mid] = eventsOn([ev("trip", "2026-10-23T13:00:00Z", "2026-10-25T13:00:00Z")], new Date(2026, 9, 24), noon, cals, "en");
+    assert.equal(mid.time, "all day");
+    assert.equal(eventsOn([ev("", "2026-10-23T01:00:00Z", "2026-10-23T02:00:00Z")], day, noon, cals, "en")[0].title, "(untitled)");
+    assert.equal(parseEvent("Meeting 19:00-20:30", day, 60, "en").label, "Fri 23 Oct · 19:00–20:30");
+    assert.equal(parseEvent("Holiday", day, 60, "en").label, "Fri 23 Oct · all day");
+    assert.deepEqual(tasksOn([{ pageId: "a", title: "Essay", done: false, due: "2026-10-23", dueHasTime: false }], day, "en").map(t => t.time), ["due"]);
+});

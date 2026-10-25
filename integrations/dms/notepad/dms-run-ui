@@ -1,0 +1,16 @@
+#!/bin/sh
+# Starts DMS with a patched copy of its UI (the notepad gets Islet's
+# formatting toolbar, see patch-notepad.py) when one was built for this
+# exact /usr/bin/dms; otherwise with DMS's own embedded UI, and
+# dms-ui-build makes the copy for the next start. Installed by
+# `islet dms notepad install`. Opt out without uninstalling:
+#   touch ~/.config/dms/ui-unpatched && systemctl --user restart dms
+here=$(dirname "$(readlink -f "$0")")
+dms=$(command -v dms || echo /usr/bin/dms)
+key=$(sha256sum "$dms" | cut -c1-16)
+dir="${XDG_DATA_HOME:-$HOME/.local/share}/islet-dms-ui/$key"
+if [ ! -e "${XDG_CONFIG_HOME:-$HOME/.config}/dms/ui-unpatched" ] && [ -f "$dir/.ok" ] \
+    && [ -f "$here/../desk/common/FormatBar.qml" ]; then
+    exec "$dms" run --session -c "$dir"
+fi
+exec "$dms" run --session

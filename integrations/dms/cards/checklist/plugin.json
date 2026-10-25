@@ -1,0 +1,29 @@
+{
+    "id": "isletChecklist",
+    "name": "Islet Checklist",
+    "description": "Islet's Checklist (its own or a Notion page): tick, add and remove to-dos.",
+    "version": "1.0.0",
+    "author": "Claritys11",
+    "type": "dashCard",
+    "capabilities": [
+        "dash-card"
+    ],
+    "component": "./IsletChecklistCard.qml",
+    "icon": "checklist",
+    "dash": {
+        "card": {
+            "title": "Checklist",
+            "icon": "checklist",
+            "w": 2,
+            "h": 3,
+            "minW": 2,
+            "minH": 2,
+            "maxW": 6,
+            "maxH": 6
+        }
+    },
+    "requires_dms": ">=1.7.0",
+    "permissions": [
+        "settings_read"
+    ]
+}

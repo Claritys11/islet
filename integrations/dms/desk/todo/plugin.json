@@ -1,0 +1,19 @@
+{
+  "id": "deskwTodo",
+  "name": "To-Do (deskw)",
+  "description": "Your Notion Tasks through islet: tick, add, see due dates.",
+  "version": "1.0.0",
+  "author": "Claritys11",
+  "type": "desktop",
+  "capabilities": [
+    "desktop-widget"
+  ],
+  "component": "./TodoWidget.qml",
+  "icon": "checklist",
+  "requires_dms": ">=1.2.0",
+  "permissions": [
+    "settings_read",
+    "settings_write"
+  ],
+  "settings": "./TodoSettings.qml"
+}

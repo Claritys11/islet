@@ -75,6 +75,9 @@ Singleton {
             // Notch
             notchEnabled: true,
             notchMode: "island",
+            // Words in the notch, the DMS bar pill and Islet's DMS cards:
+            // "en" (English) or "id" (Bahasa Indonesia).
+            language: "en",
             barPillWidth: 300,
             barShowVisualizer: true,
             barShowTimer: true,
@@ -132,6 +135,8 @@ Singleton {
             todayCalendar: "",
             todayTimetableDb: "",
             todayTasksDb: "",
+            // Notion database for the DMS Notes desktop widget ("" = the one titled Notes).
+            notesDb: "",
             todayColumns: "",
             todayDays: 7,
             todayMorningOpen: true,
@@ -279,6 +284,7 @@ Singleton {
 
             property bool notchEnabled: root.defaults.notchEnabled
             property string notchMode: root.defaults.notchMode
+            property string language: root.defaults.language
             property int barPillWidth: root.defaults.barPillWidth
             property bool barShowVisualizer: root.defaults.barShowVisualizer
             property bool barShowTimer: root.defaults.barShowTimer
@@ -330,6 +336,7 @@ Singleton {
             property string todayCalendar: root.defaults.todayCalendar
             property string todayTimetableDb: root.defaults.todayTimetableDb
             property string todayTasksDb: root.defaults.todayTasksDb
+            property string notesDb: root.defaults.notesDb
             property string todayColumns: root.defaults.todayColumns
             property int todayDays: root.defaults.todayDays
             property bool todayMorningOpen: root.defaults.todayMorningOpen

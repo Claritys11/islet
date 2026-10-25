@@ -51,6 +51,8 @@ test("taskFromRow reads dates with and without a time", () => {
 
 test("taskPatch builds Notion property updates", () => {
     assert.deepEqual(taskPatch(tmap, { status: "Done" }), { Status: { status: { name: "Done" } } });
+    // A Status column that's a select (as Islet's Notion template makes it).
+    assert.deepEqual(taskPatch(Object.assign({}, tmap, { statusType: "select" }), { status: "Done" }), { Status: { select: { name: "Done" } } });
     assert.deepEqual(taskPatch(tmap, { gcalId: "ev-1" }), { "GCal ID": { rich_text: [{ type: "text", text: { content: "ev-1" } }] } });
     assert.deepEqual(taskPatch(tmap, { start: "2026-10-22", end: "" }), { "Rencana Mulai": { date: { start: "2026-10-22", end: null } } });
     assert.deepEqual(taskPatch(tmap, { start: "" }), { "Rencana Mulai": { date: null } });

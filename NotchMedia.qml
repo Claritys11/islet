@@ -19,7 +19,7 @@ Item {
     Text {
         anchors.centerIn: parent
         visible: !LyricsService.hasTrack
-        text: "Nothing playing"
+        text: Lang.t("Nothing playing", "Tidak ada yang diputar")
         color: Theme.subtext
         font.family: Theme.font
         font.pixelSize: 15

@@ -1,0 +1,29 @@
+{
+    "id": "isletToday",
+    "name": "Islet Hari ini",
+    "description": "Today's lessons and Google events, close Notion deadlines (tick to mark Done) and a field for a new task, from Islet.",
+    "version": "1.0.0",
+    "author": "Claritys11",
+    "type": "dashCard",
+    "capabilities": [
+        "dash-card"
+    ],
+    "component": "./IsletTodayCard.qml",
+    "icon": "today",
+    "dash": {
+        "card": {
+            "title": "Hari ini",
+            "icon": "today",
+            "w": 4,
+            "h": 3,
+            "minW": 2,
+            "minH": 2,
+            "maxW": 8,
+            "maxH": 6
+        }
+    },
+    "requires_dms": ">=1.7.0",
+    "permissions": [
+        "settings_read"
+    ]
+}

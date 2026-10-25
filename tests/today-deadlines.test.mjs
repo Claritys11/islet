@@ -49,3 +49,14 @@ test("clashes: overlapping items, touching ends don't count", () => {
     ]);
     assert.deepEqual([...c].sort(), ["a", "b"]);
 });
+
+test("labels in English: 24-hour times with a colon", () => {
+    assert.equal(label(new Date("2026-10-21T23:59:00+07:00"), true, now, "en"), "today 23:59");
+    assert.equal(label(new Date("2026-10-21T23:59:59+07:00"), false, now, "en"), "today");
+    assert.equal(label(new Date("2026-10-22T07:00:00+07:00"), true, now, "en"), "tomorrow 07:00");
+    assert.equal(label(new Date("2026-10-23T23:59:59+07:00"), false, now, "en"), "Fri, 2 days");
+    assert.equal(label(new Date("2026-10-20T23:59:59+07:00"), false, now, "en"), "1 day late");
+    assert.equal(label(new Date("2026-10-18T23:59:59+07:00"), false, now, "en"), "3 days late");
+    assert.equal(label(new Date("2026-10-21T00:10:00+07:00"), true, now, "en"), "20 min late");
+    assert.equal(dueSoon([task("t", "2026-10-22")], [], now, 7, "en")[0].label, "tomorrow");
+});

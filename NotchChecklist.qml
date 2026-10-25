@@ -72,7 +72,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 visible: list.count === 0 && root.todo.status === "ready"
-                text: "Nothing to do ✨"
+                text: Lang.t("Nothing to do ✨", "Tidak ada yang perlu dikerjakan ✨")
                 color: Theme.subtext
                 font.family: Theme.font
                 font.pixelSize: 13
@@ -142,7 +142,7 @@ Item {
             id: input
             Layout.fillWidth: true
             enabled: root.todo.status !== "setup"
-            placeholderText: "Add a task…"
+            placeholderText: Lang.t("Add a task…", "Tambah tugas…")
             placeholderTextColor: Theme.subtext
             color: Theme.text
             font.family: Theme.font

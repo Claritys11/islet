@@ -28,7 +28,7 @@ Item {
     }
     function ago(ms) {
         const m = Math.round((t.now - ms) / 60000);
-        return m < 1 ? "baru saja" : `${m} mnt lalu`;
+        return m < 1 ? Lang.t("just now", "baru saja") : Lang.t(`${m} min ago`, `${m} mnt lalu`);
     }
 
     // Not set up (or Today turned off): one clear next step.
@@ -48,14 +48,14 @@ Item {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
-            text: !t.o.todayEnabled ? "Jadwal & tugas is off." : t.error || "Connect your Notion timetable and tasks."
+            text: !t.o.todayEnabled ? Lang.t("Lessons & tasks are off.", "Jadwal & tugas mati.") : t.error || Lang.t("Connect your Notion timetable and tasks.", "Sambungkan jadwal dan tugas Notion-mu.")
             color: Theme.text
             font.family: Theme.font
             font.pixelSize: 13
         }
         Button {
             Layout.alignment: Qt.AlignHCenter
-            text: "Open settings"
+            text: Lang.t("Open settings", "Buka pengaturan")
             onClicked: root.openSettings()
         }
     }
@@ -78,18 +78,18 @@ Item {
             Text {
                 Layout.fillWidth: true
                 elide: Text.ElideRight
-                text: !t.o.todaySync ? "Sinkron Google Calendar mati"
-                    : t.syncStatus === "waiting" ? `Sinkron pertama menunggu konfirmasi · ${t.previewText}`
+                text: !t.o.todaySync ? Lang.t("Google Calendar sync is off", "Sinkron Google Calendar mati")
+                    : t.syncStatus === "waiting" ? Lang.t(`First sync waits for you · ${t.previewText}`, `Sinkron pertama menunggu konfirmasi · ${t.previewText}`)
                     : t.syncStatus === "error" || t.syncStatus === "held" ? t.syncError
-                    : t.syncStatus === "syncing" ? "Menyinkronkan…"
-                    : t.lastSync ? `Tersinkron ${root.ago(t.lastSync)}` : ""
+                    : t.syncStatus === "syncing" ? Lang.t("Syncing…", "Menyinkronkan…")
+                    : t.lastSync ? Lang.t(`Synced ${root.ago(t.lastSync)}`, `Tersinkron ${root.ago(t.lastSync)}`) : ""
                 color: t.syncStatus === "error" || t.syncStatus === "held" ? Theme.danger : Theme.subtext
                 font.family: Theme.font
                 font.pixelSize: 11
             }
             Button {
                 visible: t.syncStatus === "waiting"
-                text: "Lihat dan konfirmasi"
+                text: Lang.t("Review and confirm", "Lihat dan konfirmasi")
                 font.pixelSize: 11
                 onClicked: root.openSettings()
             }
@@ -125,13 +125,13 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         elide: Text.ElideRight
-                        text: `Tabrakan: ${conflict.modelData.title} — dipakai versi Google`
+                        text: Lang.t(`Clash: ${conflict.modelData.title} — Google's version kept`, `Tabrakan: ${conflict.modelData.title} — dipakai versi Google`)
                         color: Theme.text
                         font.family: Theme.font
                         font.pixelSize: 12
                     }
                     Button {
-                        text: "Pakai versi Notion"
+                        text: Lang.t("Use Notion's version", "Pakai versi Notion")
                         font.pixelSize: 11
                         onClicked: t.useOther(t.conflicts.length - Math.min(2, t.conflicts.length) + conflict.index)
                     }
@@ -152,7 +152,7 @@ Item {
                 spacing: 4
                 RowLayout {
                     Text {
-                        text: `JADWAL · ${["MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"][new Date(t.now).getDay()]}`
+                        text: `${Lang.t("SCHEDULE", "JADWAL")} · ${(Lang.id ? ["MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"] : ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"])[new Date(t.now).getDay()]}`
                         color: Theme.subtext
                         font.family: Theme.font
                         font.pixelSize: 11
@@ -162,7 +162,7 @@ Item {
                         Layout.fillWidth: true
                     }
                     Text {
-                        text: t.scheduleToday.length ? `${t.scheduleToday.filter(l => !l.past).length} sisa` : ""
+                        text: t.scheduleToday.length ? Lang.t(`${t.scheduleToday.filter(l => !l.past).length} left`, `${t.scheduleToday.filter(l => !l.past).length} sisa`) : ""
                         color: Theme.subtext
                         font.family: Theme.font
                         font.pixelSize: 11
@@ -178,7 +178,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         visible: parent.count === 0
-                        text: "Tidak ada jadwal hari ini"
+                        text: Lang.t("Nothing on today", "Tidak ada jadwal hari ini")
                         color: Theme.subtext
                         font.family: Theme.font
                         font.pixelSize: 12
@@ -224,17 +224,17 @@ Item {
                             }
                             Chip {
                                 visible: lesson.modelData.clash
-                                text: "bentrok"
+                                text: Lang.t("clash", "bentrok")
                                 tint: Theme.danger
                             }
                             Chip {
                                 visible: lesson.modelData.until !== "" && !lesson.modelData.now
-                                text: lesson.modelData.until.replace(/ \d\d\.\d\d$/, "")
+                                text: lesson.modelData.until.replace(/ \d\d[.:]\d\d$/, "")
                                 tint: Theme.subtext
                             }
                             Chip {
                                 visible: lesson.modelData.now
-                                text: "sekarang"
+                                text: Lang.t("now", "sekarang")
                                 tint: Theme.primary
                                 filled: true
                             }
@@ -251,7 +251,7 @@ Item {
                 spacing: 4
                 RowLayout {
                     Text {
-                        text: "TENGGAT DEKAT"
+                        text: Lang.t("DUE SOON", "TENGGAT DEKAT")
                         color: Theme.subtext
                         font.family: Theme.font
                         font.pixelSize: 11
@@ -277,7 +277,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         visible: parent.count === 0
-                        text: "Tidak ada tenggat dekat ✨"
+                        text: Lang.t("Nothing due soon ✨", "Tidak ada tenggat dekat ✨")
                         color: Theme.subtext
                         font.family: Theme.font
                         font.pixelSize: 12
@@ -336,7 +336,7 @@ Item {
                             }
                             Chip {
                                 visible: due.modelData.clash
-                                text: "bentrok"
+                                text: Lang.t("clash", "bentrok")
                                 tint: Theme.danger
                             }
                             Chip {
@@ -353,7 +353,7 @@ Item {
             id: input
             Layout.fillWidth: true
             enabled: t.tasksDb !== ""
-            placeholderText: "＋ Tugas baru — Enter menyimpannya di Notion"
+            placeholderText: Lang.t("＋ New task — Enter saves it to Notion", "＋ Tugas baru — Enter menyimpannya di Notion")
             placeholderTextColor: Theme.subtext
             color: Theme.text
             font.family: Theme.font

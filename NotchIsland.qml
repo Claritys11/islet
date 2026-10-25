@@ -30,15 +30,22 @@ Item {
     readonly property var soon: o.todayEnabled ? TodayService.soon : null
     readonly property bool showSoon: soon !== null
     readonly property bool showDue: o.todayEnabled && !hasMusic && !hasTimer && !showSoon && TodayService.dueToday > 0
-    readonly property string todayText: showSoon ? `${soon.title} · mulai ${Math.max(1, Math.ceil((soon.startAt - TodayService.now) / 60000))} mnt lagi`
-        : showDue ? (TodayService.dueToday === 1 ? `${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.title ?? ""} · ${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.label ?? ""}` : `${TodayService.dueToday} tenggat hari ini`) : ""
+    readonly property string todayText: showSoon ? Lang.startsIn(soon.title, soon.startAt, TodayService.now)
+        : showDue ? (TodayService.dueToday === 1 ? `${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.title ?? ""} · ${TodayService.deadlines.find(d => d.urgency === "today" || d.urgency === "overdue")?.label ?? ""}` : Lang.dueToday(TodayService.dueToday)) : ""
     // Nothing playing and no timer: the weather keeps the pill company.
     readonly property bool showWeather: !hasMusic && !hasTimer && !showSoon && !showDue && o.weatherEnabled && WeatherService.ready
     readonly property bool idle: !hasMusic && !hasTimer && !showWeather && !showSoon && !showDue
     readonly property bool island: o.notchShape === "island" || barMode
     // "bar": no pill of its own — a bar widget (e.g. in DankMaterialShell)
     // shows the activities and opens the island as a dropdown.
-    readonly property bool barMode: o.notchMode === "bar"
+    // "dms": Islet's notch is the Islet tab of DankMaterialShell's dashboard
+    // (inside DMS's Island when it has one); opening the notch opens that.
+    // This window still shows Finder and the away visualizer.
+    readonly property bool dmsMode: o.notchMode === "dms"
+    readonly property bool barMode: o.notchMode === "bar" || dmsMode
+    function dmsDash(how) {
+        Quickshell.execDetached(["dms", "ipc", "call", "dash", how, "plugin_isletMedia"]);
+    }
     readonly property string pillText: {
         const l = LyricsService.lines[LyricsService.currentIndex];
         if (o.notchPillText === "lyrics" && LyricsService.status === "ready" && LyricsService.synced && l && !l.interlude)
@@ -90,6 +97,8 @@ Item {
     }
 
     function open(t) {
+        if (dmsMode)
+            return dmsDash("open");
         if (t !== undefined)
             tab = t;
         mode = "open";
@@ -97,6 +106,8 @@ Item {
     }
 
     function toggle() {
+        if (dmsMode && mode !== "find")
+            return dmsDash("toggle");
         mode === "open" || mode === "find" ? close() : open();
     }
 
@@ -104,6 +115,9 @@ Item {
     function summon() {
         if (mode === "find" || (mode === "open" && hotkey))
             return close();
+        // No notch of Islet's own to type into: straight to Finder.
+        if (dmsMode)
+            return find("");
         hotkey = true;
         open();
         Qt.callLater(() => typeCatcher.forceActiveFocus());
@@ -120,7 +134,19 @@ Item {
         mode = mode === "viz" ? "closed" : "viz";
     }
 
-    onHasMusicChanged: CavaService.wanted = hasMusic
+    // The lyric clock runs every frame only while the notch shows it moving:
+    // the floating pill's sliding lyric, the peek's progress bar, the Media
+    // tab. In the DMS bar, the pill there fills the line by itself.
+    readonly property SmoothLyrics smooth: SmoothLyrics {
+        active: win.hasMusic && (win.mode === "peek" || (win.mode === "open" && win.tab === 0) || (win.mode === "closed" && !win.barMode && !win.showSoon))
+    }
+    // The visualizer only where the notch draws one: not for a closed notch
+    // in the DMS bar (the pill there uses DMS's own).
+    Binding {
+        target: CavaService
+        property: "wanted"
+        value: win.hasMusic && (!win.barMode || win.mode !== "closed")
+    }
 
     // Shelved files moved while the shelf wasn't looking: find them as it
     // opens.
@@ -364,7 +390,7 @@ Item {
                 // Deadlines due today, small, while music plays.
                 Text {
                     visible: win.hasMusic && win.o.todayEnabled && TodayService.dueToday > 0
-                    text: `${TodayService.dueToday} tenggat`
+                    text: Lang.due(TodayService.dueToday)
                     color: Theme.danger
                     font.family: Theme.font
                     font.pixelSize: 11
@@ -592,11 +618,11 @@ Item {
                     Repeater {
                         model: [
                             { icon: "music_note", text: "Media" },
-                            { icon: "timer", text: "Focus" },
+                            { icon: "timer", text: Lang.t("Focus", "Fokus") },
                             { icon: "checklist", text: "Checklist" },
                             { icon: "inventory_2", text: "Shelf" },
-                            { icon: "today", text: "Hari ini" },
-                            { icon: "calendar_month", text: "Kalender" }
+                            { icon: "today", text: Lang.t("Today", "Hari ini") },
+                            { icon: "calendar_month", text: Lang.t("Calendar", "Kalender") }
                         ]
                         Rectangle {
                             id: tabButton
@@ -728,6 +754,13 @@ Item {
                     win.find(event.text);
                     event.accepted = true;
                 }
+            }
+
+            // Ctrl+V on the Shelf parks what you copied.
+            Shortcut {
+                sequences: [StandardKey.Paste]
+                enabled: win.mode === "open" && win.tab === 3
+                onActivated: ShelfService.paste()
             }
 
             // ← → go through the tabs (not while typing in a field).

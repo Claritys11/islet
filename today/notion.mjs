@@ -131,12 +131,14 @@ export function taskFromRow(row, map) {
 const richText = s => [{ type: "text", text: { content: s } }];
 
 // Notion `properties` for the given changes; unset fields are left alone.
+// `map.statusType` is "select" when the Status column is a select rather
+// than Notion's status type.
 export function taskPatch(map, fields) {
     const out = {};
     if (fields.title !== undefined && map.title)
         out[map.title] = { title: richText(fields.title) };
     if (fields.status !== undefined && map.status)
-        out[map.status] = { status: { name: fields.status } };
+        out[map.status] = map.statusType === "select" ? { select: { name: fields.status } } : { status: { name: fields.status } };
     if (fields.start !== undefined && map.start)
         out[map.start] = { date: fields.start ? { start: fields.start, end: fields.end || null } : null };
     if (fields.gcalId !== undefined && map.gcal)
