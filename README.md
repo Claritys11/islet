@@ -324,11 +324,11 @@ islet dms widgets            # links and enables them; then DMS Settings → Des
 | **To-Do** | Today's Notion tasks: tick, add with **+**, 🗑 twice to move one to Notion's trash |
 | **Notes** | Your Notion *Notes* database with its formatting; ↗ opens the Notion app if it's running. **+** writes a note with a toolbar and Notion's shortcuts (Ctrl+B/I/U/E/K, Ctrl+Shift+1–6…); drafts are DMS Notepad's own tabs, so they show in both until you send one with Ctrl+Enter |
 | **Pomodoro** | Islet's focus timer with modes, ring, play/pause, reset, skip |
-| **Calendar** | The month with dots on days with Dux Calendar events, and the chosen day's list |
+| **Calendar** | The month with dots on days with Dank Calendar events, and the chosen day's list |
 | **Clock** | A wavy cookie clock with the date |
 | **GitHub** | A year of contributions from your public calendar (set your name in its settings) |
 
-Any widget's settings → **Tampilan semua widget deskw** switches all of them between **Solid** and
+Any widget's settings → **Tampilan semua widget Islet** switches all of them between **Solid** and
 **Glass** (see-through with the desktop blurred behind it — needs a compositor with background blur:
 niri, KDE, Hyprland), with its opacity and a hairline border.
 

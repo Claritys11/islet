@@ -27,7 +27,7 @@ Column {
     StyledText {
         width: parent.width
         topPadding: Theme.spacingM
-        text: "Tampilan semua widget deskw"
+        text: "Tampilan semua widget Islet"
         font.pixelSize: Theme.fontSizeLarge
         font.weight: Theme.fontWeightMedium
         color: Theme.surfaceText

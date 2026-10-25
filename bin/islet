@@ -252,6 +252,8 @@ print(changed)
 PY
         }
         desk="${src%/IsletMedia}/desk"
+        dmsconf="${XDG_CONFIG_HOME:-$HOME/.config}/DankMaterialShell"
+        dmssession="${XDG_STATE_HOME:-$HOME/.local/state}/dms/session.json"
         widgets="clock calendar lyrics todo pomodoro notes github"
         id_of() { echo "deskw$(echo "$1" | cut -c1 | tr a-z A-Z)$(echo "$1" | cut -c2-)"; }
         case "${2:-install}" in
@@ -264,10 +266,30 @@ PY
                         dms ipc call plugin-scan scan >/dev/null 2>&1
                         sleep 1
                         for w in $widgets; do dms ipc call plugins enable "$(id_of "$w")" >/dev/null 2>&1; done
-                        echo "Installed 7 desktop widgets. Put them on the desktop from DMS Settings → Desktop Widgets."
-                        echo "Glass look: any widget's settings → \"Tampilan semua widget deskw\"."
-                        echo "They need Islet running; Notes and To-Do need Today set up with Notion (islet setup)." ;;
+                        # Onto the desktop, laid out away from Islet's lyrics on the
+                        # screen edge (GitHub waits for a user name). DMS keeps its
+                        # widgets' places in memory, so it's stopped while they're
+                        # written: the bar is gone for a few seconds, once.
+                        side=both
+                        if [ "$(call islet get lyricsEnabled 2>/dev/null)" = true ]; then
+                            case "$(call islet get side 2>/dev/null)" in right) side=left ;; left) side=right ;; esac
+                        fi
+                        if grep -q '"deskwPomodoro"' "$dmsconf/settings.json" 2>/dev/null &&
+                            grep -q '"deskwClock"' "$dmsconf/settings.json" && grep -q '"deskwNotes"' "$dmsconf/settings.json"; then
+                            : # already on the desktop
+                        elif systemctl --user is-active -q dms; then
+                            systemctl --user stop dms
+                            python3 -I "$desk/place.py" install "$dmsconf/settings.json" "$dmssession" "$side" ||
+                                echo "Couldn't place them; add them in DMS Settings → Desktop Widgets." >&2
+                            systemctl --user start dms
+                        else
+                            echo "DMS doesn't run as the dms systemd service: add them in DMS Settings → Desktop Widgets." >&2
+                        fi
+                        echo "Installed 7 desktop widgets and put 6 on the desktop (GitHub: add it in DMS Settings → Desktop Widgets)."
+                        echo "Move them in DMS's widget edit mode; glass or solid: any widget's settings → \"Tampilan semua widget Islet\"."
+                        echo "They need Islet running; Notes and To-Do need Notion set up (islet settings → Calendar & Notion)." ;;
                     uninstall)
+                        [ -f "$dmsconf/settings.json" ] && python3 -I "$desk/place.py" uninstall "$dmsconf/settings.json" "$dmssession"
                         for w in $widgets; do
                             dms ipc call plugins disable "$(id_of "$w")" >/dev/null 2>&1
                             [ -L "$plugins/deskw-$w" ] && rm -f "$plugins/deskw-$w"
