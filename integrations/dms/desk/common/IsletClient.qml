@@ -7,8 +7,9 @@ import "slices.mjs" as Slices
 // One connection to islet's socket ($XDG_RUNTIME_DIR/islet.sock) shared by
 // every deskw desktop widget: the latest state, fire-and-forget commands,
 // and request/reply calls (notes, calendar). While islet isn't there it
-// tries again after 5 s, then waits twice as long each time up to 30 s, so
-// the journal doesn't get a "ConnectionRefused" every 5 s (review M5).
+// tries again after 2 s, then waits twice as long each time up to 8 s: soon
+// back after Islet restarts (an update, `islet dms`), without a
+// "ConnectionRefused" in the journal every second while it's gone (M5).
 Singleton {
     id: root
 
@@ -126,7 +127,7 @@ Singleton {
         }
         onConnectedChanged: {
             if (connected) {
-                root._retry = 5000;
+                root._retry = 2000;
                 return;
             }
             root._clear();
@@ -135,7 +136,7 @@ Singleton {
         }
     }
 
-    property int _retry: 5000
+    property int _retry: 2000
 
     // Reconnect while islet is away, waiting longer each time.
     Timer {
@@ -144,7 +145,7 @@ Singleton {
         running: !socket.connected
         onTriggered: {
             socket.connected = true;
-            root._retry = Math.min(root._retry * 2, 30000);
+            root._retry = Math.min(root._retry * 2, 8000);
         }
     }
 

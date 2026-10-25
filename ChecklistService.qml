@@ -116,30 +116,15 @@ Singleton {
         tokenWriter.running = true;
     }
 
+    // Through NotionDbService: the same secret, time-out and retries.
     function notion(method, path, body, cb) {
-        const xhr = new XMLHttpRequest();
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState !== XMLHttpRequest.DONE)
-                return;
-            let res = null;
-            try {
-                res = JSON.parse(xhr.responseText);
-            } catch (e) {}
-            const ok = xhr.status >= 200 && xhr.status < 300;
+        NotionDbService.request(method, path, body, (ok, res) => {
             if (!ok) {
                 status = "error";
-                error = xhr.status === 0 ? "Can't reach Notion — are you offline?"
-                    : xhr.status === 401 ? "Notion rejected the token. Check it in Settings."
-                    : xhr.status === 404 ? "Page not found. In Notion, open the page → ••• → Connections → add your integration."
-                    : `Notion error ${xhr.status}: ${res?.message ?? ""}`;
+                error = res;
             }
-            cb(ok, res);
-        };
-        xhr.open(method, `https://api.notion.com/v1/${path}`);
-        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-        xhr.setRequestHeader("Notion-Version", "2022-06-28");
-        xhr.setRequestHeader("Content-Type", "application/json");
-        xhr.send(body ? JSON.stringify(body) : null);
+            cb(ok, ok ? res : null);
+        });
     }
 
     onUseNotionChanged: refresh()

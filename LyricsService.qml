@@ -571,7 +571,7 @@ Singleton {
             last = tag.lastIndex;
         }
         text += body.slice(last);
-        const len = Math.max(text.trimEnd().length, 1);
+        const len = Math.max(text.replace(/\s+$/, "").length, 1);
         const words = marks.map(k => ({ time: k.time, frac: Math.min(1, k.at / len) }));
         if (words[words.length - 1].frac < 1)
             words.push({ time: words[words.length - 1].time + 0.4, frac: 1 });

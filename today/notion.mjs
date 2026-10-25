@@ -145,3 +145,17 @@ export function taskPatch(map, fields) {
         out[map.gcal] = { rich_text: fields.gcalId ? richText(fields.gcalId) : [] };
     return out;
 }
+
+// Whether a request may be sent again when its connection dropped before an
+// answer (Notion closes idle HTTP/2 connections; the next request on one
+// fails): reads, and changes that end the same however often they're made.
+// A new page or appended blocks are not: twice would mean two of them.
+export function retryable(method, path) {
+    if (method === "GET" || method === "DELETE")
+        return true;
+    if (method === "PATCH")
+        return !/\/children$/.test(path);
+    if (method === "POST")
+        return path === "search" || /\/query$/.test(path);
+    return false;
+}

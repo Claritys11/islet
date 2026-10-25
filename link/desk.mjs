@@ -216,7 +216,7 @@ function block(type, text, extra = {}) {
 // One line of a note: its indent level (two spaces or a tab each) and the
 // block it makes.
 function lineBlock(line) {
-    const body = line.trimStart();
+    const body = line.replace(/^\s+/, "");
     let m;
     if ((m = body.match(/^(#{1,3})\s+(.*)$/)))
         return block(`heading_${m[1].length}`, m[2]);
@@ -256,7 +256,7 @@ export function markdownToBlocks(md) {
     const parents = [];
     const rest = lines.slice(first + 1);
     for (let n = 0; n < rest.length; n++) {
-        const line = rest[n].trimEnd();
+        const line = rest[n].replace(/\s+$/, "");
         if (line.trim() === "")
             continue;
         let b;

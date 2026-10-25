@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import "today/notion.mjs" as Notion
 
 // Notion databases for "Today" (the timetable and the task list), with the
 // integration secret the Checklist already keeps. Callbacks get
@@ -41,6 +42,7 @@ Singleton {
             return;
         }
         const xhr = new XMLHttpRequest();
+        let timedOut = false;
         xhr.onreadystatechange = () => {
             if (xhr.readyState !== XMLHttpRequest.DONE)
                 return;
@@ -48,6 +50,13 @@ Singleton {
             try {
                 res = JSON.parse(xhr.responseText);
             } catch (e) {}
+            // No answer and not our time-out: most often a connection Notion
+            // had closed while idle. Once more on a fresh one, when doing it
+            // again can't do it twice.
+            if (xhr.status === 0 && !timedOut && (attempt ?? 0) < 1 && Notion.retryable(method, path)) {
+                waitComponent.createObject(root, { interval: 400, then: () => request(method, path, body, cb, (attempt ?? 0) + 1) });
+                return;
+            }
             if (xhr.status === 429 && (attempt ?? 0) < 3) {
                 const wait = Math.max(1, parseFloat(xhr.getResponseHeader("Retry-After")) || 1) * 1000;
                 waitComponent.createObject(root, { interval: wait, then: () => request(method, path, body, cb, (attempt ?? 0) + 1) });
@@ -58,8 +67,10 @@ Singleton {
         };
         // No answer in 30 s: give up (abort ends it as a network failure).
         waitComponent.createObject(root, { interval: 30000, then: () => {
-                if (xhr.readyState !== XMLHttpRequest.DONE)
+                if (xhr.readyState !== XMLHttpRequest.DONE) {
+                    timedOut = true;
                     xhr.abort();
+                }
             } });
         xhr.open(method, `https://api.notion.com/v1/${path}`);
         xhr.setRequestHeader("Authorization", `Bearer ${token()}`);

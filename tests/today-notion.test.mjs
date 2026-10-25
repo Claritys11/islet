@@ -66,3 +66,19 @@ test("Hari is normalised, and a row without a weekday is a problem", () => {
     row.properties.Hari.select = null;
     assert.ok(lessonFromRow(row, lmap, {}).error);
 });
+
+import { retryable } from "../today/notion.mjs";
+
+test("retryable: what can be sent again after a dropped connection without doing it twice", () => {
+    // Reads, and changes that end the same however often they're made.
+    assert.equal(retryable("GET", "pages/abc"), true);
+    assert.equal(retryable("POST", "search"), true);
+    assert.equal(retryable("POST", "databases/abc/query"), true);
+    assert.equal(retryable("PATCH", "pages/abc"), true);
+    assert.equal(retryable("PATCH", "blocks/abc"), true);
+    assert.equal(retryable("DELETE", "blocks/abc"), true);
+    // A new page, or blocks added: twice would mean two.
+    assert.equal(retryable("POST", "pages"), false);
+    assert.equal(retryable("POST", "databases"), false);
+    assert.equal(retryable("PATCH", "blocks/abc/children"), false);
+});
