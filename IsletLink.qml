@@ -3,12 +3,18 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "link/desk.mjs" as Desk
+import "link/fill.mjs" as Fill
 
 // Lets other shells show Islet: a Unix socket at $XDG_RUNTIME_DIR/islet.sock
 // streams Islet's state as JSON lines and accepts commands back. The
 // DankMaterialShell bar widget (integrations/dms) uses it.
 //
-//   → {"v":1,"hasTrack":true,"title":…,"line":…,"progress":0.42,"timer":{…},…}
+//   → {"v":1,"hasTrack":true,"title":…,"line":…,"fill":{keys,clock},"timer":{…},…}
+//     A line is sent when it changes, not as it's sung: "fill" has the line's
+//     karaoke keys ([[time, fill]…]) and the lyric clock's anchor {t, at,
+//     playing, rate} (link/fill.mjs: fillAt(keys, clockAt(clock, now))). The
+//     state goes out only when something in it changes (a few times a second
+//     at most), and the anchor only when a client's clock would be 80 ms off.
 //   ← {"cmd":"toggle","tab":"media","x":812,"y":44,"width":300}
 //   ← {"cmd":"play-pause"} | {"cmd":"next"} | {"cmd":"previous"}
 //   ← {"cmd":"volume","steps":1}  (the playing app's volume, ±5% a step)
@@ -53,9 +59,8 @@ Singleton {
             art: ArtCache.local,
             playing: L.isPlaying,
             line: singing ? l.main : "",
-            progress: singing ? Math.round(L.progress * 1000) / 1000 : 0,
+            fill: singing ? { keys: root.fillKeys, clock: root.anchor() } : null,
             source: L.source,
-            viz: CavaService.small.map(v => Math.round(v * 100) / 100),
             timer: P.active ? { clock: P.clock, mode: P.mode, running: P.running, paused: P.paused, pausedFor: P.paused ? P.format(P.pausedFor) : "", progress: Math.round(P.progress * 1000) / 1000 } : null,
             bar: { width: o.barPillWidth, text: o.notchPillText, viz: o.barShowVisualizer, timer: o.barShowTimer, accent: Theme.primary.toString() },
             weather: o.weatherEnabled && WeatherService.ready ? { temp: WeatherService.tempText, icon: WeatherService.icon, text: WeatherService.description } : null,
@@ -72,6 +77,18 @@ Singleton {
     }
 
     // Worked out only when their inputs change, not on every 33 ms tick.
+    // The line's fill keys, rounded (they go into every state message).
+    readonly property var fillKeys: LyricsService.lineKeys.map(k => [Math.round(k[0] * 1000) / 1000, Math.round(k[1] * 1000) / 1000])
+    // The lyric clock as the clients last got it; renewed only when theirs
+    // would be off.
+    property var _anchor: null
+    function anchor() {
+        const L = LyricsService, t = L.timeNow(), now = Date.now();
+        if (Fill.needsAnchor(_anchor, t, L.isPlaying, 1, now))
+            _anchor = { t: Math.round(t * 1000) / 1000, at: now, playing: L.isPlaying, rate: 1 };
+        return _anchor;
+    }
+
     readonly property var lyricsView: Object.assign(Desk.lyricWindow(LyricsService.lines, LyricsService.currentIndex), { status: LyricsService.status, synced: LyricsService.synced })
     readonly property var tasksView: ({ status: TodayService.status, error: TodayService.error, message: TodayService.message, items: Desk.openTasks(TodayService.tasks) })
 
@@ -175,20 +192,26 @@ Singleton {
         }
     }
 
-    // Fast while something moves (lyrics, timer), slow when idle.
+    // Sent when something changed: checked a few times a second, and at once
+    // when the line or play state does.
     Timer {
         running: root.hasClients
         repeat: true
-        interval: LyricsService.isPlaying || PomodoroService.running ? 33 : 1000
+        interval: LyricsService.isPlaying || PomodoroService.running ? 250 : 1000
         onTriggered: root.broadcast(false)
     }
-
-    // The visualizer only runs while someone shows it.
-    Binding {
-        target: CavaService
-        property: "wanted"
-        value: true
-        when: root.hasClients && Config.opts.barShowVisualizer
+    Connections {
+        target: LyricsService
+        enabled: root.hasClients
+        function onCurrentIndexChanged() {
+            Qt.callLater(() => root.broadcast(false));
+        }
+        function onIsPlayingChanged() {
+            Qt.callLater(() => root.broadcast(false));
+        }
+        function onLinesChanged() {
+            Qt.callLater(() => root.broadcast(false));
+        }
     }
 
     SocketServer {

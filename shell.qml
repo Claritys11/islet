@@ -93,7 +93,7 @@ ShellRoot {
             p?.positionChanged();
             const b = SpicyBridge.sampleFor(LyricsService.spotifyId);
             const bridge = b ? (b.position + (b.playing ? (Date.now() - b.at) / 1000 : 0)).toFixed(2) : "-";
-            return `source ${LyricsService.source}  bridge ${SpicyBridge.connected ? "on" : "off"} ${bridge}  clock ${LyricsService.position.toFixed(2)}  player ${(p?.position ?? -1).toFixed(2)}  playing ${LyricsService.isPlaying}  demo ${LyricsService.demo}  line ${LyricsService.currentIndex}  pace ${LyricsService.pace.toFixed(2)}  fill ${(LyricsService.progress*100).toFixed(0)}%`;
+            return `source ${LyricsService.source}  bridge ${SpicyBridge.connected ? "on" : "off"} ${bridge}  clock ${LyricsService.position.toFixed(2)}  player ${(p?.position ?? -1).toFixed(2)}  playing ${LyricsService.isPlaying}  demo ${LyricsService.demo}  line ${LyricsService.currentIndex}  pace ${LyricsService.pace.toFixed(2)}  fill ${(LyricsService.progress*100).toFixed(0)}%  smooth ${LyricsService.smoothUsers}`;
         }
     }
 
@@ -583,6 +583,10 @@ ShellRoot {
             readonly property bool shown: !shell.hidden && LyricsService.hasTrack
                 && !(o.hideWhenPaused && !LyricsService.isPlaying)
                 && !(o.hideWhenNoLyrics && LyricsService.status !== "ready")
+            // The wheel fills the sung line as it goes.
+            readonly property SmoothLyrics smooth: SmoothLyrics {
+                active: win.shown
+            }
 
             anchors {
                 top: true

@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Services.Mpris
+import "link/fill.mjs" as Fill
 
 // Follows an MPRIS player, fetches lyrics from LRCLIB and tracks the
 // currently sung line and how far into it the singer is.
@@ -104,8 +105,11 @@ Singleton {
         return lo;
     }
 
+    // The current line's fill as keys (link/fill.mjs), worked out once per
+    // line; the DMS bar pill gets them too and fills the line by itself.
+    readonly property var lineKeys: synced && lines[currentIndex] ? Fill.fillKeys(lines[currentIndex], mainDuration(currentIndex)) : []
     // 0 → 1: how much of the current line has been sung.
-    readonly property real progress: synced ? lineProgress(currentIndex, time) : 1
+    readonly property real progress: synced ? Fill.fillAt(lineKeys, time) : 1
 
     function nextTime(i) {
         return lines[i + 1]?.time ?? (length > 0 ? length : (lines[i]?.time ?? 0) + 5);
@@ -154,25 +158,7 @@ Singleton {
     }
 
     function lineProgress(i, t) {
-        const l = lines[i];
-        if (!l)
-            return 0;
-        if (l.syl)
-            return sylProgress(l.syl, t);
-        // Line-synced lyrics that know when the line ends.
-        if (l.end > l.time)
-            return Math.max(0, Math.min(1, (t - l.time) / (l.end - l.time)));
-        if (l.words) {
-            const w = l.words;
-            if (t <= w[0].time)
-                return 0;
-            for (let k = 0; k < w.length - 1; k++) {
-                if (t < w[k + 1].time)
-                    return w[k].frac + (w[k + 1].frac - w[k].frac) * (t - w[k].time) / Math.max(w[k + 1].time - w[k].time, 0.01);
-            }
-            return 1;
-        }
-        return Math.max(0, Math.min(1, (t - l.time) / Math.max(mainDuration(i), 0.1)));
+        return lines[i] ? Fill.fillAt(Fill.fillKeys(lines[i], mainDuration(i)), t) : 0;
     }
 
     // Background vocals usually answer the lead ("I want you (want you)") and
@@ -268,8 +254,30 @@ Singleton {
         }
     }
 
+    // Things drawing the fill as it moves (SmoothLyrics); with none, the
+    // clock needn't run every frame, only wake as the next line starts.
+    property int smoothUsers: 0
+    readonly property bool smooth: smoothUsers > 0 || demo
+
+    // The lyric time now, from the last measurement (whatever `position`
+    // last caught up to).
+    function timeNow() {
+        return (isPlaying && !demo ? _mPos + (Date.now() - _mAt) / 1000 : position) + offset;
+    }
+
+    Timer {
+        running: root.isPlaying && !root.smooth
+        repeat: true
+        // Just after the next line starts (between 50 ms and 1 s away).
+        interval: Math.max(50, Math.min(1000, Math.ceil((root.nextTime(root.currentIndex) - root.time) * 1000) + 15))
+        onTriggered: {
+            root.position = root._mPos + (Date.now() - root._mAt) / 1000;
+            root._frameAt = Date.now();
+        }
+    }
+
     FrameAnimation {
-        running: root.isPlaying
+        running: root.isPlaying && root.smooth
         onTriggered: {
             const now = Date.now();
             // High-refresh monitors would otherwise redo every lyric binding

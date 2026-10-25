@@ -5,6 +5,8 @@ import Quickshell.Widgets
 import qs.Common
 import qs.Widgets
 import qs.Modules.Plugins
+import qs.Services
+import "fill.mjs" as Fill
 
 // Islet in the DankMaterialShell bar. Islet runs separately and streams its
 // state over $XDG_RUNTIME_DIR/islet.sock; this pill only displays it and
@@ -29,6 +31,62 @@ PluginComponent {
     readonly property bool hasDue: !hasTrack && !hasTimer && !hasSoon && due > 0
     readonly property bool hasWeather: linked && !hasTrack && !hasTimer && !hasSoon && !hasDue && !!st.weather
     readonly property bool isLyric: hasTrack && st.line !== "" && st.bar?.text !== "title"
+
+    // The karaoke fill, worked out here from the line's keys and Islet's
+    // clock anchor (link/fill.mjs): Islet sends a line once, not 30 times a
+    // second. 30 times a second while it's sung on screen (not every frame:
+    // on a 180 Hz screen that redraws the whole bar 180 times), and only a
+    // change of about a pixel redraws it, so held syllables cost nothing.
+    property real lyricFill: 0
+    function updateFill() {
+        const f = st?.fill;
+        const p = f ? Fill.fillAt(f.keys, Fill.clockAt(f.clock, Date.now())) : 1;
+        if (p === 1 || p === 0 || Math.abs(p - lyricFill) >= 0.004)
+            lyricFill = p;
+    }
+    onStChanged: updateFill()
+    Timer {
+        running: root.isLyric && !!root.st?.fill?.clock?.playing && root.lyricFill < 1 && root.surfaceLive
+        repeat: true
+        interval: 33
+        onTriggered: root.updateFill()
+    }
+
+    // The visualizer from DMS's own cava (shared with its widgets). Asking
+    // for it is what makes DMS look for cava, so don't wait for cavaAvailable.
+    readonly property bool vizLive: hasTrack && !!st?.playing && (st.bar?.viz ?? true) && surfaceLive
+    property var vizLevels: [0, 0, 0, 0, 0, 0]
+    Loader {
+        active: root.vizLive
+        sourceComponent: Component {
+            Ref {
+                service: CavaService
+            }
+        }
+    }
+    Connections {
+        target: CavaService
+        enabled: root.vizLive
+        function onValuesChanged() {
+            const v = CavaService.values;
+            if (v.length >= 6)
+                root.vizLevels = [0, 1, 2, 3, 4, 5].map(i => v[i] <= 0 ? 0 : v[i] >= 100 ? 1 : Math.sqrt(v[i] * 0.01));
+        }
+    }
+    onVizLiveChanged: if (!vizLive)
+        vizLevels = [0, 0, 0, 0, 0, 0]
+    // Without cava, the gentle stand-in Islet always had: each bar wanders
+    // toward a random target (about 11 steps a second).
+    property var _vizTargets: [0.3, 0.3, 0.3, 0.3, 0.3, 0.3]
+    Timer {
+        running: root.vizLive && CavaService._cavaChecked && !CavaService.cavaAvailable
+        repeat: true
+        interval: 90
+        onTriggered: {
+            root._vizTargets = root._vizTargets.map((t, i) => Math.random() < 0.35 ? Math.max(0.1, Math.min(1, 0.55 - i / 6 * 0.35 + (Math.random() - 0.5) * 0.7)) : t);
+            root.vizLevels = root.vizLevels.map((v, i) => v + (root._vizTargets[i] - v) * 0.45);
+        }
+    }
     // The playing app's volume (%), -1 when it can't be turned; shown in place
     // of the lyric for a moment after scrolling.
     readonly property int volume: hasTrack ? (st.volume ?? -1) : -1
@@ -224,10 +282,7 @@ PluginComponent {
                     clip: true
 
                     readonly property real overflow: Math.max(0, base.implicitWidth - width)
-                    readonly property real progress: root.isLyric ? (root.st?.progress ?? 0) : 1
-                    // No Behaviors in this pill: Islet sends 30 updates a second,
-                    // and an animation restarted on each one would keep the whole
-                    // bar redrawing at the monitor's refresh rate.
+                    readonly property real progress: root.isLyric ? root.lyricFill : 1
                     readonly property real shift: root.isLyric ? overflow * Math.max(0, Math.min(1, (progress - 0.2) / 0.6)) : 0
 
                     StyledText {
@@ -237,6 +292,9 @@ PluginComponent {
                         color: Theme.surfaceText
                         opacity: root.isLyric ? 0.5 : 0.9
                         font.pixelSize: Theme.fontSizeMedium
+                        // The same weight as the sung copy over it: a bolder one
+                        // is wider, and the two read as a doubled line.
+                        font.weight: Font.Medium
                     }
 
                     Item {
@@ -270,13 +328,12 @@ PluginComponent {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
                     Repeater {
-                        // A count, not the array: each update would rebuild the bars.
-                        model: root.st?.viz?.length ?? 0
+                        model: 6
                         Rectangle {
                             required property int index
                             anchors.verticalCenter: parent.verticalCenter
                             width: 3
-                            height: Math.max(3, (root.st?.viz?.[index] ?? 0) * root.widgetThickness * 0.5)
+                            height: Math.max(3, (root.vizLevels[index] ?? 0) * root.widgetThickness * 0.5)
                             radius: 1.5
                             color: Theme.primary
                         }

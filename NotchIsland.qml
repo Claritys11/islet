@@ -120,7 +120,19 @@ Item {
         mode = mode === "viz" ? "closed" : "viz";
     }
 
-    onHasMusicChanged: CavaService.wanted = hasMusic
+    // The lyric clock runs every frame only while the notch shows it moving:
+    // the floating pill's sliding lyric, the peek's progress bar, the Media
+    // tab. In the DMS bar, the pill there fills the line by itself.
+    readonly property SmoothLyrics smooth: SmoothLyrics {
+        active: win.hasMusic && (win.mode === "peek" || (win.mode === "open" && win.tab === 0) || (win.mode === "closed" && !win.barMode && !win.showSoon))
+    }
+    // The visualizer only where the notch draws one: not for a closed notch
+    // in the DMS bar (the pill there uses DMS's own).
+    Binding {
+        target: CavaService
+        property: "wanted"
+        value: win.hasMusic && (!win.barMode || win.mode !== "closed")
+    }
 
     // Shelved files moved while the shelf wasn't looking: find them as it
     // opens.
