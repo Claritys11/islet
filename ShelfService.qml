@@ -38,6 +38,36 @@ Singleton {
 
     readonly property string locate: decodeURIComponent(String(Qt.resolvedUrl("shelf/locate.sh")).replace(/^file:\/\//, ""))
 
+    // ── Paste ─────────────────────────────────────────────────────
+    // Copied files go on the shelf as they are; a copied picture or text is
+    // saved here first (it has no file of its own).
+    readonly property string pasteDir: `${Quickshell.env("XDG_DATA_HOME") || Quickshell.env("HOME") + "/.local/share"}/islet/shelf`
+    // "" | a word on what the last paste did, for a moment.
+    property string pasteNote: ""
+
+    function paste() {
+        if (!pasting.running)
+            pasting.running = true;
+    }
+    Process {
+        id: pasting
+        command: [decodeURIComponent(String(Qt.resolvedUrl("shelf/paste.sh")).replace(/^file:\/\//, "")), root.pasteDir]
+        stdout: StdioCollector {
+            id: pasted
+        }
+        onExited: code => {
+            const paths = code === 0 ? pasted.text.split("\n").filter(l => l.startsWith("/")) : [];
+            const n = paths.length ? root.add(paths) : 0;
+            root.pasteNote = code !== 0 ? "Nothing to paste — copy a file, picture or text first" : n === 0 ? "Already on the shelf" : n === 1 ? "Pasted" : `Pasted ${n} files`;
+            noteTimer.restart();
+        }
+    }
+    Timer {
+        id: noteTimer
+        interval: 2500
+        onTriggered: root.pasteNote = ""
+    }
+
     Process {
         id: info
         stdout: SplitParser {

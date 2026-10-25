@@ -22,7 +22,7 @@ Usage: islet <command>
        --reindex | --print text | --open text | --copy text | --status | --bind
   today [status|list|add text|preview|confirm|sync|reload]
                                   Today's lessons and deadlines (Notion ⇄ Google Calendar)
-  shelf [FILE…|clear]             Put files on the notch's shelf; without files, list it
+  shelf [FILE…|paste|clear]       Put files on the notch's shelf (paste: what you copied); without files, list it
   share [copy|save]               A picture of the song and lyric playing now, to copy or save
   todo [text]                     Add a task, or list tasks without text
   dms [install|uninstall|status]  Islet in the DankMaterialShell bar instead of DMS's media widget
@@ -139,6 +139,7 @@ case "$1" in
         case "${1:-}" in
             "") call shelf list ;;
             clear) call shelf clear ;;
+            paste) call shelf paste ;;
             *) for f; do call shelf add "$(realpath -- "$f")"; done ;;
         esac ;;
     find)

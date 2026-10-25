@@ -730,6 +730,13 @@ Item {
                 }
             }
 
+            // Ctrl+V on the Shelf parks what you copied.
+            Shortcut {
+                sequences: [StandardKey.Paste]
+                enabled: win.mode === "open" && win.tab === 3
+                onActivated: ShelfService.paste()
+            }
+
             // ← → go through the tabs (not while typing in a field).
             Shortcut {
                 sequence: "Left"

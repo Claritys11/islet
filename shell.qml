@@ -203,6 +203,11 @@ ShellRoot {
         function clear(): void {
             ShelfService.clear();
         }
+        // What's on the clipboard, onto the shelf (opens it to show).
+        function paste(): void {
+            ShelfService.paste();
+            shell.notch?.open(shell.tabs.indexOf("shelf"));
+        }
     }
 
     // Share card for the song playing now.

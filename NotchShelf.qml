@@ -1,9 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Shelf tab: files parked on the notch. Drop files anywhere on the island to
-// add them; drag a tile out to drop the file into another app; click to
-// open it.
+// Shelf tab: files parked on the notch. Drop files anywhere on the island,
+// or paste what you copied (Ctrl+V, or the paste button), to add them; drag
+// a tile out to drop the file into another app; click to open it.
 Item {
     id: root
 
@@ -23,17 +23,50 @@ Item {
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "Drop files here to keep them close"
+            text: ShelfService.pasteNote || "Drop files here to keep them close"
             color: Theme.text
             font.family: Theme.font
             font.pixelSize: 14
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "Drag them out again into any app. The files stay where they are."
+            text: "…or copy them and press Ctrl+V. Drag them out again into any app."
             color: Theme.subtext
             font.family: Theme.font
             font.pixelSize: 12
+        }
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            implicitWidth: pasteRow.implicitWidth + 24
+            implicitHeight: 32
+            radius: 16
+            color: pasteMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.06)
+            Row {
+                id: pasteRow
+                anchors.centerIn: parent
+                spacing: 6
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "content_paste"
+                    color: Theme.primary
+                    font.family: Theme.iconFont
+                    font.pixelSize: 17
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Paste"
+                    color: Theme.text
+                    font.family: Theme.font
+                    font.pixelSize: 13
+                }
+            }
+            MouseArea {
+                id: pasteMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: ShelfService.paste()
+            }
         }
     }
 
@@ -46,10 +79,16 @@ Item {
             Layout.fillWidth: true
             Text {
                 Layout.fillWidth: true
-                text: `${root.items.length} file${root.items.length === 1 ? "" : "s"} · drag one out, or click to open`
-                color: Theme.subtext
+                text: ShelfService.pasteNote || `${root.items.length} file${root.items.length === 1 ? "" : "s"} · drag one out, or click to open`
+                color: ShelfService.pasteNote ? Theme.primary : Theme.subtext
                 font.family: Theme.font
                 font.pixelSize: 12
+            }
+            NotchIconButton {
+                icon: "content_paste"
+                size: 26
+                tint: Theme.subtext
+                onClicked: ShelfService.paste()
             }
             NotchIconButton {
                 icon: "delete_sweep"
