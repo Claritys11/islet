@@ -132,6 +132,8 @@ Singleton {
             todayCalendar: "",
             todayTimetableDb: "",
             todayTasksDb: "",
+            // Notion database for the DMS Notes desktop widget ("" = the one titled Notes).
+            notesDb: "",
             todayColumns: "",
             todayDays: 7,
             todayMorningOpen: true,
@@ -330,6 +332,7 @@ Singleton {
             property string todayCalendar: root.defaults.todayCalendar
             property string todayTimetableDb: root.defaults.todayTimetableDb
             property string todayTasksDb: root.defaults.todayTasksDb
+            property string notesDb: root.defaults.notesDb
             property string todayColumns: root.defaults.todayColumns
             property int todayDays: root.defaults.todayDays
             property bool todayMorningOpen: root.defaults.todayMorningOpen

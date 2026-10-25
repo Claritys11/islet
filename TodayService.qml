@@ -225,11 +225,35 @@ Singleton {
         });
     }
 
+    // A task thrown away from the desktop To-Do: into Notion's trash (30
+    // days to restore it there), off the list at once, back if Notion
+    // refuses. The next sync takes its calendar event away too.
+    function remove(pageId, cb) {
+        const done = cb ?? (() => {});
+        const before = tasks;
+        if (!before.some(t => t.pageId === pageId))
+            return done(false, "task not found");
+        tasks = tasks.filter(t => t.pageId !== pageId);
+        NotionDbService.trash(pageId, (ok, err) => {
+            if (!ok) {
+                tasks = before;
+                flash(err);
+                return done(false, err);
+            }
+            done(true, "");
+            changed();
+        });
+    }
+
     // A new task (Tipe: Sekolah), optionally with a due date (YYYY-MM-DD).
-    function add(text, due) {
+    // `cb(ok, error)` is optional (the desktop To-Do widget waits for it).
+    function add(text, due, cb) {
         text = text.trim();
-        if (text === "" || tasksDb === "")
-            return;
+        const done = cb ?? (() => {});
+        if (text === "")
+            return done(false, "empty task");
+        if (tasksDb === "")
+            return done(false, "No Notion task list set up in islet (Today).");
         const m = tasksMap;
         const props = {};
         props[m.title] = { title: [{ type: "text", text: { content: text } }] };
@@ -238,8 +262,11 @@ Singleton {
         if (due && m.due)
             props[m.due] = { date: { start: due } };
         NotionDbService.create(tasksDb, props, (ok, res) => {
-            if (!ok)
-                return flash(res);
+            if (!ok) {
+                flash(res);
+                return done(false, res);
+            }
+            done(true, "");
             loadTasks(() => changed());
         });
     }

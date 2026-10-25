@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Socket for desktop widgets** (`$XDG_RUNTIME_DIR/islet.sock`, protocol v1, additive): the state line now
+  also carries `lyrics` (a few synced lines around the sung one), `tasks` (Today's Notion tasks) and
+  `pomodoro`. New commands `task-done` and `timer-*`; new requests answered only to the asking client —
+  `notes-list`, `note-get`, `note-create`, `calendar-month`, `task-add`, `task-delete`. The token stays in Islet.
+- **Notes** (`NotesService`): your Notion Notes database (found by its title) — list, read with any depth
+  of children (paged past Notion's 100 blocks), and create from Markdown: headings, lists with sub-items,
+  to-dos (`[ ]` and `- [ ]`), quotes, code fences, `---`, bold/italic/strikethrough/underline/code and links.
+- Tasks can be deleted (into Notion's trash) from a socket client.
+
 ## 1.7.1 — 2026-10-23
 
 ### Added
