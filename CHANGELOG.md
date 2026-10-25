@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.8.0 — 2026-10-25
 
 ### Added
 - **Socket for desktop widgets** (`$XDG_RUNTIME_DIR/islet.sock`, protocol v1, additive): the state line now
@@ -16,6 +16,21 @@
   Notes drafts are DMS Notepad's tabs; a formatting toolbar with Notion's shortcuts.
 - **DMS notepad toolbar** (`islet dms notepad`): the same toolbar in DMS's own notepad, through a patched
   copy of DMS's UI that rebuilds itself after DMS updates and falls back to DMS's own when it can't.
+- `islet dms widgets` **puts six of them on the desktop**, laid out in two columns on the side away from
+  Islet's lyrics (GitHub waits for a user name); uninstall takes them away again.
+- **Settings → DankMaterialShell**: the bar pill, the desktop widgets and the notepad toolbar, each with
+  whether it's set up and one button.
+- **Islet's Notion template** — *Settings → Calendar & Notion → Make Islet's databases*: an Islet page with
+  Mata Pelajaran, Jadwal Pelajaran, Tasks and Notes, linked, plus a Checklist page, in a page you shared;
+  Islet starts using whichever of them you didn't have yet. The Notes database can be picked there too.
+- **Shelf: paste** — Ctrl+V in the Shelf tab, its paste button, or `islet shelf paste`. Copied files go on
+  as they are; a copied picture or text is saved to `~/.local/share/islet/shelf` first.
+
+### Fixed
+- Ticking a task in a task list whose Status column is a select (not Notion's status type) failed; new
+  tasks there now start as To do.
+- The Notes widget kept the first Notes database it found after you picked another.
+- "Tampilan semua widget Islet" (was "…deskw"); Dank Calendar in the README (was Dux).
 
 ## 1.7.1 — 2026-10-23
 

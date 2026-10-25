@@ -19,7 +19,8 @@ command -v qs && qs --version                   # need: Quickshell 0.2 or newer
   - Fedora: `sudo dnf copr enable errornointernet/quickshell && sudo dnf install quickshell`
   - NixOS: add `pkgs.quickshell` to the configuration
   - Others: see https://quickshell.org
-- Optional: `cava` (real audio visualizer in the notch).
+- Optional: `cava` (real audio visualizer in the notch), `wl-clipboard` (paste onto the Shelf), `python3`
+  (the DankMaterialShell setup below).
 
 ## 2. Install
 
@@ -98,6 +99,13 @@ floating notch, run `islet dms` (it replaces DMS's media widget; a backup of DMS
 check `islet dms status` shows the plugin as `loaded`. If DMS reports the plugin failed to load after an
 Islet update, `systemctl --user restart dms` clears DMS's QML cache.
 
+Desktop widgets (Lyrics, To-Do, Notes, Pomodoro, Calendar, Clock; GitHub on request): ask first, then
+`islet dms widgets` — it puts six on the desktop, laid out away from Islet's lyrics, and **stops DMS for a
+few seconds** to do it (DMS must run as the `dms` systemd user service). Check with
+`islet dms widgets status` and `dms ipc call desktopWidget list`. The same buttons are in
+*Settings → DankMaterialShell*, with the optional notepad toolbar (`islet dms notepad`, which makes DMS run
+from a patched copy of its UI — only if the user wants it).
+
 ## 6b. Optional: lessons and deadlines (Notion ⇄ Google Calendar)
 
 Needs the Checklist's Notion integration (see README) shared with the page holding the timetable and
@@ -105,6 +113,10 @@ task databases, and Dank Calendar (`dcal`) signed in to Google. Check with `isle
 `dcal: ok` and `notion: ok`). The first sync waits for the user: show them `islet today preview` and let
 **them** confirm (`islet today confirm`, or Settings → Calendar & Notion) — it writes to their Google
 Calendar and fills a GCal ID column in Notion.
+
+No timetable or task database yet? Point them to *Settings → Calendar & Notion → Make Islet's databases*:
+it builds Islet's template (subjects, timetable, tasks, notes, a checklist page) in a Notion page they shared
+with the integration and switches Islet to it. It writes to their Notion, so **they** press the button.
 
 ## 7. Optional: configure
 
