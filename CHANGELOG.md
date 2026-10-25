@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.8.2 — 2026-10-25
+
+### Fixed
+- **Notes → Send to Notion** failed with "Property 'trimEnd' of object is not a function": QML's JavaScript lacks
+  some newer built-ins. Replaced, and a test now fails on any of them in Islet's code.
+- "Can't reach Notion — are you offline?" now and then: Notion closes idle connections and the next request
+  failed on one. Requests that can safely be repeated (reads, changes, deletes — not new pages or notes) are
+  sent once more on a fresh connection. The Checklist too.
+- DMS widgets said "islet isn't running" for up to 30 s after Islet restarted; they reconnect in about 2 s now.
+
 ## 1.8.1 — 2026-10-25
 
 ### Fixed
