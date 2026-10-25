@@ -436,6 +436,13 @@ PY
         git -C "$dir" rev-parse --git-dir >/dev/null 2>&1 ||
             { echo "Islet at $dir isn't a git checkout; update it with your package manager." >&2; exit 1; }
         git -C "$dir" fetch --quiet --tags || { echo "Couldn't reach GitHub — check your connection." >&2; exit 1; }
+        # A branch that follows nothing on GitHub (a development branch) would
+        # look up to date forever: say so, and how to get back to releases.
+        if ! git -C "$dir" rev-parse --verify --quiet @{u} >/dev/null 2>&1; then
+            echo "Islet at $dir is on branch '$(git -C "$dir" branch --show-current)', which doesn't follow GitHub, so it can't update." >&2
+            echo "Releases are on main: git -C $dir switch main && islet update" >&2
+            exit 1
+        fi
         behind="$(git -C "$dir" rev-list --count HEAD..@{u} 2>/dev/null || echo 0)"
         current="$(git -C "$dir" describe --tags --always 2>/dev/null)"
         if [ "$behind" = 0 ]; then
