@@ -51,6 +51,7 @@ FloatingWindow {
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
         { icon: "event_note", title: "Calendar & Notion", subtitle: "Lessons, deadlines, Google sync", keys: ["todayEnabled", "todaySync", "todaySyncLessons", "todayCalendar", "todayTimetableDb", "todayTasksDb", "todayColumns", "todayDays", "todayMorningOpen", "todayMorningSeconds", "todayNudges", "todayEventMinutes", "todaySemesterEnd", "todaySyncMinutes"] },
         { icon: "search", title: "Finder", subtitle: "Find files and folders", keys: ["finderRoots", "finderExclude", "finderHidden", "finderFileManager", "finderTerminal", "finderEditor", "finderReindexMinutes"] },
+        { icon: "widgets", title: "DankMaterialShell", subtitle: "Bar, desktop widgets, notepad", keys: [] },
         { icon: "info", title: "About", subtitle: "Updates, files, shortcuts", keys: ["checkUpdates"] }
     ]
 
@@ -100,6 +101,8 @@ FloatingWindow {
         { words: "wrong lyrics version different song live remix", title: "Wrong lyrics for this song", answer: "Pick another version from LRCLIB for the song playing now.", key: "lyricsSource" },
         { words: "bar dms dankmaterialshell panel widget top media", title: "Put Islet in the DankMaterialShell bar", answer: "Choose 'In the DMS bar', then 'Set up DMS bar widget'.", key: "notchMode" },
         { words: "floating island notch top pill", title: "Floating island instead of the bar", answer: "Choose 'Floating island'.", key: "notchMode" },
+        { words: "desktop widget widgets dms clock jam calendar kalender notes catatan todo pomodoro github glass end4 wallpaper", title: "Widgets on the desktop", answer: "On the DankMaterialShell page: 'Put them on the desktop' adds Lyrics, To-Do, Notes, Pomodoro, Calendar and a clock, laid out for you.", action: "page:DankMaterialShell" },
+        { words: "notepad toolbar bold format markdown dms", title: "Formatting toolbar in DMS's notepad", answer: "On the DankMaterialShell page: 'Add the toolbar'.", action: "page:DankMaterialShell" },
         { words: "close closes closing stay open shut leave pin drag drop", title: "The notch closes too soon", answer: "Pin it with 📌, use the Shelf tab, or close it later.", key: "notchCloseDelay" },
         { words: "shelf file files drag drop keep park", title: "File shelf", answer: "Drag files onto the notch or the Islet pill in your bar; drag them out into any app. Open it with the Shelf tab." },
         { words: "share picture image photo instagram story card screenshot", title: "Share the song as a picture", answer: "The ⬆ button in the notch's Media tab (or 'islet share') makes a card to copy or save." },
@@ -130,7 +133,7 @@ FloatingWindow {
             const hay = `${g.words} ${g.title}`.toLowerCase();
             const n = words.reduce((a, w) => a + hit(hay, w), 0);
             if (n > 0)
-                out.push({ score: n * 3 + 1, title: g.title, answer: g.answer, key: g.key ?? "", action: g.action ?? "", where: g.key ? pageTitleOf(g.key) : "" });
+                out.push({ score: n * 3 + 1, title: g.title, answer: g.answer, key: g.key ?? "", action: g.action ?? "", where: g.key ? pageTitleOf(g.key) : (g.action ?? "").startsWith("page:") ? g.action.slice(5) : "" });
         }
         for (const key in rows) {
             const r = rows[key];
@@ -190,6 +193,8 @@ FloatingWindow {
         searchField.text = "";
         if (r.action === "setup")
             setupRequested();
+        else if (r.action.startsWith("page:"))
+            page = Math.max(0, pages.findIndex(p => p.title === r.action.slice(5)));
         else if (r.key !== "")
             jumpTo(r.key);
     }
@@ -207,6 +212,112 @@ FloatingWindow {
         font.hintingPreference: Font.PreferNoHinting
         font.variableAxes: ({ FILL: 0, GRAD: 0, opsz: 24, wght: 400 })
         color: win.subtext
+    }
+
+    // A DankMaterialShell part Islet sets up with `islet dms …`: whether it's
+    // in, and a button to put it in or take it out.
+    component DmsPart: ColumnLayout {
+        id: part
+        property var statusArgs: []
+        property var installArgs: []
+        property var uninstallArgs: []
+        // The status command's output → is it set up?
+        property var isIn: out => false
+        property string inText: "Set up"
+        property string outText: "Not set up"
+        property string installText: "Set up"
+        property string uninstallText: "Remove"
+        // Said before a step that briefly takes DMS away.
+        property string warn: ""
+        property bool on: false
+        property bool known: false
+        property string said: ""
+        readonly property string islet: decodeURIComponent(String(Qt.resolvedUrl("bin/islet")).replace(/^file:\/\//, ""))
+        function refresh() {
+            if (!statusProc.running)
+                statusProc.running = true;
+        }
+        function run(args) {
+            said = "";
+            actProc.command = ["sh", islet].concat(args);
+            actProc.running = true;
+        }
+        Layout.fillWidth: true
+        spacing: 6
+        Component.onCompleted: refresh()
+        Connections {
+            target: win
+            function onPageChanged() {
+                part.refresh();
+            }
+        }
+        Process {
+            id: statusProc
+            command: ["sh", part.islet].concat(part.statusArgs)
+            stdout: StdioCollector {
+                id: statusOut
+            }
+            onExited: {
+                part.on = part.isIn(statusOut.text);
+                part.known = true;
+            }
+        }
+        Process {
+            id: actProc
+            stdout: StdioCollector {
+                id: actOut
+            }
+            stderr: StdioCollector {
+                id: actErr
+            }
+            onExited: code => {
+                part.said = (code === 0 ? actOut.text : actErr.text || actOut.text).trim().split("\n")[0] ?? "";
+                part.refresh();
+            }
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+            Label {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: !part.known ? "…" : part.on ? "● " + part.inText : "○ " + part.outText
+                color: part.on ? "#a5d6a7" : win.subtext
+                font.family: win.font
+                font.pixelSize: 12
+            }
+            Button {
+                visible: part.known && part.on && part.uninstallArgs.length > 0
+                text: part.uninstallText
+                flat: true
+                enabled: !actProc.running
+                onClicked: part.run(part.uninstallArgs)
+            }
+            Button {
+                visible: part.known && !part.on
+                text: actProc.running ? "Working…" : part.installText
+                enabled: !actProc.running
+                onClicked: part.run(part.installArgs)
+            }
+        }
+        Label {
+            Layout.fillWidth: true
+            visible: part.warn !== "" && part.known && !part.on
+            wrapMode: Text.WordWrap
+            text: part.warn
+            color: win.subtext
+            font.family: win.font
+            font.pixelSize: 11
+        }
+        Label {
+            Layout.fillWidth: true
+            visible: part.said !== ""
+            wrapMode: Text.WordWrap
+            text: part.said
+            color: win.subtext
+            font.family: win.font
+            font.pixelSize: 11
+        }
     }
 
     component Card: Rectangle {
@@ -2267,6 +2378,68 @@ FloatingWindow {
                             label: "Editor (Ctrl+E)"
                             hint: `Empty: ${FinderService.apps.editor || "none found"}`
                             placeholder: "code"
+                        }
+                    }
+                }
+
+                // ── DankMaterialShell ─────────────────────────────
+                Page {
+                    id: dmsPage
+                    readonly property bool hasDms: dmsCheck.found
+                    Process {
+                        id: dmsCheck
+                        property bool found: true
+                        running: true
+                        command: ["sh", "-c", "command -v dms"]
+                        onExited: code => found = code === 0
+                    }
+                    Card {
+                        visible: !dmsPage.hasDms
+                        title: "DankMaterialShell isn't installed"
+                        hint: "These parts need DankMaterialShell (dms). Everything else in Islet works without it."
+                    }
+                    Card {
+                        visible: dmsPage.hasDms
+                        title: "Islet in the bar"
+                        hint: "Islet's pill in place of DMS's media widget: the line being sung, your timer and today's deadlines. Click it to drop the notch down, scroll on it to turn the music's volume, drop files on it for the Shelf."
+                        DmsPart {
+                            statusArgs: ["dms", "status"]
+                            installArgs: ["dms", "install"]
+                            uninstallArgs: ["dms", "uninstall"]
+                            isIn: out => /bar: Islet Media is in the bar/.test(out)
+                            inText: "In the bar"
+                            outText: "Not in the bar"
+                            installText: "Put it in the bar"
+                        }
+                    }
+                    Card {
+                        visible: dmsPage.hasDms
+                        title: "Desktop widgets"
+                        hint: "Lyrics, To-Do, Notes, Pomodoro, Calendar and a clock on your wallpaper, laid out on the side away from the lyrics (move them in DMS's widget edit mode). A GitHub contributions widget waits in DMS Settings → Desktop Widgets. Solid or glass: any widget's settings → Tampilan semua widget Islet. To-Do and Notes use Notion (Calendar & Notion page)."
+                        DmsPart {
+                            statusArgs: ["dms", "widgets", "status"]
+                            installArgs: ["dms", "widgets", "install"]
+                            uninstallArgs: ["dms", "widgets", "uninstall"]
+                            isIn: out => /deskwNotes: installed/.test(out)
+                            inText: "On the desktop"
+                            outText: "Not on the desktop"
+                            installText: "Put them on the desktop"
+                            warn: "Your bar disappears for a few seconds while DMS takes them in."
+                        }
+                    }
+                    Card {
+                        visible: dmsPage.hasDms
+                        title: "Notepad toolbar"
+                        hint: "The Notes widget's formatting bar (bold, headings, lists; Ctrl+B, Ctrl+Shift+1…) in DMS's own notepad. DMS then runs from a patched copy of its interface, rebuilt by itself after DMS updates, and its own whenever the patch doesn't fit."
+                        DmsPart {
+                            statusArgs: ["dms", "notepad", "status"]
+                            installArgs: ["dms", "notepad", "install"]
+                            uninstallArgs: ["dms", "notepad", "uninstall"]
+                            isIn: out => /notepad toolbar: installed/.test(out)
+                            inText: "Added"
+                            outText: "DMS's own notepad"
+                            installText: "Add the toolbar"
+                            warn: "DMS restarts once (a few seconds without the bar)."
                         }
                     }
                 }
