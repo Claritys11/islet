@@ -140,6 +140,7 @@ Singleton {
             const props = id => (dbs.find(d => d.id === id) ?? {}).properties ?? {};
             timetableMap = Object.assign(Notion.mapColumns("timetable", props(timetableDb)), cols.timetable ?? {});
             tasksMap = Object.assign(Notion.mapColumns("tasks", props(tasksDb)), cols.tasks ?? {});
+            tasksMap.statusType = props(tasksDb)[tasksMap.status]?.type ?? "status";
             let left = 2;
             const done = () => {
                 if (--left > 0)
@@ -259,6 +260,9 @@ Singleton {
         props[m.title] = { title: [{ type: "text", text: { content: text } }] };
         if (m.type)
             props[m.type] = { select: { name: "Sekolah" } };
+        // A select has no default the way Notion's status type has.
+        if (m.status && m.statusType === "select")
+            props[m.status] = { select: { name: statusName("to_do") } };
         if (due && m.due)
             props[m.due] = { date: { start: due } };
         NotionDbService.create(tasksDb, props, (ok, res) => {

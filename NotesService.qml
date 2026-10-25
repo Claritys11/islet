@@ -29,14 +29,15 @@ Singleton {
     }
 
     // Find (once) the database, then run `then`.
+    // Found again when Config notesDb changes (Islet's template sets it).
     function ready(then, fail) {
-        if (root.db)
+        const want = Config.opts.notesDb ?? "";
+        const plain = s => s.replace(/-/g, "");
+        if (root.db && (want === "" || plain(root.db.id) === plain(want)))
             return then();
         NotionDbService.listDatabases((ok, dbs) => {
             if (!ok)
                 return fail(dbs);
-            const want = Config.opts.notesDb ?? "";
-            const plain = s => s.replace(/-/g, "");
             const title = d => (d.title ?? []).map(t => t.plain_text).join("").trim();
             const found = want !== ""
                 ? dbs.find(d => plain(d.id) === plain(want))

@@ -49,7 +49,7 @@ FloatingWindow {
         { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose", "notchCloseDelay", "vizMode", "vizIdleSeconds", "weatherEnabled", "weatherCity", "weatherUnit"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes", "breakTips"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
-        { icon: "event_note", title: "Calendar & Notion", subtitle: "Lessons, deadlines, Google sync", keys: ["todayEnabled", "todaySync", "todaySyncLessons", "todayCalendar", "todayTimetableDb", "todayTasksDb", "todayColumns", "todayDays", "todayMorningOpen", "todayMorningSeconds", "todayNudges", "todayEventMinutes", "todaySemesterEnd", "todaySyncMinutes"] },
+        { icon: "event_note", title: "Calendar & Notion", subtitle: "Lessons, deadlines, Google sync", keys: ["todayEnabled", "todaySync", "todaySyncLessons", "todayCalendar", "todayTimetableDb", "todayTasksDb", "notesDb", "todayColumns", "todayDays", "todayMorningOpen", "todayMorningSeconds", "todayNudges", "todayEventMinutes", "todaySemesterEnd", "todaySyncMinutes"] },
         { icon: "search", title: "Finder", subtitle: "Find files and folders", keys: ["finderRoots", "finderExclude", "finderHidden", "finderFileManager", "finderTerminal", "finderEditor", "finderReindexMinutes"] },
         { icon: "widgets", title: "DankMaterialShell", subtitle: "Bar, desktop widgets, notepad", keys: [] },
         { icon: "info", title: "About", subtitle: "Updates, files, shortcuts", keys: ["checkUpdates"] }
@@ -88,6 +88,7 @@ FloatingWindow {
     // Questions people actually ask, with the answer and where to go.
     readonly property var guides: [
         { words: "google calendar kalender gcal sync sinkron", title: "Sync with Google Calendar", answer: "Islet uses Dank Calendar, which is already signed in to Google. Check the preview on the Calendar & Notion page and press Confirm once.", key: "todaySync" },
+        { words: "notion template templat database databases bikin buat create setup new baru teman friend", title: "Make the Notion databases for me", answer: "On the Calendar & Notion page: 'Make Islet's databases' builds a timetable, task list, notes and checklist in a page you shared, and Islet uses them.", action: "page:Calendar & Notion" },
         { words: "notion jadwal pelajaran timetable schedule lesson kelas", title: "Lessons from your Notion timetable", answer: "Islet finds your timetable database by itself; pick another one on the Calendar & Notion page if it chose wrong.", key: "todayTimetableDb" },
         { words: "tugas task deadline tenggat due homework pr", title: "Deadlines from Notion", answer: "Tasks that aren't Done and are due within a few days show in the notch's Hari ini tab. Tick one to mark it Done in Notion.", key: "todayDays" },
         { words: "pagi morning remind reminder pengingat lupa", title: "Don't forget to check", answer: "The notch opens to Hari ini at your first activity each morning, and you get a nudge before a deadline.", key: "todayMorningOpen" },
@@ -2009,6 +2010,75 @@ FloatingWindow {
                             }
                         }
                     }
+                    // Islet's Notion template, made for you in a page you shared.
+                    Card {
+                        id: tplCard
+                        title: "Islet's Notion template"
+                        visible: win.o.todayEnabled && ChecklistService.token !== ""
+                        readonly property bool fresh: TodayService.timetableDb === "" && TodayService.tasksDb === ""
+                        property bool confirming: false
+                        hint: (fresh ? "No timetable or task list yet? " : "Starting over, or setting Islet up for a friend? ")
+                            + "Islet makes them for you: an Islet page with Mata Pelajaran, Jadwal Pelajaran (your week), Tasks (deadlines) and Notes, linked to each other, and a Checklist page — the same columns Islet reads. Then Islet uses them. Pick a page you shared with the integration (••• → Connections) to put it in."
+                        onVisibleChanged: if (visible && NotionTemplate.places.length === 0)
+                            NotionTemplate.loadPlaces()
+                        Component.onCompleted: if (visible)
+                            NotionTemplate.loadPlaces()
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            ComboBox {
+                                id: tplPlace
+                                Layout.fillWidth: true
+                                enabled: NotionTemplate.places.length > 0 && NotionTemplate.status !== "working"
+                                model: NotionTemplate.loadingPlaces ? ["Looking for your pages…"] : NotionTemplate.places.length ? NotionTemplate.places.map(p => p.title) : ["No shared pages — share one with the integration"]
+                            }
+                            NotchIconButton {
+                                icon: "refresh"
+                                size: 30
+                                tint: win.subtext
+                                onClicked: NotionTemplate.loadPlaces()
+                            }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Label {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                font.family: win.font
+                                font.pixelSize: 12
+                                color: NotionTemplate.status === "error" ? Theme.danger : NotionTemplate.status === "done" ? "#a5d6a7" : win.subtext
+                                text: NotionTemplate.status === "working" ? `Making it… (${NotionTemplate.step})`
+                                    : NotionTemplate.status === "done" ? (NotionTemplate.took.length === 4 ? "✓ Made, and Islet uses it now. Fill in your subjects and timetable in Notion." : NotionTemplate.took.length ? `✓ Made. Islet now uses its ${NotionTemplate.took.join(", ")}; it keeps your other ones — switch them below if you like.` : "✓ Made. Islet keeps the databases it already uses — switch to the new ones below if you like.")
+                                    : NotionTemplate.status === "error" ? NotionTemplate.error
+                                    : tplCard.confirming ? `Make it in “${NotionTemplate.places[tplPlace.currentIndex]?.title ?? ""}”? ${tplCard.fresh ? "Islet then reads these." : "Islet keeps the databases it uses now; you can switch below."}` : ""
+                            }
+                            Button {
+                                visible: NotionTemplate.status === "done" && NotionTemplate.url !== ""
+                                text: "Open in Notion"
+                                onClicked: Qt.openUrlExternally(NotionTemplate.url)
+                            }
+                            Button {
+                                visible: tplCard.confirming
+                                text: "Cancel"
+                                flat: true
+                                onClicked: tplCard.confirming = false
+                            }
+                            Button {
+                                visible: NotionTemplate.status !== "done"
+                                text: tplCard.confirming ? "Yes, make it" : "Make Islet's databases"
+                                enabled: NotionTemplate.places.length > 0 && NotionTemplate.status !== "working"
+                                onClicked: {
+                                    if (!tplCard.confirming) {
+                                        tplCard.confirming = true;
+                                        return;
+                                    }
+                                    tplCard.confirming = false;
+                                    NotionTemplate.create(NotionTemplate.places[tplPlace.currentIndex].id);
+                                }
+                            }
+                        }
+                    }
                     Card {
                         title: "Notion"
                         visible: win.o.todayEnabled
@@ -2025,14 +2095,15 @@ FloatingWindow {
                         Repeater {
                             model: [
                                 { key: "todayTimetableDb", label: "Timetable", kind: "timetable", picked: TodayService.timetableDb },
-                                { key: "todayTasksDb", label: "Tasks", kind: "tasks", picked: TodayService.tasksDb }
+                                { key: "todayTasksDb", label: "Tasks", kind: "tasks", picked: TodayService.tasksDb },
+                                { key: "notesDb", label: "Notes", kind: "notes", picked: win.o.notesDb || (TodayService.databases.find(d => (d.title ?? []).map(t => t.plain_text).join("").trim().toLowerCase() === "notes")?.id ?? "") }
                             ]
                             Row_ {
                                 id: dbRow
                                 required property var modelData
                                 key: modelData.key
                                 label: modelData.label
-                                hint: `${modelData.kind === "timetable" ? TodayService.allLessons.length + " lessons" : TodayService.tasks.length + " tasks"}${win.o[modelData.key] === "" ? " · found by itself" : ""}`
+                                hint: `${modelData.kind === "timetable" ? TodayService.allLessons.length + " lessons" : modelData.kind === "tasks" ? TodayService.tasks.length + " tasks" : "for the Notes desktop widget"}${win.o[modelData.key] === "" ? " · found by itself" : ""}`
                                 ComboBox {
                                     width: 260
                                     readonly property var dbs: TodayService.databases.map(d => ({ id: d.id, name: (d.title ?? []).map(t => t.plain_text).join("") || "Untitled" }))
