@@ -51,7 +51,7 @@ Singleton {
         error = "";
         url = "";
         step = "Islet page";
-        const req = NotionDbService.request;
+        const req = (method, path, body, cb) => NotionDbService.request(method, path, body, cb);
         req("POST", "pages", Template.homePage(parentPageId), (ok, home) => {
             if (!ok)
                 return fail("Islet page", home);
@@ -76,7 +76,7 @@ Singleton {
     // Short names for the subject list's back-links, the example lesson, the
     // Checklist page; then Islet uses them.
     function linked(homeId, ids) {
-        const req = NotionDbService.request;
+        const req = (method, path, body, cb) => NotionDbService.request(method, path, body, cb);
         step = "links";
         req("GET", `databases/${ids.mapel}`, null, (ok, db) => {
             const renames = ok ? Template.relationRenames(db.properties, ids) : {};
