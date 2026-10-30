@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.9.0 — 2026-10-30
 
 ### Added
 - **A due date for new tasks**, in plain words: "besok", "lusa", "jum 14.00", "5/11", "12 des", "+3",
