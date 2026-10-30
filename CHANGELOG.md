@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.9.1 — 2026-10-30
 
 ### Added
 - **The DMS Focus card, Islet tab and desktop Pomodoro do what the notch's Focus tab does**: ∞ continuous
