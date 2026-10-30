@@ -5,8 +5,8 @@
 ### Added
 - **A due date for new tasks**, in plain words: "besok", "lusa", "jum 14.00", "5/11", "12 des", "+3",
   "jam 23.59". What it reads as shows while you type ("→ Jum 6 Nov"), and it goes into the Notion task's
-  due date column. In the notch's Hari ini, the DMS overview card and Islet tab, and the desktop To-Do
-  (Tab moves to the due field). Hidden when the task list has no due date column.
+  due date column. In the notch's Hari ini, the DMS overview card and Islet tab, and the desktop To-Do.
+  Hidden when the task list has no due date column.
 - **A calendar to pick it on**: the 📅 Tenggat button next to the new-task field (it shows the date
   picked, "Jum 6 Nov 14.00") opens the month where the lists were: click a day, flip months with ‹ › or
   the wheel, take Hari ini / Besok / +1 minggu and a time, or type one ("jum 14.00") on the line under it.
