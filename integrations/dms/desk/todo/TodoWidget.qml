@@ -3,9 +3,12 @@ import Quickshell
 import qs.Common
 import qs.Modules.Plugins
 import "common"
+import "common/due/due.mjs" as Due
+import "common/due"
 
 // end4-pC's To-Do, showing your Notion Tasks through islet: open tasks as
-// coloured pills (due date chip), tick to finish, "+" to add one.
+// coloured pills (due date chip), tick to finish, "+" to add one with an
+// optional due date.
 DesktopPluginComponent {
     id: root
 
@@ -28,38 +31,44 @@ DesktopPluginComponent {
         : root.items.length === 0 ? IsletClient.t("Nothing to do 🎉", "Tidak ada tugas 🎉")
         : root.tasks.message || ""
     property bool adding: false
+    // The calendar for the due date, in the list's place.
+    property bool picking: false
+    // The due date as typed or picked ("6/11 14.00"), "" for none.
+    property string dueText: ""
+    readonly property var dueParsed: Due.parseDue(root.dueText, new Date())
+    onAddingChanged: if (!adding)
+        picking = false
     property bool saving: false
     property string addError: ""
     // The task whose 🗑 was clicked once; a second click deletes it.
     property string confirmDelete: ""
     property string deleting: ""
 
-    function dueLabel(due): string {
-        if (!due)
-            return "";
-        const d = new Date(due.length <= 10 ? due + "T00:00:00" : due);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const day = new Date(d);
-        day.setHours(0, 0, 0, 0);
-        const diff = Math.round((day - today) / 864e5);
-        return diff < 0 ? IsletClient.t("Late", "Terlambat") : diff === 0 ? IsletClient.t("Today", "Hari ini") : diff === 1 ? IsletClient.t("Tomorrow", "Besok") : Qt.formatDate(d, "d MMM");
-    }
+    // The task list has a due date column (older islets don't say: assume so).
+    readonly property bool canDue: root.tasks?.canDue ?? true
 
-    // Keeps the text until islet says Notion has the task (review I2).
+    // Keeps the text until islet says Notion has the task (review I2); a
+    // due date that isn't one stops it there.
     function submit(): void {
         const text = field.text.trim();
         if (text === "" || root.saving)
             return;
+        const due = root.canDue ? root.dueParsed : { due: "" };
+        if (!due) {
+            root.addError = IsletClient.t("The due date isn't a date: try “besok”, “jum 14.00” or “5/11”.", "Tenggatnya bukan tanggal: coba “besok”, “jum 14.00” atau “5/11”.");
+            root.picking = true;
+            return;
+        }
         root.saving = true;
         root.addError = "";
-        requester.request("task-add", { text }, (ok, data, err) => {
+        requester.request("task-add", due.due ? { text, due: due.due } : { text }, (ok, data, err) => {
             root.saving = false;
             if (!ok) {
                 root.addError = err;
                 return;
             }
             field.text = "";
+            root.dueText = "";
             root.adding = false;
         }, 150000);
     }
@@ -119,11 +128,42 @@ DesktopPluginComponent {
                 color: Qt.alpha(Theme.onPrimaryContainer, 0.1)
                 border.color: Theme.primary
                 border.width: 1
+                // Enter, or this, saves the task.
+                Rectangle {
+                    id: addButton
+                    readonly property bool ready: field.text.trim() !== "" && !root.saving
+                    anchors.right: parent.right
+                    anchors.rightMargin: 5
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: addText.implicitWidth + 20
+                    height: 30
+                    radius: 11
+                    opacity: ready ? 1 : 0.4
+                    color: Theme.primary
+                    Text {
+                        id: addText
+                        anchors.centerIn: parent
+                        text: root.saving ? "…" : IsletClient.t("Add", "Tambah")
+                        color: Theme.onPrimary
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.weight: Font.DemiBold
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: addButton.ready
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.submit()
+                    }
+                }
                 TextInput {
                     id: field
-                    anchors.fill: parent
+                    anchors.left: parent.left
+                    anchors.right: addButton.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
                     anchors.leftMargin: 12
-                    anchors.rightMargin: 12
+                    anchors.rightMargin: 8
                     verticalAlignment: TextInput.AlignVCenter
                     color: Theme.onPrimaryContainer
                     font.family: Theme.fontFamily
@@ -131,13 +171,93 @@ DesktopPluginComponent {
                     clip: true
                     readOnly: root.saving
                     onAccepted: root.submit()
-                    Keys.onEscapePressed: root.adding = false
+                    Keys.onEscapePressed: {
+                        if (root.picking)
+                            root.picking = false;
+                        else
+                            root.adding = false;
+                    }
                     Text {
                         visible: !field.text
                         anchors.verticalCenter: parent.verticalCenter
-                        text: root.saving ? IsletClient.t("Saving…", "Menyimpan…") : IsletClient.t("New task, Enter to add", "Tugas baru, Enter untuk menambah")
+                        text: root.saving ? IsletClient.t("Saving…", "Menyimpan…") : IsletClient.t("New task", "Tugas baru")
                         color: Qt.alpha(Theme.onPrimaryContainer, 0.5)
                         font: field.font
+                    }
+                }
+            }
+
+            // 📅 the due date picked, or "Tenggat (opsional)": opens the
+            // calendar in the list's place; × takes the date away.
+            Rectangle {
+                id: dueChip
+                readonly property bool set: root.dueText.trim() !== ""
+                visible: root.adding && root.canDue
+                width: parent.width
+                height: 32
+                radius: 12
+                color: root.picking || set ? Qt.alpha(Theme.primary, dueMouse.containsMouse ? 0.3 : 0.2) : Qt.alpha(Theme.onPrimaryContainer, dueMouse.containsMouse ? 0.12 : 0.06)
+                MouseArea {
+                    id: dueMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.picking = !root.picking
+                }
+                Text {
+                    anchors.left: parent.left
+                    anchors.right: clearDue.left
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    elide: Text.ElideRight
+                    text: "📅  " + (!dueChip.set ? IsletClient.t("Due date (optional)", "Tenggat (opsional)")
+                        : root.dueParsed ? Due.dueChip(root.dueParsed.due, new Date(new Date().setHours(0, 0, 0, 0)), IsletClient.lang).text
+                        : IsletClient.t("Not a date", "Bukan tanggal"))
+                    color: dueChip.set ? (root.dueParsed ? Theme.onPrimaryContainer : Theme.error) : Qt.alpha(Theme.onPrimaryContainer, 0.6)
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                }
+                Text {
+                    id: clearDue
+                    visible: dueChip.set
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "×"
+                    color: Theme.onPrimaryContainer
+                    font.pixelSize: Theme.fontSizeMedium
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -6
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.dueText = ""
+                    }
+                }
+            }
+
+            DuePicker {
+                visible: root.adding && root.picking && root.canDue
+                width: parent.width
+                height: Math.max(140, parent.height - y)
+                value: root.dueText
+                marks: root.items.filter(t => t.due && !t.done).map(t => String(t.due).slice(0, 10))
+                lang: IsletClient.lang
+                textColor: Theme.onPrimaryContainer
+                subColor: Qt.alpha(Theme.onPrimaryContainer, 0.6)
+                accentColor: Theme.primary
+                accentTextColor: Theme.onPrimary
+                hoverColor: Qt.alpha(Theme.onPrimaryContainer, 0.14)
+                tileColor: Qt.alpha(Theme.onPrimaryContainer, 0.06)
+                errorColor: Theme.error
+                fontFamily: Theme.fontFamily
+                fontSize: Theme.fontSizeMedium
+                onChosen: (text, done) => {
+                    root.dueText = text;
+                    root.addError = "";
+                    if (done) {
+                        root.picking = false;
+                        field.forceActiveFocus();
                     }
                 }
             }
@@ -154,6 +274,7 @@ DesktopPluginComponent {
             }
 
             ListView {
+                visible: !(root.adding && root.picking && root.canDue)
                 width: parent.width
                 height: parent.height - y
                 clip: true
@@ -256,7 +377,8 @@ DesktopPluginComponent {
 
                     Rectangle {
                         id: due
-                        readonly property string label: root.dueLabel(pill.modelData.due)
+                        readonly property var chip: Due.dueChip(pill.modelData.due, new Date(), IsletClient.lang)
+                        readonly property string label: chip.text
                         visible: label !== "" && !pill.modelData.done
                         anchors.right: del.left
                         anchors.rightMargin: del.visible ? 6 : 0
@@ -264,12 +386,12 @@ DesktopPluginComponent {
                         width: visible ? dueText.implicitWidth + 14 : 0
                         height: 22
                         radius: 11
-                        color: label === IsletClient.t("Late", "Terlambat") ? Theme.error : Qt.alpha(pill.fg, 0.15)
+                        color: chip.late ? Theme.error : Qt.alpha(pill.fg, 0.15)
                         Text {
                             id: dueText
                             anchors.centerIn: parent
                             text: due.label
-                            color: due.label === IsletClient.t("Late", "Terlambat") ? Theme.onPrimary : pill.fg
+                            color: due.chip.late ? Theme.onError : pill.fg
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSizeSmall - 1
                         }

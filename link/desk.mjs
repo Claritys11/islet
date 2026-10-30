@@ -37,6 +37,13 @@ export function openTasks(tasks, limit = 40) {
         }));
 }
 
+// A due date sent with "task-add": Notion's date ("2026-11-05") or date and
+// time with an offset ("2026-11-05T14:00:00+07:00"); anything else is "".
+export function validDue(due) {
+    const s = String(due ?? "");
+    return /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?(Z|[+-]\d{2}:\d{2}))?$/.test(s) && !isNaN(new Date(s.length === 10 ? s + "T00:00:00" : s)) ? s : "";
+}
+
 // The focus timer as the Pomodoro widget needs it; always present (the old
 // `timer` field stays null while idle, which the bar widget relies on).
 export function pomodoroView(p) {
@@ -62,6 +69,8 @@ export function todayView(t) {
         error: t.error ?? "",
         sync: t.sync ?? "",
         canAdd: !!t.tasksDb,
+        // The task list has a due date column, so new tasks can get one.
+        canDue: !!t.tasksDb && !!t.dueColumn,
         soon: t.soon ? { title: t.soon.title, startAt: t.soon.startAt } : null,
         schedule: (t.schedule ?? []).map(s => ({
             kind: s.kind,

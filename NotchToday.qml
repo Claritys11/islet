@@ -2,16 +2,48 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell
+import "link/desk.mjs" as Desk
+import "integrations/dms/desk/common/due/due.mjs" as Due
+import "integrations/dms/desk/common/due" as Picker
 
-// "Hari ini" tab: today's lessons on the left, close deadlines on the
-// right (tick one to mark it Done in Notion), a field to add a task, and the
-// sync state with Google Calendar.
+// "Hari ini" tab: today's lessons on the left, close deadlines or all open
+// tasks on the right (tick one to mark it Done in Notion), fields to add a
+// task and its due date, and the sync state with Google Calendar.
 Item {
     id: root
 
     readonly property var t: TodayService
-    property alias inputFocused: input.activeFocus
-    property alias draft: input.text
+    readonly property bool inputFocused: input.activeFocus || picker.typing
+    readonly property string draft: input.text + dueText
+    // The right column: close deadlines ("due") or every open task ("all").
+    property string list: "due"
+    readonly property var openTasks: Desk.openTasks(t.tasks, 200).filter(x => !x.done)
+    readonly property bool canDue: t.tasksDb !== "" && !!t.tasksMap.due
+    property string addError: ""
+    // The calendar for the due date, shown where the lists are.
+    property bool picking: false
+    // The due date as typed or picked ("6/11 14.00"), "" for none.
+    property string dueText: ""
+    readonly property var dueParsed: Due.parseDue(dueText, new Date(t.now))
+
+    // A due date that isn't one keeps both fields as they are.
+    function submit() {
+        const text = input.text.trim();
+        if (text === "")
+            return;
+        const due = canDue ? root.dueParsed : { due: "" };
+        if (!due) {
+            addError = Lang.t("The due date isn't a date: try “besok”, “jum 14.00” or “5/11”.", "Tenggatnya bukan tanggal: coba “besok”, “jum 14.00” atau “5/11”.");
+            picking = true;
+            return;
+        }
+        addError = "";
+        picking = false;
+        t.add(text, due.due);
+        input.text = "";
+        dueText = "";
+        input.forceActiveFocus();
+    }
     signal calendarRequested
 
     readonly property color late: Theme.danger
@@ -139,9 +171,37 @@ Item {
             }
         }
 
+        Picker.DuePicker {
+            id: picker
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.picking
+            value: root.dueText
+            marks: root.openTasks.filter(x => x.due).map(x => String(x.due).slice(0, 10))
+            lang: Lang.code
+            textColor: Theme.text
+            subColor: Theme.subtext
+            accentColor: Theme.primary
+            accentTextColor: Theme.onPrimary
+            hoverColor: Qt.rgba(1, 1, 1, 0.08)
+            fontFamily: Theme.font
+            tileColor: Qt.rgba(1, 1, 1, 0.04)
+            errorColor: Theme.danger
+            fontSize: 13
+            onChosen: (text, done) => {
+                root.dueText = text;
+                root.addError = "";
+                if (done) {
+                    root.picking = false;
+                    input.forceActiveFocus();
+                }
+            }
+        }
+
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: !root.picking
             spacing: 16
 
             // ── Lessons and Google events ─────────────────────────
@@ -250,26 +310,36 @@ Item {
                 Layout.preferredWidth: 1
                 spacing: 4
                 RowLayout {
-                    Text {
-                        text: Lang.t("DUE SOON", "TENGGAT DEKAT")
-                        color: Theme.subtext
-                        font.family: Theme.font
-                        font.pixelSize: 11
-                        font.letterSpacing: 0.6
-                    }
-                    Item {
-                        Layout.fillWidth: true
-                    }
-                    Text {
-                        text: t.deadlines.length || ""
-                        color: Theme.subtext
-                        font.family: Theme.font
-                        font.pixelSize: 11
+                    spacing: 12
+                    Repeater {
+                        model: [
+                            { key: "due", text: Lang.t("DUE SOON", "TENGGAT DEKAT"), n: t.deadlines.length },
+                            { key: "all", text: Lang.t("ALL TASKS", "SEMUA TUGAS"), n: root.openTasks.length }
+                        ]
+                        Text {
+                            id: tab
+                            required property var modelData
+                            text: modelData.n ? `${modelData.text} · ${modelData.n}` : modelData.text
+                            color: root.list === modelData.key ? Theme.primary : tabMouse.containsMouse ? Theme.text : Theme.subtext
+                            font.family: Theme.font
+                            font.pixelSize: 11
+                            font.letterSpacing: 0.6
+                            font.weight: root.list === modelData.key ? Font.DemiBold : Font.Normal
+                            MouseArea {
+                                id: tabMouse
+                                anchors.fill: parent
+                                anchors.margins: -4
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.list = tab.modelData.key
+                            }
+                        }
                     }
                 }
                 ListView {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    visible: root.list === "due"
                     clip: true
                     spacing: 2
                     model: t.deadlines
@@ -346,35 +416,177 @@ Item {
                         }
                     }
                 }
+                // Every open Notion task, soonest due first, undated last.
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    visible: root.list === "all"
+                    clip: true
+                    spacing: 2
+                    model: root.openTasks
+                    boundsBehavior: Flickable.StopAtBounds
+                    Text {
+                        anchors.centerIn: parent
+                        visible: parent.count === 0
+                        text: Lang.t("Nothing to do 🎉", "Tidak ada tugas 🎉")
+                        color: Theme.subtext
+                        font.family: Theme.font
+                        font.pixelSize: 12
+                    }
+                    delegate: Rectangle {
+                        id: task
+                        required property var modelData
+                        readonly property var chip: Due.dueChip(modelData.due, new Date(t.now), Lang.code)
+                        width: ListView.view.width
+                        height: 30
+                        radius: 10
+                        color: taskMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
+                        MouseArea {
+                            id: taskMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: t.tick(task.modelData.id, true)
+                        }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 2
+                            anchors.rightMargin: 6
+                            spacing: 8
+                            Rectangle {
+                                width: 3
+                                height: 16
+                                radius: 2
+                                color: root.priorityColor(task.modelData.priority)
+                            }
+                            Rectangle {
+                                width: 16
+                                height: 16
+                                radius: 8
+                                color: "transparent"
+                                border.width: 2
+                                border.color: taskMouse.containsMouse ? Theme.primary : Theme.subtext
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: task.modelData.title
+                                elide: Text.ElideRight
+                                color: Theme.text
+                                font.family: Theme.font
+                                font.pixelSize: 13
+                            }
+                            Chip {
+                                visible: task.chip.text !== ""
+                                text: task.chip.text
+                                tint: task.chip.late ? Theme.danger : Theme.subtext
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        TextField {
-            id: input
+        RowLayout {
             Layout.fillWidth: true
-            enabled: t.tasksDb !== ""
-            placeholderText: Lang.t("＋ New task — Enter saves it to Notion", "＋ Tugas baru — Enter menyimpannya di Notion")
-            placeholderTextColor: Theme.subtext
-            color: Theme.text
-            font.family: Theme.font
-            font.pixelSize: 13
-            leftPadding: 14
-            background: Rectangle {
-                radius: 12
-                color: Theme.raised
-                border.width: input.activeFocus ? 1 : 0
-                border.color: Theme.primary
+            spacing: 8
+            TextField {
+                id: input
+                Layout.fillWidth: true
+                enabled: t.tasksDb !== ""
+                placeholderText: Lang.t("＋ New task", "＋ Tugas baru")
+                Keys.onEscapePressed: event => {
+                    event.accepted = root.picking;
+                    root.picking = false;
+                }
+                placeholderTextColor: Theme.subtext
+                color: Theme.text
+                font.family: Theme.font
+                font.pixelSize: 13
+                leftPadding: 14
+                background: Rectangle {
+                    radius: 12
+                    color: Theme.raised
+                    border.width: input.activeFocus ? 1 : 0
+                    border.color: Theme.primary
+                }
+                onAccepted: root.submit()
             }
-            onAccepted: {
-                t.add(text, "");
-                text = "";
+            // The due date picked, or "Tenggat"; opens the calendar.
+            Rectangle {
+                id: dueButton
+                readonly property bool set: root.dueText.trim() !== ""
+                visible: root.canDue
+                implicitWidth: dueRow.implicitWidth + 24
+                implicitHeight: input.implicitHeight
+                radius: 12
+                color: root.picking || set ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, dueMouse.containsMouse ? 0.3 : 0.2) : dueMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Theme.raised
+                Row {
+                    id: dueRow
+                    anchors.centerIn: parent
+                    spacing: 6
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.picking ? "expand_more" : "event"
+                        color: dueButton.set || root.picking ? Theme.primary : Theme.subtext
+                        font.family: Theme.iconFont
+                        font.pixelSize: 17
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: !dueButton.set ? Lang.t("Due", "Tenggat") : root.dueParsed ? Due.dueChip(root.dueParsed.due, new Date(new Date(t.now).setHours(0, 0, 0, 0)), Lang.code).text : "?"
+                        color: dueButton.set ? Theme.text : Theme.subtext
+                        font.family: Theme.font
+                        font.pixelSize: 13
+                    }
+                }
+                MouseArea {
+                    id: dueMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.picking = !root.picking
+                }
+            }
+            Rectangle {
+                readonly property bool ready: t.tasksDb !== "" && input.text.trim() !== ""
+                implicitWidth: addRow.implicitWidth + 24
+                implicitHeight: input.implicitHeight
+                radius: 12
+                opacity: ready ? 1 : 0.4
+                color: Theme.primary
+                Row {
+                    id: addRow
+                    anchors.centerIn: parent
+                    spacing: 4
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "add"
+                        color: Theme.onPrimary
+                        font.family: Theme.iconFont
+                        font.pixelSize: 17
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Lang.t("Add", "Tambah")
+                        color: Theme.onPrimary
+                        font.family: Theme.font
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                    }
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: parent.ready
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.submit()
+                }
             }
         }
 
         Text {
             Layout.fillWidth: true
-            visible: t.message !== ""
-            text: t.message
+            visible: root.addError !== "" || t.message !== ""
+            text: root.addError || t.message
             color: Theme.danger
             elide: Text.ElideRight
             font.family: Theme.font

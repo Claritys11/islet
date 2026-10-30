@@ -169,7 +169,17 @@ test("walkBlocks: a failing first page is an error", async () => {
     assert.deepEqual(out, { ok: false, data: "nope" });
 });
 
-import { todayView, shelfView, checklistView } from "../link/desk.mjs";
+import { todayView, shelfView, checklistView, validDue } from "../link/desk.mjs";
+
+test("validDue: Notion dates and date-times pass, anything else is dropped", () => {
+    assert.equal(validDue("2026-11-05"), "2026-11-05");
+    assert.equal(validDue("2026-11-05T14:00:00+07:00"), "2026-11-05T14:00:00+07:00");
+    assert.equal(validDue("2026-11-05T14:00Z"), "2026-11-05T14:00Z");
+    assert.equal(validDue("besok"), "");
+    assert.equal(validDue("2026-13-45"), "");
+    assert.equal(validDue(undefined), "");
+    assert.equal(validDue({}), "");
+});
 
 test("todayView: the day's schedule and deadlines, plain values only", () => {
     const due = new Date(2026, 9, 25, 23, 59);
@@ -187,6 +197,8 @@ test("todayView: the day's schedule and deadlines, plain values only", () => {
     assert.deepEqual(v.deadlines[0], { id: "p1", key: "notion:p1", title: "Essay", source: "notion", priority: "Tinggi", label: "hari ini 23.59", urgency: "today", tickable: true });
     assert.deepEqual(v.soon, { title: "KKA", startAt: Date.parse("2026-10-25T07:00:00+07:00") });
     assert.equal(v.canAdd, true);
+    assert.equal(v.canDue, false);
+    assert.equal(todayView({ tasksDb: "db", dueColumn: "Tenggat" }).canDue, true);
     assert.equal(v.sync, "Tersinkron 2 mnt lalu");
     // Through JSON unchanged: nothing that doesn't survive it.
     assert.deepEqual(JSON.parse(JSON.stringify(v)), v);
@@ -194,7 +206,7 @@ test("todayView: the day's schedule and deadlines, plain values only", () => {
 
 test("todayView: off, or nothing yet", () => {
     const v = todayView({ schedule: [], deadlines: [], soon: null, enabled: false, status: "setup", error: "x", sync: "", tasksDb: "" });
-    assert.deepEqual(v, { enabled: false, status: "setup", error: "x", sync: "", canAdd: false, soon: null, schedule: [], deadlines: [] });
+    assert.deepEqual(v, { enabled: false, status: "setup", error: "x", sync: "", canAdd: false, canDue: false, soon: null, schedule: [], deadlines: [] });
 });
 
 test("shelfView: name, folder or picture, and whether it went missing", () => {

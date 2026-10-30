@@ -22,9 +22,9 @@ import "link/fill.mjs" as Fill
 //
 // For the DMS desktop widgets (all additive; v stays 1):
 //   → also "lyrics" {index, lines:[{t,text}], status, synced}, "tasks" {status,
-//     error, items}, "pomodoro" {active, mode, label, clock, running, paused,
+//     error, canDue, items}, "pomodoro" {active, mode, label, clock, running, paused,
 //     progress, todayCount, todayFocused} — see link/desk.mjs
-//   ← {"cmd":"task-add","text":…,"due"?} | {"cmd":"task-done","id":…,"done":bool}
+//   ← {"cmd":"task-add","text":…,"due"?} (due: "YYYY-MM-DD" or with "THH:MM:SS±HH:MM") | {"cmd":"task-done","id":…,"done":bool}
 //   ← {"cmd":"timer-toggle"|"timer-start"|"timer-pause"|"timer-reset"|"timer-skip"}
 //     | {"cmd":"timer-mode","mode":"focus"|"short"|"long"}
 //   ← requests with an integer "req", answered to that client only with
@@ -33,7 +33,8 @@ import "link/fill.mjs" as Fill
 //     "calendar-month" {year, month}
 //
 // For the DMS dashboard tab and card (Islet's notch inside DMS):
-//   → also "day" (link/desk.mjs todayView: schedule, deadlines, soon, sync),
+//   → also "day" (link/desk.mjs todayView: schedule, deadlines, soon, sync,
+//     canAdd, canDue),
 //     "shelf" [{path, name, dir, image, missing}], "checklist" {source, items}
 //   ← {"cmd":"today-refresh"} | {"cmd":"shelf-open"|"shelf-remove","path":…}
 //     | {"cmd":"shelf-paste"} | {"cmd":"shelf-clear"}
@@ -114,13 +115,13 @@ Singleton {
             : T.syncStatus === "error" || T.syncStatus === "held" ? T.syncError
             : T.syncStatus === "syncing" ? Lang.t("Syncing…", "Menyinkronkan…")
             : T.lastSync ? Lang.t(`Synced ${ago(T.lastSync)}`, `Tersinkron ${ago(T.lastSync)}`) : "";
-        return Desk.todayView({ schedule: T.scheduleToday, deadlines: T.deadlines, soon: T.soon, enabled: o.todayEnabled, status: T.status, error: T.error || T.message, sync, tasksDb: T.tasksDb });
+        return Desk.todayView({ schedule: T.scheduleToday, deadlines: T.deadlines, soon: T.soon, enabled: o.todayEnabled, status: T.status, error: T.error || T.message, sync, tasksDb: T.tasksDb, dueColumn: T.tasksMap.due ?? "" });
     }
     readonly property var shelfView: Desk.shelfView(ShelfService.items)
     readonly property var checklistView: Desk.checklistView(ChecklistService.items, ChecklistService.useNotion, ChecklistService.error)
 
     readonly property var lyricsView: Object.assign(Desk.lyricWindow(LyricsService.lines, LyricsService.currentIndex), { status: LyricsService.status, synced: LyricsService.synced })
-    readonly property var tasksView: ({ status: TodayService.status, error: TodayService.error, message: TodayService.message, items: Desk.openTasks(TodayService.tasks) })
+    readonly property var tasksView: ({ status: TodayService.status, error: TodayService.error, message: TodayService.message, canDue: TodayService.tasksDb !== "" && !!TodayService.tasksMap.due, items: Desk.openTasks(TodayService.tasks) })
 
     function broadcast(force) {
         const s = state();
@@ -150,7 +151,7 @@ Singleton {
         const P = PomodoroService;
         switch (msg.cmd) {
         case "task-add":
-            TodayService.add(String(msg.text ?? ""), msg.due ? String(msg.due) : "", (ok, err) => root.reply(client, msg.req, ok, ok ? null : err));
+            TodayService.add(String(msg.text ?? ""), Desk.validDue(msg.due), (ok, err) => root.reply(client, msg.req, ok, ok ? null : err));
             break;
         case "task-delete":
             TodayService.remove(String(msg.id ?? ""), (ok, err) => root.reply(client, msg.req, ok, ok ? null : err));
