@@ -46,7 +46,12 @@ export function validDue(due) {
 
 // The focus timer as the Pomodoro widget needs it; always present (the old
 // `timer` field stays null while idle, which the bar widget relies on).
-export function pomodoroView(p) {
+//
+// Like the notch's Focus tab: whether it rolls on by itself (continuous),
+// the round towards the long break, a tip on breaks, and this sitting. The
+// pause and the sitting go as the times they began (ms), not as counters,
+// so a paused timer doesn't send a line every second; the widgets count.
+export function pomodoroView(p, o = {}) {
     return {
         active: !!p.active,
         mode: p.mode,
@@ -56,7 +61,16 @@ export function pomodoroView(p) {
         paused: !!p.paused,
         progress: Math.round((p.progress ?? 0) * 1000) / 1000,
         todayCount: p.todayCount ?? 0,
-        todayFocused: Math.floor((p.todayFocused ?? 0) / 60)
+        todayFocused: Math.floor((p.todayFocused ?? 0) / 60),
+        continuous: !!p.continuous,
+        round: p.round ?? 1,
+        longEvery: o.longEvery ?? 4,
+        tip: p.mode !== "focus" && o.breakTips && p.tip ? { icon: String(p.tip.icon ?? ""), text: String(p.tip.text ?? "") } : null,
+        sessionStart: p.sessionStart ?? 0,
+        pausedAt: p.paused ? (p._pausedAt ?? 0) : 0,
+        // Seconds, without the pause going on now (pausedAt is that one).
+        pausedBefore: Math.floor(p._pausedTotal ?? 0),
+        focused: Math.floor(p.focused ?? 0)
     };
 }
 

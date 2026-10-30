@@ -4,9 +4,11 @@ import Quickshell
 import qs.Common
 import qs.Modules.Plugins
 import "common"
+import "common/pomo.mjs" as Pomo
 
 // islet's focus timer, end4 tile style: mode chips, a ring with the clock,
-// play/pause, reset and skip, and today's focus so far.
+// play/pause, reset, skip and ∞ continuous (focus and breaks roll on by
+// themselves), how long it's been paused, the rounds and today's focus.
 DesktopPluginComponent {
     id: root
 
@@ -15,6 +17,15 @@ DesktopPluginComponent {
 
     readonly property var p: IsletClient.pomodoro
     readonly property bool on: IsletClient.connected && root.p !== null
+    // The pause clock counts here, a second at a time.
+    property real now: Date.now()
+    Timer {
+        interval: 1000
+        repeat: true
+        running: root.p?.paused ?? false
+        triggeredOnStart: true
+        onTriggered: root.now = Date.now()
+    }
 
     function send(cmd, extra): void {
         IsletClient.send(Object.assign({ cmd }, extra ?? {}));
@@ -119,8 +130,9 @@ DesktopPluginComponent {
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: root.p?.paused ? "Paused" : (root.p?.label ?? "")
-                        color: Qt.alpha(Theme.onPrimaryContainer, 0.7)
+                        text: Pomo.status(root.p, root.now, IsletClient.lang)
+                        color: root.p?.paused ? Theme.error : Qt.alpha(Theme.onPrimaryContainer, 0.7)
+                        font.features: ({ tnum: 1 })
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeSmall
                     }
@@ -138,26 +150,29 @@ DesktopPluginComponent {
                     model: [
                         { icon: "↺", cmd: "timer-reset", big: false },
                         { icon: "", cmd: "timer-toggle", big: true },
-                        { icon: "⏭", cmd: "timer-skip", big: false }
+                        { icon: "⏭", cmd: "timer-skip", big: false },
+                        { icon: "∞", cmd: "timer-continuous", big: false }
                     ]
                     Rectangle {
                         required property var modelData
                         width: modelData.big ? 56 : 36
                         height: 36
                         radius: 18
-                        color: modelData.big ? Theme.primary : (btn.containsMouse ? Qt.alpha(Theme.primary, 0.25) : Qt.alpha(Theme.onPrimaryContainer, 0.1))
+                        // ∞ lit while continuous is on.
+                        readonly property bool lit: modelData.cmd === "timer-continuous" && (root.p?.continuous ?? false)
+                        color: modelData.big || lit ? Theme.primary : (btn.containsMouse ? Qt.alpha(Theme.primary, 0.25) : Qt.alpha(Theme.onPrimaryContainer, 0.1))
                         Text {
                             anchors.centerIn: parent
                             text: modelData.cmd === "timer-toggle" ? (root.p?.running ? "⏸" : "▶") : modelData.icon
-                            color: modelData.big ? Theme.onPrimary : Theme.onPrimaryContainer
-                            font.pixelSize: 16
+                            color: modelData.big || parent.lit ? Theme.onPrimary : Theme.onPrimaryContainer
+                            font.pixelSize: modelData.cmd === "timer-continuous" ? 20 : 16
                         }
                         MouseArea {
                             id: btn
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.send(modelData.cmd)
+                            onClicked: modelData.cmd === "timer-continuous" ? root.send(modelData.cmd, { on: !root.p?.continuous }) : root.send(modelData.cmd)
                         }
                     }
                 }
@@ -168,7 +183,7 @@ DesktopPluginComponent {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: controls.bottom
                 anchors.topMargin: 6
-                text: IsletClient.t(`Today: ${root.p?.todayCount ?? 0} sessions · ${root.p?.todayFocused ?? 0} min`, `Hari ini: ${root.p?.todayCount ?? 0} sesi · ${root.p?.todayFocused ?? 0} mnt`)
+                text: Pomo.rounds(root.p).map(d => d ? "●" : "○").join("") + "  " + IsletClient.t(`Today: ${root.p?.todayCount ?? 0} sessions · ${root.p?.todayFocused ?? 0} min`, `Hari ini: ${root.p?.todayCount ?? 0} sesi · ${root.p?.todayFocused ?? 0} mnt`)
                 color: Qt.alpha(Theme.onPrimaryContainer, 0.7)
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall

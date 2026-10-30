@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **The DMS Focus card, Islet tab and desktop Pomodoro do what the notch's Focus tab does**: ∞ continuous
+  (focus and breaks roll on by themselves), "Paused 1:22" while paused, the ring running down in the
+  break's own colour, dots for the rounds to the long break, a tip on breaks, and this sitting (elapsed ·
+  focus · paused, with ⟳ to forget the pause time). The one-row card keeps the time, the pause and all
+  four buttons.
+
 ## 1.9.0 — 2026-10-30
 
 ### Added

@@ -23,10 +23,12 @@ import "link/fill.mjs" as Fill
 // For the DMS desktop widgets (all additive; v stays 1):
 //   → also "lyrics" {index, lines:[{t,text}], status, synced}, "tasks" {status,
 //     error, canDue, items}, "pomodoro" {active, mode, label, clock, running, paused,
-//     progress, todayCount, todayFocused} — see link/desk.mjs
+//     progress, todayCount, todayFocused, continuous, round, longEvery, tip,
+//     sessionStart, pausedAt, pausedBefore, focused} — see link/desk.mjs
 //   ← {"cmd":"task-add","text":…,"due"?} (due: "YYYY-MM-DD" or with "THH:MM:SS±HH:MM") | {"cmd":"task-done","id":…,"done":bool}
 //   ← {"cmd":"timer-toggle"|"timer-start"|"timer-pause"|"timer-reset"|"timer-skip"}
 //     | {"cmd":"timer-mode","mode":"focus"|"short"|"long"}
+//     | {"cmd":"timer-continuous","on":bool} | {"cmd":"timer-reset-pause"}
 //   ← requests with an integer "req", answered to that client only with
 //     {"reply":req,"ok":bool,"data"|"error"}: "notes-list" {limit?, tipe?},
 //     "note-get" {id} → {blocks, cut}, "note-create" {markdown}, "task-delete" {id},
@@ -83,7 +85,7 @@ Singleton {
             // The DMS desktop widgets.
             lyrics: root.lyricsView,
             tasks: root.tasksView,
-            pomodoro: Desk.pomodoroView(P),
+            pomodoro: Desk.pomodoroView(P, { longEvery: o.longBreakEvery, breakTips: o.breakTips }),
             // The DMS dashboard tab and card.
             day: root.dayView,
             shelf: root.shelfView,
@@ -204,6 +206,12 @@ Singleton {
             break;
         case "timer-skip":
             P.skip();
+            break;
+        case "timer-continuous":
+            P.setContinuous(!!msg.on);
+            break;
+        case "timer-reset-pause":
+            P.resetPause();
             break;
         case "timer-mode":
             if (["focus", "short", "long"].includes(msg.mode))
