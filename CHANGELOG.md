@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Islet only finds a daily list by itself when it's called Daily Tasks: since old ticks come off unattended,
+  another list that merely looked like one could have lost its ticks. Any other can still be picked in
+  Settings.
+- Lesson, event and task titles from Notion and Google in Hari ini show as plain text, never as markup.
+
 ## 1.10.0 — 2026-10-31
 
 ### Added

@@ -106,6 +106,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 elide: Text.ElideRight
                 wrapMode: Text.NoWrap
+                textFormat: Text.PlainText
                 text: root.day?.soon ? IsletClient.t(`${root.day.soon.title} · in ${Math.max(1, Math.ceil((root.day.soon.startAt - Date.now()) / 60000))} min`, `${root.day.soon.title} · mulai ${Math.max(1, Math.ceil((root.day.soon.startAt - Date.now()) / 60000))} mnt lagi`) : ""
                 color: Theme.surfaceText
                 font.pixelSize: Theme.fontSizeMedium
@@ -177,6 +178,7 @@ ColumnLayout {
                         StyledText {
                             Layout.fillWidth: true
                             text: slot.modelData.title
+                            textFormat: Text.PlainText
                             elide: Text.ElideRight
                             wrapMode: Text.NoWrap
                             color: Theme.surfaceText
@@ -285,6 +287,7 @@ ColumnLayout {
                         StyledText {
                             Layout.fillWidth: true
                             text: due.modelData.title
+                            textFormat: Text.PlainText
                             elide: Text.ElideRight
                             wrapMode: Text.NoWrap
                             color: Theme.surfaceText
@@ -355,6 +358,7 @@ ColumnLayout {
                         StyledText {
                             Layout.fillWidth: true
                             text: chore.modelData.title
+                            textFormat: Text.PlainText
                             elide: Text.ElideRight
                             wrapMode: Text.NoWrap
                             opacity: chore.modelData.done ? 0.5 : 1
@@ -415,6 +419,7 @@ ColumnLayout {
                         StyledText {
                             Layout.fillWidth: true
                             text: task.modelData.title
+                            textFormat: Text.PlainText
                             elide: Text.ElideRight
                             wrapMode: Text.NoWrap
                             color: Theme.surfaceText

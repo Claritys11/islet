@@ -6,7 +6,7 @@ import { parseJam, hariIndex, HARI } from "./timetable.mjs";
 
 const WEEKDAYS = ["senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
-const DONE_BOX = /selesai|done|centang|ceklis|check/i;
+const DONE_BOX = /^(selesai|done|centang|ceklis|checked?)$/i;
 
 function titleOf(db) {
     return (db.title ?? []).map(t => t.plain_text).join("");
@@ -31,9 +31,11 @@ export function classify(db) {
     const recent = Date.parse(db.last_edited_time ?? 0) / 1e12;
     if (props.some(e => e.type === "select" && looksLikeWeekdays(e.p)) && props.some(e => (e.type === "rich_text" || e.type === "title") && /jam|waktu|time/i.test(e.name)))
         return { kind: "timetable", score: 1 + (/jadwal|timetable|schedule/i.test(title) ? 1 : 0) + recent };
-    // Daily tasks: which days (several of a weekday list) and a tick.
-    if (has("title") && props.some(e => e.type === "multi_select" && looksLikeWeekdays(e.p)) && has("checkbox", DONE_BOX))
-        return { kind: "daily", score: 1 + (/daily|harian|rutin|routine|habit/i.test(title) ? 1 : 0) + recent };
+    // Daily tasks: which days (several of a weekday list) and a tick. Islet
+    // takes old ticks off by itself, so only its own list is found by itself:
+    // any other has to be picked in Settings.
+    if (/^daily tasks$/i.test(title.trim()) && has("title") && props.some(e => e.type === "multi_select" && looksLikeWeekdays(e.p)) && has("checkbox", DONE_BOX))
+        return { kind: "daily", score: 1 + recent };
     if (has("title") && (has("status") || has("select", /status/i)) && has("date"))
         return { kind: "tasks", score: 1 + (/task|tugas/i.test(title) ? 1 : 0) + (has("date", /tenggat|deadline|due/i) ? 1 : 0) + recent };
     return { kind: null, score: 0 };

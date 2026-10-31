@@ -105,11 +105,22 @@ const dailyRow = (title, hari, jam, checked, edited, off) => ({
 });
 
 test("the Daily Tasks template is found by its shape and isn't taken for another list", () => {
-    const db = { id: "d", title: [{ plain_text: "Rutinitas" }], properties: typed(dailyDb.properties) };
+    const db = { id: "d", title: [{ plain_text: "Daily Tasks" }], properties: typed(dailyDb.properties) };
     assert.equal(classify(db).kind, "daily");
     assert.equal(pickDatabases([...fx.databases, db]).daily, "d");
     assert.equal(pickDatabases([...fx.databases, db]).tasks, "tasks");
     assert.deepEqual(dailyMap, { title: "Tugas", days: "Hari", time: "Jam", done: "Selesai", off: "Nonaktif" });
+});
+
+test("another list shaped like it isn't found by itself: Islet would take its ticks off", () => {
+    const db = { id: "h", title: [{ plain_text: "Habit tracker" }], properties: typed(dailyDb.properties) };
+    assert.equal(classify(db).kind, null);
+    assert.equal(pickDatabases([...fx.databases, db]).daily, "");
+    // A tick column has to be called that, not just contain the word.
+    const props = typed(dailyDb.properties);
+    props["Sudah selesai dibayar"] = props.Selesai;
+    delete props.Selesai;
+    assert.equal(classify({ id: "x", title: [{ plain_text: "Daily Tasks" }], properties: props }).kind, null);
 });
 
 test("dailyFromRow reads the days as weekdays, tidies the time, keeps the tick", () => {

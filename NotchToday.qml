@@ -159,6 +159,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         elide: Text.ElideRight
+                        textFormat: Text.PlainText
                         text: Lang.t(`Clash: ${conflict.modelData.title} — Google's version kept`, `Tabrakan: ${conflict.modelData.title} — dipakai versi Google`)
                         color: Theme.text
                         font.family: Theme.font
@@ -279,6 +280,7 @@ Item {
                             Text {
                                 Layout.fillWidth: true
                                 text: lesson.modelData.title
+                                textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 color: Theme.text
                                 font.family: Theme.font
@@ -402,6 +404,7 @@ Item {
                             Text {
                                 Layout.fillWidth: true
                                 text: due.modelData.title
+                                textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 color: Theme.text
                                 font.family: Theme.font
@@ -487,6 +490,7 @@ Item {
                             Text {
                                 Layout.fillWidth: true
                                 text: chore.modelData.title
+                                textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 opacity: chore.modelData.done ? 0.5 : 1
                                 font.strikeout: chore.modelData.done
@@ -556,6 +560,7 @@ Item {
                             Text {
                                 Layout.fillWidth: true
                                 text: task.modelData.title
+                                textFormat: Text.PlainText
                                 elide: Text.ElideRight
                                 color: Theme.text
                                 font.family: Theme.font
