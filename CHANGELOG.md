@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.10.1 — 2026-10-31
 
 ### Fixed
 - Islet only finds a daily list by itself when it's called Daily Tasks: since old ticks come off unattended,
