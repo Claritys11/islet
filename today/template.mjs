@@ -18,15 +18,15 @@ export function homePage(parentPageId) {
         properties: { title: { title: text("Islet") } },
         children: [
             paragraph("Islet reads these: your lessons for the week (Jadwal Pelajaran), what you have to do (Tasks), your notes (Notes) and the to-dos below (Checklist)."),
-            paragraph("Fill in Mata Pelajaran and Jadwal Pelajaran once; Jam is like 07.00-08.30. Add tasks with a Tenggat (deadline) and they show in the notch, and in Google Calendar if you sync.")
+            paragraph("Fill in Mata Pelajaran and Jadwal Pelajaran once; Jam is like 07.00-08.30. Add tasks with a Tenggat (deadline) and they show in the notch, and in Google Calendar if you sync. Daily Tasks come back on their days (Hari; none chosen is every day); Islet takes last day's ticks off Selesai by itself.")
         ]
     };
 }
 
 // Made in this order: the others link back to the subject list.
-export const DATABASES = ["mapel", "jadwal", "tasks", "notes"];
+export const DATABASES = ["mapel", "jadwal", "tasks", "notes", "daily"];
 
-const TITLES = { mapel: ["📚", "Mata Pelajaran"], jadwal: ["🗓️", "Jadwal Pelajaran"], tasks: ["✅", "Tasks"], notes: ["📝", "Notes"] };
+const TITLES = { mapel: ["📚", "Mata Pelajaran"], jadwal: ["🗓️", "Jadwal Pelajaran"], tasks: ["✅", "Tasks"], notes: ["📝", "Notes"], daily: ["🔁", "Daily Tasks"] };
 
 function columns(key, ids) {
     switch (key) {
@@ -57,6 +57,15 @@ function columns(key, ids) {
             Mapel: link(ids.mapel),
             "GCal ID": { rich_text: {} },
             "Sisa waktu": { formula: { expression: 'if(prop("Status") == "Done" or empty(prop("Tenggat")), "", let(d, dateBetween(prop("Tenggat"), today(), "days"), if(d < 0, "🔴 Telat " + format(abs(d)) + " hari", if(d == 0, "🟠 Hari ini", if(d <= 2, "🟡 " + format(d) + " hari lagi", "🟢 " + format(d) + " hari lagi")))))' } }
+        };
+    case "daily":
+        return {
+            Tugas: { title: {} },
+            Selesai: { checkbox: {} },
+            // None chosen: every day.
+            Hari: { multi_select: options(["Senin", "blue"], ["Selasa", "green"], ["Rabu", "yellow"], ["Kamis", "orange"], ["Jumat", "purple"], ["Sabtu", "gray"], ["Minggu", "red"]) },
+            Jam: { rich_text: {} },
+            Nonaktif: { checkbox: {} }
         };
     case "notes":
         return {

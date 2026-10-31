@@ -3,11 +3,15 @@ import QtQuick.Layouts
 import qs.Common
 import qs.DCommon.Widgets
 
-// The Shelf: files parked on Islet; click to open, paste what you copied.
-// Drawn with DMS's widgets, fed by Islet over its socket (IsletClient); the
-// DMS dashboard's Islet tab and the Shelf card both show it.
-ColumnLayout {
+// The Shelf: files parked on Islet; drop them here, drag them out to another
+// app, click to open, paste what you copied. Drawn with DMS's widgets, fed by
+// Islet over its socket (IsletClient); the DMS dashboard's Islet tab and the
+// Shelf card both show it.
+Item {
     id: root
+
+    // Off where something around it takes the drops (the Islet tab).
+    property bool acceptDrops: true
 
     // Fewer details for a small card; one row for a card one cell tall.
     property bool compact: false
@@ -21,166 +25,252 @@ ColumnLayout {
         IsletClient.send(Object.assign({ cmd: name }, args ?? {}));
     }
 
+    function fileUrl(path) {
+        return "file://" + path.split("/").map(encodeURIComponent).join("/");
+    }
+
     Requester {
         id: requester
     }
 
-    spacing: Theme.spacingS
-    RowLayout {
-        visible: !root.strip
-        Layout.fillWidth: true
-        StyledText {
-            Layout.fillWidth: true
-            text: root.shelf.length ? IsletClient.t(`${root.shelf.length} file${root.shelf.length === 1 ? "" : "s"} · click to open`, `${root.shelf.length} file · klik untuk membuka`) : IsletClient.t("Copy a file and press Paste, or drop files on Islet's pill", "Copy file lalu tekan Tempel, atau taruh file di pill Islet")
-            elide: Text.ElideRight
-            wrapMode: Text.NoWrap
-            color: Theme.surfaceVariantText
-            font.pixelSize: Theme.fontSizeSmall
+    DropArea {
+        id: drop
+        anchors.fill: parent
+        enabled: root.acceptDrops
+        onEntered: drag => {
+            if (drag.hasUrls)
+                drag.accept(Qt.CopyAction);
         }
-        DIconButton {
-            iconName: "content_paste"
-            onClicked: root.cmd("shelf-paste")
-        }
-        DIconButton {
-            visible: root.shelf.length > 0
-            iconName: "delete_sweep"
-            onClicked: root.cmd("shelf-clear")
+        onDropped: event => {
+            if (!event.hasUrls)
+                return;
+            root.cmd("shelf-add", { urls: event.urls.map(u => u.toString()) });
+            event.accept(Qt.CopyAction);
         }
     }
-    // One row: the files as chips, sliding sideways, and Paste.
-    RowLayout {
-        visible: root.strip
-        Layout.fillWidth: true
-        Layout.fillHeight: true
+
+    ColumnLayout {
+        anchors.fill: parent
         spacing: Theme.spacingS
-        ListView {
+        RowLayout {
+            visible: !root.strip
+            Layout.fillWidth: true
+            StyledText {
+                Layout.fillWidth: true
+                text: root.shelf.length ? IsletClient.t(`${root.shelf.length} file${root.shelf.length === 1 ? "" : "s"} · click to open, drag out`, `${root.shelf.length} file · klik untuk membuka, seret keluar`) : IsletClient.t("Drop files here, or copy one and press Paste", "Taruh file di sini, atau copy file lalu tekan Tempel")
+                elide: Text.ElideRight
+                wrapMode: Text.NoWrap
+                color: Theme.surfaceVariantText
+                font.pixelSize: Theme.fontSizeSmall
+            }
+            DIconButton {
+                iconName: "content_paste"
+                onClicked: root.cmd("shelf-paste")
+            }
+            DIconButton {
+                visible: root.shelf.length > 0
+                iconName: "delete_sweep"
+                onClicked: root.cmd("shelf-clear")
+            }
+        }
+        // One row: the files as chips, sliding sideways, and Paste.
+        RowLayout {
+            visible: root.strip
             Layout.fillWidth: true
             Layout.fillHeight: true
-            orientation: ListView.Horizontal
-            clip: true
-            spacing: Theme.spacingXS
-            model: root.shelf
-            StyledText {
-                anchors.verticalCenter: parent.verticalCenter
-                visible: parent.count === 0
-                text: IsletClient.t("Copy a file, then Paste", "Copy file, lalu Tempel")
-                wrapMode: Text.NoWrap
-                color: Theme.surfaceVariantText
-                font.pixelSize: Theme.fontSizeSmall
-            }
-            delegate: Rectangle {
-                id: chip
-                required property var modelData
-                y: (ListView.view.height - height) / 2
-                width: Math.min(160, chipRow.implicitWidth + Theme.spacingM * 2)
-                height: 32
-                radius: 16
-                opacity: modelData.missing ? 0.45 : 1
-                color: chipMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
-                Row {
-                    id: chipRow
-                    anchors.centerIn: parent
-                    spacing: Theme.spacingXS
-                    DIcon {
-                        anchors.verticalCenter: parent.verticalCenter
-                        name: chip.modelData.dir ? "folder" : chip.modelData.image ? "image" : "description"
-                        size: 16
-                        color: Theme.primary
+            spacing: Theme.spacingS
+            ListView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                orientation: ListView.Horizontal
+                clip: true
+                spacing: Theme.spacingXS
+                model: root.shelf
+                StyledText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: parent.count === 0
+                    text: IsletClient.t("Drop a file, or copy and Paste", "Taruh file, atau copy lalu Tempel")
+                    wrapMode: Text.NoWrap
+                    color: Theme.surfaceVariantText
+                    font.pixelSize: Theme.fontSizeSmall
+                }
+                delegate: Rectangle {
+                    id: chip
+                    required property var modelData
+                    y: (ListView.view.height - height) / 2
+                    width: Math.min(160, chipRow.implicitWidth + Theme.spacingM * 2)
+                    height: 32
+                    radius: 16
+                    opacity: modelData.missing ? 0.45 : 1
+                    color: chipMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+                    Row {
+                        id: chipRow
+                        anchors.centerIn: parent
+                        spacing: Theme.spacingXS
+                        DIcon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: chip.modelData.dir ? "folder" : chip.modelData.image ? "image" : "description"
+                            size: 16
+                            color: Theme.primary
+                        }
+                        StyledText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.min(implicitWidth, 120)
+                            text: chip.modelData.name
+                            elide: Text.ElideMiddle
+                            wrapMode: Text.NoWrap
+                            color: Theme.surfaceText
+                            font.pixelSize: Theme.fontSizeSmall
+                        }
                     }
-                    StyledText {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(implicitWidth, 120)
-                        text: chip.modelData.name
-                        elide: Text.ElideMiddle
-                        wrapMode: Text.NoWrap
-                        color: Theme.surfaceText
-                        font.pixelSize: Theme.fontSizeSmall
+                    FileDrag {
+                        id: chipDrag
+                        source: chip
+                        area: chipMouse
+                        path: chip.modelData.path
+                    }
+                    MouseArea {
+                        id: chipMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+                        drag.target: chip.modelData.missing ? null : chipDrag
+                        drag.threshold: 6
+                        preventStealing: true
+                        onReleased: chipDrag.settle()
+                        onClicked: root.cmd("shelf-open", { path: chip.modelData.path })
                     }
                 }
+            }
+            DIconButton {
+                iconName: "content_paste"
+                onClicked: root.cmd("shelf-paste")
+            }
+        }
+        GridView {
+            visible: !root.strip
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            cellWidth: 96
+            cellHeight: 96
+            model: root.shelf
+            delegate: Rectangle {
+                id: tile
+                required property var modelData
+                width: 88
+                height: 88
+                radius: Theme.cornerRadius
+                opacity: modelData.missing ? 0.45 : 1
+                color: tileMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+                Image {
+                    id: thumb
+                    visible: tile.modelData.image && status === Image.Ready
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 8
+                    width: 44
+                    height: 44
+                    source: tile.modelData.image ? "file://" + tile.modelData.path : ""
+                    sourceSize: Qt.size(88, 88)
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                }
+                DIcon {
+                    visible: !thumb.visible
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 10
+                    name: tile.modelData.dir ? "folder" : "description"
+                    size: 36
+                    color: Theme.primary
+                }
+                StyledText {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.margins: 6
+                    text: tile.modelData.missing ? IsletClient.t("not found", "tidak ditemukan") : tile.modelData.name
+                    elide: Text.ElideMiddle
+                    wrapMode: Text.NoWrap
+                    horizontalAlignment: Text.AlignHCenter
+                    color: tile.modelData.missing ? Theme.error : Theme.surfaceText
+                    font.pixelSize: Theme.fontSizeSmall
+                }
+                FileDrag {
+                    id: tileDrag
+                    source: tile
+                    area: tileMouse
+                    path: tile.modelData.path
+                }
                 MouseArea {
-                    id: chipMouse
+                    id: tileMouse
                     anchors.fill: parent
                     hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.cmd("shelf-open", { path: chip.modelData.path })
+                    cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+                    drag.target: tile.modelData.missing ? null : tileDrag
+                    drag.threshold: 6
+                    preventStealing: true
+                    onReleased: tileDrag.settle()
+                    onClicked: root.cmd("shelf-open", { path: tile.modelData.path })
+                }
+                DIcon {
+                    visible: tileMouse.containsMouse
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.margins: 4
+                    name: "close"
+                    size: 16
+                    color: Theme.surfaceVariantText
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.cmd("shelf-remove", { path: tile.modelData.path })
+                    }
                 }
             }
-        }
-        DIconButton {
-            iconName: "content_paste"
-            onClicked: root.cmd("shelf-paste")
         }
     }
-    GridView {
-        visible: !root.strip
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-        clip: true
-        cellWidth: 96
-        cellHeight: 96
-        model: root.shelf
-        delegate: Rectangle {
-            id: tile
-            required property var modelData
-            width: 88
-            height: 88
-            radius: Theme.cornerRadius
-            opacity: modelData.missing ? 0.45 : 1
-            color: tileMouse.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
-            Image {
-                id: thumb
-                visible: tile.modelData.image && status === Image.Ready
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: 8
-                width: 44
-                height: 44
-                source: tile.modelData.image ? "file://" + tile.modelData.path : ""
-                sourceSize: Qt.size(88, 88)
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-            }
-            DIcon {
-                visible: !thumb.visible
-                anchors.horizontalCenter: parent.horizontalCenter
-                y: 10
-                name: tile.modelData.dir ? "folder" : "description"
-                size: 36
-                color: Theme.primary
-            }
-            StyledText {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.margins: 6
-                text: tile.modelData.missing ? IsletClient.t("not found", "tidak ditemukan") : tile.modelData.name
-                elide: Text.ElideMiddle
-                wrapMode: Text.NoWrap
-                horizontalAlignment: Text.AlignHCenter
-                color: tile.modelData.missing ? Theme.error : Theme.surfaceText
-                font.pixelSize: Theme.fontSizeSmall
-            }
-            MouseArea {
-                id: tileMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.cmd("shelf-open", { path: tile.modelData.path })
-            }
-            DIcon {
-                visible: tileMouse.containsMouse
-                anchors.top: parent.top
-                anchors.right: parent.right
-                anchors.margins: 4
-                name: "close"
-                size: 16
-                color: Theme.surfaceVariantText
-                MouseArea {
-                    anchors.fill: parent
-                    anchors.margins: -4
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.cmd("shelf-remove", { path: tile.modelData.path })
-                }
+
+    Rectangle {
+        visible: drop.containsDrag
+        anchors.fill: parent
+        radius: Theme.cornerRadius
+        color: Qt.alpha(Theme.primary, 0.08)
+        border.color: Theme.primary
+        border.width: 2
+    }
+
+    // What travels when a file is dragged out: an invisible stand-in, so the
+    // tile stays put. Moved by the drop? Islet looks where it went.
+    component FileDrag: Item {
+        id: fileDrag
+        required property Item source
+        required property MouseArea area
+        required property string path
+        property var shot: null
+        function settle() {
+            x = 0;
+            y = 0;
+        }
+        width: source.width
+        height: source.height
+        Connections {
+            target: fileDrag.area
+            function onContainsMouseChanged() {
+                if (fileDrag.area.containsMouse)
+                    fileDrag.source.grabToImage(r => fileDrag.shot = r);
             }
         }
+        Drag.active: area.drag.active
+        Drag.dragType: Drag.Automatic
+        Drag.supportedActions: Qt.CopyAction | Qt.LinkAction | Qt.MoveAction
+        Drag.mimeData: ({
+                "text/uri-list": root.fileUrl(path) + "\r\n",
+                "text/plain": path
+            })
+        Drag.imageSource: shot?.url ?? ""
+        Drag.hotSpot.x: width / 2
+        Drag.hotSpot.y: height / 2
+        Drag.onDragFinished: root.cmd("shelf-follow")
     }
 }

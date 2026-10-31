@@ -30,6 +30,9 @@ Singleton {
     // Islet's language (Settings → Notch): "en" or "id". Words are written
     // as both: IsletClient.t("No classes", "Tidak ada jadwal").
     readonly property string lang: state?.lang === "id" ? "id" : "en"
+    // The Islet tab shows this page when it can ("shelf": files were dragged
+    // onto the pill), then clears it.
+    property string panelPage: ""
     function t(en, id) {
         return lang === "id" ? id : en;
     }

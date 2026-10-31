@@ -24,8 +24,8 @@ test("the home page sits in the page you chose", () => {
     assert.ok(p.children.length > 0);
 });
 
-test("four databases, made in an order where every relation points back", () => {
-    assert.deepEqual(DATABASES, ["mapel", "jadwal", "tasks", "notes"]);
+test("five databases, made in an order where every relation points back", () => {
+    assert.deepEqual(DATABASES, ["mapel", "jadwal", "tasks", "notes", "daily"]);
     for (const k of DATABASES) {
         const b = body(k);
         assert.deepEqual(b.parent, { type: "page_id", page_id: "page-home" });

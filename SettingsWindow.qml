@@ -49,7 +49,7 @@ FloatingWindow {
         { icon: "page_header", title: "Notch", subtitle: "Dynamic island, or in your bar", keys: ["language", "notchEnabled", "notchMode", "barPillWidth", "barShowVisualizer", "barShowTimer", "notchShape", "notchStyle", "notchPillText", "notchIdle", "notchScreen", "notchMarginTop", "notchPillWidth", "notchWidth", "notchHeight", "notchHoverDelay", "notchAutoClose", "notchCloseDelay", "vizMode", "vizIdleSeconds", "weatherEnabled", "weatherCity", "weatherUnit"] },
         { icon: "timer", title: "Focus", subtitle: "Pomodoro timer", keys: ["focusMinutes", "shortBreakMinutes", "longBreakMinutes", "longBreakEvery", "autoStartBreaks", "autoStartFocus", "pomodoroSound", "pauseReminderMinutes", "breakTips"] },
         { icon: "checklist", title: "Checklist", subtitle: "Local or Notion to-dos", keys: ["checklistSource", "notionPage"] },
-        { icon: "event_note", title: "Calendar & Notion", subtitle: "Lessons, deadlines, Google sync", keys: ["todayEnabled", "todaySync", "todaySyncLessons", "todayCalendar", "todayTimetableDb", "todayTasksDb", "notesDb", "todayColumns", "todayDays", "todayMorningOpen", "todayMorningSeconds", "todayNudges", "todayEventMinutes", "todaySemesterEnd", "todaySyncMinutes"] },
+        { icon: "event_note", title: "Calendar & Notion", subtitle: "Lessons, deadlines, Google sync", keys: ["todayEnabled", "todaySync", "todaySyncLessons", "todayCalendar", "todayTimetableDb", "todayTasksDb", "todayDailyDb", "notesDb", "todayColumns", "todayDays", "todayMorningOpen", "todayMorningSeconds", "todayNudges", "todayEventMinutes", "todaySemesterEnd", "todaySyncMinutes"] },
         { icon: "search", title: "Finder", subtitle: "Find files and folders", keys: ["finderRoots", "finderExclude", "finderHidden", "finderFileManager", "finderTerminal", "finderEditor", "finderReindexMinutes"] },
         { icon: "widgets", title: "DankMaterialShell", subtitle: "Bar, desktop widgets, notepad", keys: [] },
         { icon: "info", title: "About", subtitle: "Updates, files, shortcuts", keys: ["checkUpdates"] }
@@ -90,6 +90,7 @@ FloatingWindow {
         { words: "google calendar kalender gcal sync sinkron", title: "Sync with Google Calendar", answer: "Islet uses Dank Calendar, which is already signed in to Google. Check the preview on the Calendar & Notion page and press Confirm once.", key: "todaySync" },
         { words: "notion template templat database databases bikin buat create setup new baru teman friend", title: "Make the Notion databases for me", answer: "On the Calendar & Notion page: 'Make Islet's databases' builds a timetable, task list, notes and checklist in a page you shared, and Islet uses them.", action: "page:Calendar & Notion" },
         { words: "notion jadwal pelajaran timetable schedule lesson kelas", title: "Lessons from your Notion timetable", answer: "Islet finds your timetable database by itself; pick another one on the Calendar & Notion page if it chose wrong.", key: "todayTimetableDb" },
+        { words: "daily harian rutin routine habit tugas harian", title: "Daily tasks", answer: "Things to do on certain days, kept in a Daily Tasks list in Notion (Hari: which days, none is every day; Jam: a time). Tick them in Hari ini → Daily or in Notion's Selesai column; ticks come off by themselves on a new day.", key: "todayDailyDb" },
         { words: "tugas task deadline tenggat due homework pr", title: "Deadlines from Notion", answer: "Tasks that aren't Done and are due within a few days show in the notch's Hari ini tab. Tick one to mark it Done in Notion.", key: "todayDays" },
         { words: "pagi morning remind reminder pengingat lupa", title: "Don't forget to check", answer: "The notch opens to Hari ini at your first activity each morning, and you get a nudge before a deadline.", key: "todayMorningOpen" },
         { words: "find search file files folder folders listary launcher locate project dolphin open", title: "Find a file or folder", answer: "Press Mod+G (or run 'islet find'), type part of the name — \"isw\" finds islet-windows — and press Enter. Ctrl+T opens a terminal there, Ctrl+E the editor.", key: "finderRoots" },
@@ -2110,6 +2111,7 @@ FloatingWindow {
                             model: [
                                 { key: "todayTimetableDb", label: "Timetable", kind: "timetable", picked: TodayService.timetableDb },
                                 { key: "todayTasksDb", label: "Tasks", kind: "tasks", picked: TodayService.tasksDb },
+                                { key: "todayDailyDb", label: "Daily tasks", kind: "daily", picked: TodayService.dailyDb },
                                 { key: "notesDb", label: "Notes", kind: "notes", picked: win.o.notesDb || (TodayService.databases.find(d => (d.title ?? []).map(t => t.plain_text).join("").trim().toLowerCase() === "notes")?.id ?? "") }
                             ]
                             Row_ {
@@ -2117,7 +2119,7 @@ FloatingWindow {
                                 required property var modelData
                                 key: modelData.key
                                 label: modelData.label
-                                hint: `${modelData.kind === "timetable" ? TodayService.allLessons.length + " lessons" : modelData.kind === "tasks" ? TodayService.tasks.length + " tasks" : "for the Notes desktop widget"}${win.o[modelData.key] === "" ? " · found by itself" : ""}`
+                                hint: `${modelData.kind === "timetable" ? TodayService.allLessons.length + " lessons" : modelData.kind === "tasks" ? TodayService.tasks.length + " tasks" : modelData.kind === "daily" ? (TodayService.dailyDb === "" ? "none yet: make it from Hari ini → Daily" : TodayService.daily.length + " daily tasks") : "for the Notes desktop widget"}${win.o[modelData.key] === "" ? " · found by itself" : ""}`
                                 ComboBox {
                                     width: 260
                                     readonly property var dbs: TodayService.databases.map(d => ({ id: d.id, name: (d.title ?? []).map(t => t.plain_text).join("") || "Untitled" }))

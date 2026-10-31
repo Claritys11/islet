@@ -6,6 +6,8 @@ import { parseJam, hariIndex, HARI } from "./timetable.mjs";
 
 const WEEKDAYS = ["senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
+const DONE_BOX = /selesai|done|centang|ceklis|check/i;
+
 function titleOf(db) {
     return (db.title ?? []).map(t => t.plain_text).join("");
 }
@@ -15,7 +17,7 @@ function entries(properties) {
 }
 
 function looksLikeWeekdays(p) {
-    const opts = (p.select?.options ?? []).map(o => o.name.toLowerCase().replace(/['’\s]/g, ""));
+    const opts = (p.select?.options ?? p.multi_select?.options ?? []).map(o => o.name.toLowerCase().replace(/['’\s]/g, ""));
     return opts.filter(o => WEEKDAYS.includes(o)).length >= 3;
 }
 
@@ -29,19 +31,22 @@ export function classify(db) {
     const recent = Date.parse(db.last_edited_time ?? 0) / 1e12;
     if (props.some(e => e.type === "select" && looksLikeWeekdays(e.p)) && props.some(e => (e.type === "rich_text" || e.type === "title") && /jam|waktu|time/i.test(e.name)))
         return { kind: "timetable", score: 1 + (/jadwal|timetable|schedule/i.test(title) ? 1 : 0) + recent };
+    // Daily tasks: which days (several of a weekday list) and a tick.
+    if (has("title") && props.some(e => e.type === "multi_select" && looksLikeWeekdays(e.p)) && has("checkbox", DONE_BOX))
+        return { kind: "daily", score: 1 + (/daily|harian|rutin|routine|habit/i.test(title) ? 1 : 0) + recent };
     if (has("title") && (has("status") || has("select", /status/i)) && has("date"))
         return { kind: "tasks", score: 1 + (/task|tugas/i.test(title) ? 1 : 0) + (has("date", /tenggat|deadline|due/i) ? 1 : 0) + recent };
     return { kind: null, score: 0 };
 }
 
 export function pickDatabases(dbs) {
-    const best = { timetable: { id: "", score: -1 }, tasks: { id: "", score: -1 } };
+    const best = { timetable: { id: "", score: -1 }, tasks: { id: "", score: -1 }, daily: { id: "", score: -1 } };
     for (const db of dbs) {
         const c = classify(db);
         if (c.kind && c.score > best[c.kind].score)
             best[c.kind] = { id: db.id, score: c.score };
     }
-    return { timetable: best.timetable.id, tasks: best.tasks.id };
+    return { timetable: best.timetable.id, tasks: best.tasks.id, daily: best.daily.id };
 }
 
 // Column names for each meaning; "" when there's none.
@@ -56,6 +61,15 @@ export function mapColumns(kind, properties) {
             jam: find(["rich_text", "title"], /jam|waktu|time/i),
             mapel: find(["relation", "select", "rich_text"], /mapel|pelajaran|subject|course/i),
             guru: find(["rich_text", "people", "select"], /guru|teacher|pengajar/i)
+        };
+    }
+    if (kind === "daily") {
+        return {
+            title: find(["title"]),
+            days: (props.find(e => e.type === "multi_select" && looksLikeWeekdays(e.p)) ?? { name: "" }).name,
+            time: find(["rich_text"], /jam|waktu|time/i),
+            done: find(["checkbox"], DONE_BOX),
+            off: find(["checkbox"], /nonaktif|libur|jeda|off|pause/i)
         };
     }
     const dates = props.filter(e => e.type === "date");
@@ -158,4 +172,57 @@ export function retryable(method, path) {
     if (method === "POST")
         return path === "search" || /\/query$/.test(path);
     return false;
+}
+
+// ── Daily tasks ───────────────────────────────────────────────────
+// Rows of a list of things to do on certain days, each with a tick that can
+// be set here or in Notion. A tick counts on the day its row was last edited;
+// one left from an earlier day is taken off (dailyStale) whenever Islet
+// loads: when it starts, past midnight, and at each sync. Nothing needs to be
+// running at midnight, and every computer sees the same.
+
+const pad = n => String(n).padStart(2, "0");
+const isoDay = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const JS_DAY = { minggu: 0, sunday: 0, senin: 1, monday: 1, selasa: 2, tuesday: 2, rabu: 3, wednesday: 3, kamis: 4, thursday: 4, jumat: 5, friday: 5, sabtu: 6, saturday: 6 };
+
+export function dailyFromRow(row, map) {
+    const p = row.properties;
+    const days = (p[map.days]?.multi_select ?? []).map(o => JS_DAY[o.name.toLowerCase().replace(/['’\s]/g, "")]).filter(d => d !== undefined);
+    const t = /(\d{1,2})[.:](\d{2})/.exec(text(p[map.time]));
+    return {
+        pageId: row.id,
+        title: text(p[map.title]).trim(),
+        days,
+        time: t && +t[1] < 24 && +t[2] < 60 ? `${pad(+t[1])}.${t[2]}` : "",
+        checked: !!p[map.done]?.checkbox,
+        edited: Date.parse(row.last_edited_time),
+        off: !!p[map.off]?.checkbox
+    };
+}
+
+const doneOn = (item, today) => item.checked && isoDay(new Date(item.edited)) === today;
+
+// What's on for `now`'s day (no days chosen: every day): what's left first,
+// by time, untimed after; plain values. `late`: its time has gone by.
+export function dailyToday(items, now, lang = "id") {
+    const today = isoDay(now), clock = `${pad(now.getHours())}.${pad(now.getMinutes())}`;
+    return (items ?? [])
+        .filter(i => !i.off && i.title !== "" && (i.days.length === 0 || i.days.includes(now.getDay())))
+        .map(i => {
+            const done = doneOn(i, today);
+            return { id: i.pageId, title: i.title, time: lang === "en" ? i.time.replace(".", ":") : i.time, sort: i.time, done, late: !done && i.time !== "" && i.time < clock };
+        })
+        .sort((a, b) => (a.done - b.done) || ((a.sort === "") - (b.sort === "")) || a.sort.localeCompare(b.sort) || a.title.localeCompare(b.title))
+        .map(i => ({ id: i.id, title: i.title, time: i.time, done: i.done, late: i.late }));
+}
+
+// Ticks left from an earlier day, on any row: these get taken off.
+export function dailyStale(items, now) {
+    const today = isoDay(now);
+    return (items ?? []).filter(i => i.checked && !doneOn(i, today)).map(i => i.pageId);
+}
+
+// Notion `properties` to set or take off a tick.
+export function dailyPatch(map, done) {
+    return { [map.done]: { checkbox: !!done } };
 }

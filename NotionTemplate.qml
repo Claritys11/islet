@@ -122,6 +122,12 @@ Singleton {
         } else {
             Config.set("todayTasksDb", TodayService.tasksDb);
         }
+        if (TodayService.dailyDb === "") {
+            Config.set("todayDailyDb", ids.daily);
+            took.push("daily tasks");
+        } else {
+            Config.set("todayDailyDb", TodayService.dailyDb);
+        }
         const ownNotes = TodayService.databases.find(d => (d.title ?? []).map(t => t.plain_text).join("").trim().toLowerCase() === "notes" && d.id !== ids.notes);
         if ((Config.opts.notesDb ?? "") === "" && !ownNotes) {
             Config.set("notesDb", ids.notes);

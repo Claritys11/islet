@@ -198,6 +198,10 @@ test("todayView: the day's schedule and deadlines, plain values only", () => {
     assert.deepEqual(v.soon, { title: "KKA", startAt: Date.parse("2026-10-25T07:00:00+07:00") });
     assert.equal(v.canAdd, true);
     assert.equal(v.canDue, false);
+    const withDaily = todayView({ dailyDb: "ab-cd", daily: [{ id: "1", title: "Lari", time: "05.00", done: false, late: true, extra: 1 }] });
+    assert.equal(withDaily.canDaily, true);
+    assert.equal(withDaily.dailyUrl, "https://www.notion.so/abcd");
+    assert.deepEqual(withDaily.daily, [{ id: "1", title: "Lari", time: "05.00", done: false, late: true }]);
     assert.equal(todayView({ tasksDb: "db", dueColumn: "Tenggat" }).canDue, true);
     assert.equal(v.sync, "Tersinkron 2 mnt lalu");
     // Through JSON unchanged: nothing that doesn't survive it.
@@ -206,7 +210,7 @@ test("todayView: the day's schedule and deadlines, plain values only", () => {
 
 test("todayView: off, or nothing yet", () => {
     const v = todayView({ schedule: [], deadlines: [], soon: null, enabled: false, status: "setup", error: "x", sync: "", tasksDb: "" });
-    assert.deepEqual(v, { enabled: false, status: "setup", error: "x", sync: "", canAdd: false, canDue: false, soon: null, schedule: [], deadlines: [] });
+    assert.deepEqual(v, { enabled: false, status: "setup", error: "x", sync: "", canAdd: false, canDue: false, canDaily: false, dailyUrl: "", daily: [], soon: null, schedule: [], deadlines: [] });
 });
 
 test("shelfView: name, folder or picture, and whether it went missing", () => {

@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import "today/notion.mjs" as Notion
 import "today/timetable.mjs" as Timetable
 import "today/deadlines.mjs" as Deadlines
+import "today/template.mjs" as Template
 import "today/sync.mjs" as Sync
 import "today/agenda.mjs" as Agenda
 
@@ -29,6 +30,11 @@ Singleton {
     property string tasksDb: ""
     property var timetableMap: ({})
     property var tasksMap: ({})
+    // Daily tasks: a list of its own in Notion (today/notion.mjs).
+    property string dailyDb: ""
+    property var dailyMap: ({})
+    property var daily: []
+    readonly property var dailyToday: Notion.dailyToday(daily, new Date(now), Lang.code)
     property real loadedAt: 0
     // Every lesson's subject could be read (else lessons aren't synced: a
     // fallback name would rename their events).
@@ -131,6 +137,7 @@ Singleton {
             const pick = Notion.pickDatabases(dbs);
             timetableDb = o.todayTimetableDb || pick.timetable;
             tasksDb = o.todayTasksDb || pick.tasks;
+            dailyDb = o.todayDailyDb || pick.daily;
             if (timetableDb === "" && tasksDb === "") {
                 status = "setup";
                 error = "Islet can't see a timetable or task list in Notion yet. Share your Workspace page with the integration (••• → Connections).";
@@ -141,7 +148,7 @@ Singleton {
             timetableMap = Object.assign(Notion.mapColumns("timetable", props(timetableDb)), cols.timetable ?? {});
             tasksMap = Object.assign(Notion.mapColumns("tasks", props(tasksDb)), cols.tasks ?? {});
             tasksMap.statusType = props(tasksDb)[tasksMap.status]?.type ?? "status";
-            let left = 2;
+            let left = 3;
             const done = () => {
                 if (--left > 0)
                     return;
@@ -154,6 +161,7 @@ Singleton {
             };
             loadTimetable(done);
             loadTasks(done);
+            loadDaily(cols.daily ?? {}, done);
         });
     }
 
@@ -198,6 +206,83 @@ Singleton {
                 return fail(rows);
             tasks = rows.map(r => Notion.taskFromRow(r, tasksMap));
             done();
+        });
+    }
+
+    // A daily list that can't be read leaves the lessons and tasks working.
+    function loadDaily(cols, done) {
+        if (dailyDb === "") {
+            daily = [];
+            dailyMap = {};
+            return done();
+        }
+        const read = properties => {
+            dailyMap = Object.assign(Notion.mapColumns("daily", properties), cols);
+            NotionDbService.query(dailyDb, (ok, rows) => {
+                if (ok) {
+                    daily = rows.map(r => Notion.dailyFromRow(r, dailyMap));
+                    resetDaily();
+                } else {
+                    flash(rows);
+                }
+                done();
+            });
+        };
+        const known = databases.find(d => d.id === dailyDb);
+        if (known)
+            return read(known.properties);
+        // Notion's search takes a while to list a database just made.
+        NotionDbService.request("GET", `databases/${dailyDb}`, null, (ok, db) => {
+            if (ok)
+                return read(db.properties);
+            flash(db);
+            done();
+        });
+    }
+
+    // Ticks left from an earlier day come off, in Notion too; one that can't
+    // is tried again at the next load (it doesn't count as done meanwhile).
+    function resetDaily() {
+        for (const id of Notion.dailyStale(daily, new Date()))
+            NotionDbService.update(id, Notion.dailyPatch(dailyMap, false), ok => {
+                if (ok)
+                    daily = daily.map(d => d.pageId === id ? Object.assign({}, d, { checked: false, edited: Date.now() }) : d);
+            });
+    }
+
+    // In Notion, at once on screen; put back if Notion refuses.
+    function tickDaily(pageId, done) {
+        if (!dailyMap.done)
+            return flash(Lang.t("The daily list has no checkbox column (Selesai).", "Daftar harian tak punya kolom centang (Selesai)."));
+        const before = daily;
+        daily = daily.map(d => d.pageId === pageId ? Object.assign({}, d, { checked: done, edited: Date.now() }) : d);
+        NotionDbService.update(pageId, Notion.dailyPatch(dailyMap, done), (ok, err) => {
+            if (!ok) {
+                daily = before;
+                flash(err);
+            }
+        });
+    }
+
+    // Makes the Daily Tasks list next to the task list (or the timetable).
+    function makeDaily(cb) {
+        const finish = cb ?? (() => {});
+        if (dailyDb !== "")
+            return finish(true, "");
+        const parent = [tasksDb, timetableDb].map(id => databases.find(d => d.id === id)?.parent?.page_id).find(id => !!id);
+        if (!parent) {
+            const err = Lang.t("Can't tell where to make it: share a page with Islet's integration, or pick a list in Settings.", "Tidak tahu harus dibuat di mana: bagikan satu halaman ke integrasi Islet, atau pilih daftar di Settings.");
+            flash(err);
+            return finish(false, err);
+        }
+        NotionDbService.request("POST", "databases", Template.databaseBody("daily", parent, {}), (ok, db) => {
+            if (!ok) {
+                flash(db);
+                return finish(false, db);
+            }
+            Config.set("todayDailyDb", db.id, "Daily tasks list");
+            finish(true, "");
+            load();
         });
     }
 
@@ -395,8 +480,13 @@ Singleton {
         repeat: true
         interval: 30000
         onTriggered: {
+            const day = new Date(root.now).getDate();
             root.now = Date.now();
             root.checkNudges();
+            // Past midnight (or back from sleep on another day): a new day's
+            // daily tasks, without waiting for the next sync.
+            if (new Date(root.now).getDate() !== day)
+                root.load();
         }
     }
     Timer {
@@ -763,7 +853,8 @@ Singleton {
         const evs = agendaToday.map(e => `event ${e.time}${e.until ? " " + e.until : ""} ${e.title} [${e.calendar}]${e.now ? " (now)" : e.past ? " (past)" : ""}`);
         const due = deadlines.map(d => `due ${d.label}: ${d.title} [${d.source}]`);
         const rest = tasks.filter(t => !t.due).map(t => `task ${t.done ? "[x]" : "[ ]"} ${t.title}`);
-        return lessons.concat(evs, due, rest).join("\n");
+        const everyDay = dailyToday.map(d => `daily ${d.done ? "[x]" : "[ ]"} ${d.time ? d.time + " " : ""}${d.title}`);
+        return lessons.concat(evs, due, rest, everyDay).join("\n");
     }
 
     function statusText() {
@@ -775,9 +866,11 @@ Singleton {
             `notion: ${notionOk ? "ok" : error}`,
             `timetable: ${dbTitle(timetableDb) || "-"}`,
             `tasks db: ${dbTitle(tasksDb) || "-"}`,
+            `daily db: ${dailyDb === "" ? "-" : dbTitle(dailyDb) || dailyDb}`,
             `lessons: ${allLessons.length}`,
             `lessons today: ${lessonsToday.length}`,
             `tasks: ${tasks.length}`,
+            `daily today: ${dailyToday.filter(d => d.done).length}/${dailyToday.length}`,
             `deadlines: ${deadlines.length}`,
             `classroom: ${classroom.length}`,
             `problems: ${problems.length}`,

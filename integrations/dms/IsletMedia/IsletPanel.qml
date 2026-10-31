@@ -14,6 +14,22 @@ Item {
     property bool live: true
     property int page: 0
 
+    readonly property var pageNames: ["focus", "today", "shelf", "checklist"]
+    function takePage() {
+        const i = pageNames.indexOf(IsletClient.panelPage);
+        if (i >= 0)
+            root.page = i;
+        IsletClient.panelPage = "";
+    }
+    Component.onCompleted: takePage()
+    Connections {
+        target: IsletClient
+        function onPanelPageChanged() {
+            if (IsletClient.panelPage !== "")
+                root.takePage();
+        }
+    }
+
     // Islet isn't running: say so instead of empty pages.
     Column {
         anchors.centerIn: parent
@@ -58,8 +74,38 @@ Item {
 
             IsletFocusPage {}
             IsletTodayPage {}
-            IsletShelfPage {}
+            // The panel takes the drops, on whichever page it's showing.
+            IsletShelfPage {
+                acceptDrops: false
+            }
             IsletChecklistPage {}
         }
+    }
+
+    // Files dragged over any of it: to the Shelf, where they land.
+    DropArea {
+        id: panelDrop
+        anchors.fill: parent
+        enabled: IsletClient.connected
+        onEntered: drag => {
+            if (!drag.hasUrls)
+                return;
+            drag.accept(Qt.CopyAction);
+            root.page = root.pageNames.indexOf("shelf");
+        }
+        onDropped: drop => {
+            if (!drop.hasUrls)
+                return;
+            IsletClient.send({ cmd: "shelf-add", urls: drop.urls.map(u => u.toString()) });
+            drop.accept(Qt.CopyAction);
+        }
+    }
+    Rectangle {
+        visible: panelDrop.containsDrag
+        anchors.fill: parent
+        radius: Theme.cornerRadius
+        color: Qt.alpha(Theme.primary, 0.08)
+        border.color: Theme.primary
+        border.width: 2
     }
 }

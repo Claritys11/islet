@@ -85,6 +85,10 @@ export function todayView(t) {
         canAdd: !!t.tasksDb,
         // The task list has a due date column, so new tasks can get one.
         canDue: !!t.tasksDb && !!t.dueColumn,
+        // Daily tasks: a list exists, today's, and where to edit them.
+        canDaily: !!t.dailyDb,
+        dailyUrl: t.dailyDb ? `https://www.notion.so/${String(t.dailyDb).replace(/-/g, "")}` : "",
+        daily: (t.daily ?? []).map(d => ({ id: d.id, title: d.title, time: d.time ?? "", done: !!d.done, late: !!d.late })),
         soon: t.soon ? { title: t.soon.title, startAt: t.soon.startAt } : null,
         schedule: (t.schedule ?? []).map(s => ({
             kind: s.kind,

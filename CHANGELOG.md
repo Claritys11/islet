@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Daily tasks** in Hari ini (notch, DMS card and Islet tab): a third tab beside Due soon and All, with
+  what's on today, done/total, and a time that turns red once it's gone by. They live in a Daily Tasks list
+  in Notion (Selesai: the tick; Hari: which days, none is every day; Jam: a time; Nonaktif: pause one). Tick
+  in Islet or in Notion. A tick counts on the day its row was last edited, and last day's ticks come off by
+  themselves whenever Islet loads (when it starts, past midnight, at each sync), so nothing has to run at
+  midnight and every computer agrees. "Make it in Notion" on the empty tab creates the list next to Tasks;
+  ↗ opens it. New templates include it; Settings can pick another list.
+- **Drag files out of the Shelf** in DMS to another app, as in the floating island.
+
+### Fixed
+- **Shelf drag and drop in DMS**: a file dragged onto the pill opened the Islet tab on Focus, and dropping it
+  on that panel lost it. The pill now lights up and opens the tab at Shelf, and the whole panel and the Shelf
+  card in the overview take drops.
+
 ## 1.9.1 — 2026-10-30
 
 ### Added

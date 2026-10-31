@@ -36,9 +36,11 @@ import "link/fill.mjs" as Fill
 //
 // For the DMS dashboard tab and card (Islet's notch inside DMS):
 //   → also "day" (link/desk.mjs todayView: schedule, deadlines, soon, sync,
-//     canAdd, canDue),
+//     canAdd, canDue, canDaily, dailyUrl, daily),
 //     "shelf" [{path, name, dir, image, missing}], "checklist" {source, items}
 //   ← {"cmd":"today-refresh"} | {"cmd":"shelf-open"|"shelf-remove","path":…}
+//     | {"cmd":"daily-done","id":…,"done":bool} | "daily-setup" (a request)
+//     | {"cmd":"shelf-follow"} (a shelf file was dragged away: look where it went)
 //     | {"cmd":"shelf-paste"} | {"cmd":"shelf-clear"}
 //     | {"cmd":"checklist-add","text":…} | {"cmd":"checklist-check","id":…,"checked":bool}
 //     | {"cmd":"checklist-remove","id":…} | {"cmd":"checklist-clear-done"}
@@ -117,7 +119,7 @@ Singleton {
             : T.syncStatus === "error" || T.syncStatus === "held" ? T.syncError
             : T.syncStatus === "syncing" ? Lang.t("Syncing…", "Menyinkronkan…")
             : T.lastSync ? Lang.t(`Synced ${ago(T.lastSync)}`, `Tersinkron ${ago(T.lastSync)}`) : "";
-        return Desk.todayView({ schedule: T.scheduleToday, deadlines: T.deadlines, soon: T.soon, enabled: o.todayEnabled, status: T.status, error: T.error || T.message, sync, tasksDb: T.tasksDb, dueColumn: T.tasksMap.due ?? "" });
+        return Desk.todayView({ schedule: T.scheduleToday, deadlines: T.deadlines, soon: T.soon, enabled: o.todayEnabled, status: T.status, error: T.error || T.message, sync, tasksDb: T.tasksDb, dueColumn: T.tasksMap.due ?? "", dailyDb: T.dailyDb, daily: T.dailyToday });
     }
     readonly property var shelfView: Desk.shelfView(ShelfService.items)
     readonly property var checklistView: Desk.checklistView(ChecklistService.items, ChecklistService.useNotion, ChecklistService.error)
@@ -155,6 +157,13 @@ Singleton {
         case "task-add":
             TodayService.add(String(msg.text ?? ""), Desk.validDue(msg.due), (ok, err) => root.reply(client, msg.req, ok, ok ? null : err));
             break;
+        case "daily-done":
+            if (msg.id)
+                TodayService.tickDaily(String(msg.id), !!msg.done);
+            break;
+        case "daily-setup":
+            TodayService.makeDaily((ok, err) => root.reply(client, msg.req, ok, ok ? null : err));
+            break;
         case "task-delete":
             TodayService.remove(String(msg.id ?? ""), (ok, err) => root.reply(client, msg.req, ok, ok ? null : err));
             break;
@@ -167,6 +176,9 @@ Singleton {
             break;
         case "shelf-remove":
             ShelfService.remove(String(msg.path ?? ""));
+            break;
+        case "shelf-follow":
+            ShelfService.followSoon();
             break;
         case "shelf-paste":
             ShelfService.paste();

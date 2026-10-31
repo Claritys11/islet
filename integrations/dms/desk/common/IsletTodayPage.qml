@@ -6,8 +6,8 @@ import "due/due.mjs" as Due
 import "due"
 
 // Hari ini: the lesson about to start, today's lessons and Google events,
-// close deadlines or all open tasks (tick a Notion one to mark it Done), a
-// field for a new task and one for its due date. Drawn with DMS's widgets, fed by Islet over its socket
+// close deadlines, all open tasks or the day's daily tasks (tick one to mark
+// it done), a field for a new task and one for its due date. Drawn with DMS's widgets, fed by Islet over its socket
 // (IsletClient); the DMS dashboard's Islet tab and the Hari ini card both
 // show it.
 ColumnLayout {
@@ -19,10 +19,23 @@ ColumnLayout {
     readonly property var day: IsletClient.day
     readonly property var shelf: IsletClient.shelf ?? []
     readonly property var checklist: IsletClient.checklist
-    // The right column: close deadlines ("due") or every open task ("all").
+    // The right column: close deadlines ("due"), every open task ("all") or
+    // today's daily tasks ("daily", from their own list in Notion).
     property string list: "due"
     readonly property var openTasks: (IsletClient.tasks?.items ?? []).filter(t => !t.done)
     readonly property bool canDue: root.day?.canDue ?? false
+    readonly property var daily: root.day?.daily ?? []
+    readonly property int dailyDone: root.daily.filter(d => d.done).length
+    property bool makingDaily: false
+    function makeDaily() {
+        root.makingDaily = true;
+        root.addError = "";
+        requester.request("daily-setup", {}, (ok, data, err) => {
+            root.makingDaily = false;
+            if (!ok)
+                root.addError = err;
+        }, 60000);
+    }
     property string addError: ""
     // The calendar for the due date, shown where the lists are.
     property bool picking: false
@@ -186,11 +199,13 @@ ColumnLayout {
             Layout.preferredWidth: 1
             spacing: Theme.spacingXS
             RowLayout {
+                Layout.fillWidth: true
                 spacing: Theme.spacingM
                 Repeater {
                     model: [
-                        { key: "due", text: IsletClient.t("DUE SOON", "TENGGAT DEKAT") },
-                        { key: "all", text: IsletClient.t(`ALL TASKS · ${root.openTasks.length}`, `SEMUA TUGAS · ${root.openTasks.length}`) }
+                        { key: "due", text: IsletClient.t("DUE SOON", "TENGGAT") },
+                        { key: "all", text: IsletClient.t(`ALL · ${root.openTasks.length}`, `SEMUA · ${root.openTasks.length}`) },
+                        { key: "daily", text: IsletClient.t("DAILY", "HARIAN") + (root.daily.length ? ` · ${root.dailyDone}/${root.daily.length}` : "") }
                     ]
                     StyledText {
                         id: tab
@@ -207,6 +222,24 @@ ColumnLayout {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: root.list = tab.modelData.key
                         }
+                    }
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+                // Daily tasks are arranged in Notion.
+                DIcon {
+                    visible: root.list === "daily" && (root.day?.canDaily ?? false)
+                    name: "open_in_new"
+                    size: 14
+                    color: notionMouse.containsMouse ? Theme.primary : Theme.surfaceVariantText
+                    MouseArea {
+                        id: notionMouse
+                        anchors.fill: parent
+                        anchors.margins: -4
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Qt.openUrlExternally(root.day.dailyUrl)
                     }
                 }
             }
@@ -261,6 +294,80 @@ ColumnLayout {
                             text: due.modelData.label
                             color: due.modelData.urgency === "overdue" || due.modelData.urgency === "today" ? Theme.error : Theme.surfaceVariantText
                             font.pixelSize: Theme.fontSizeSmall
+                        }
+                    }
+                }
+            }
+            // Today's daily tasks: tick one for today, it's back on its next day.
+            ListView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: root.list === "daily"
+                clip: true
+                spacing: 2
+                model: root.daily
+                Column {
+                    anchors.centerIn: parent
+                    width: parent.width - Theme.spacingM
+                    visible: parent.count === 0
+                    spacing: Theme.spacingS
+                    StyledText {
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        text: root.day?.canDaily ? IsletClient.t("Nothing for today. Add some in Notion: Hari is which days, none is every day.", "Tidak ada untuk hari ini. Tambahkan di Notion: Hari untuk harinya, kosong berarti setiap hari.") : IsletClient.t("Daily tasks live in a list of their own in Notion.", "Tugas harian ada di daftarnya sendiri di Notion.")
+                        color: Theme.surfaceVariantText
+                        font.pixelSize: Theme.fontSizeSmall
+                    }
+                    DButton {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        visible: !(root.day?.canDaily ?? false)
+                        enabled: !root.makingDaily
+                        iconName: "add"
+                        text: root.makingDaily ? IsletClient.t("Making…", "Membuat…") : IsletClient.t("Make it in Notion", "Buat di Notion")
+                        onClicked: root.makeDaily()
+                    }
+                }
+                delegate: Rectangle {
+                    id: chore
+                    required property var modelData
+                    width: ListView.view.width
+                    height: 30
+                    radius: Theme.cornerRadius
+                    color: choreMouse.containsMouse ? Theme.surfaceContainerHigh : "transparent"
+                    MouseArea {
+                        id: choreMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.cmd("daily-done", { id: chore.modelData.id, done: !chore.modelData.done })
+                    }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: Theme.spacingXS
+                        anchors.rightMargin: Theme.spacingXS
+                        spacing: Theme.spacingS
+                        DIcon {
+                            name: chore.modelData.done ? "check_box" : "check_box_outline_blank"
+                            size: Theme.iconSizeSmall ?? 16
+                            color: chore.modelData.done ? Theme.primary : Theme.surfaceVariantText
+                        }
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: chore.modelData.title
+                            elide: Text.ElideRight
+                            wrapMode: Text.NoWrap
+                            opacity: chore.modelData.done ? 0.5 : 1
+                            font.strikeout: chore.modelData.done
+                            color: Theme.surfaceText
+                            font.pixelSize: Theme.fontSizeMedium
+                        }
+                        StyledText {
+                            visible: text !== ""
+                            text: chore.modelData.time
+                            color: chore.modelData.late ? Theme.error : Theme.surfaceVariantText
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.features: ({ tnum: 1 })
                         }
                     }
                 }

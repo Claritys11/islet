@@ -144,15 +144,18 @@ PluginComponent {
                 }
             }
 
-            // Files dragged onto the pill open Islet's shelf right below it,
-            // and dropping them here parks them on the shelf.
+            // Files dragged onto the pill open Islet's shelf right below it
+            // (in DMS mode the dashboard's Islet tab, at Shelf, which takes
+            // them too), and dropping them here parks them on the shelf.
             DropArea {
+                id: pillDrop
                 anchors.fill: parent
                 anchors.margins: -6
                 onEntered: drag => {
                     if (!drag.hasUrls)
                         return;
                     drag.accept(Qt.CopyAction);
+                    IsletClient.panelPage = "shelf";
                     const p = pill.mapToGlobal(0, 0);
                     root.send({ cmd: "open", tab: "shelf", x: p.x, y: -1, width: pill.width });
                 }
@@ -162,6 +165,16 @@ PluginComponent {
                     root.send({ cmd: "shelf-add", urls: drop.urls.map(u => u.toString()) });
                     drop.accept(Qt.CopyAction);
                 }
+            }
+
+            Rectangle {
+                visible: pillDrop.containsDrag
+                anchors.fill: parent
+                anchors.margins: -4
+                radius: Theme.cornerRadius
+                color: Qt.alpha(Theme.primary, 0.15)
+                border.color: Theme.primary
+                border.width: 1
             }
 
             Row {

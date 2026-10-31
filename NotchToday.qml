@@ -6,16 +6,18 @@ import "link/desk.mjs" as Desk
 import "integrations/dms/desk/common/due/due.mjs" as Due
 import "integrations/dms/desk/common/due" as Picker
 
-// "Hari ini" tab: today's lessons on the left, close deadlines or all open
-// tasks on the right (tick one to mark it Done in Notion), fields to add a
-// task and its due date, and the sync state with Google Calendar.
+// "Hari ini" tab: today's lessons on the left, close deadlines, all open
+// tasks or the day's daily tasks on the right (tick one to mark it done in
+// Notion), fields to add a task and its due date, and the sync state with
+// Google Calendar.
 Item {
     id: root
 
     readonly property var t: TodayService
     readonly property bool inputFocused: input.activeFocus || picker.typing
     readonly property string draft: input.text + dueText
-    // The right column: close deadlines ("due") or every open task ("all").
+    // The right column: close deadlines ("due"), every open task ("all") or
+    // today's daily tasks ("daily", from their own list in Notion).
     property string list: "due"
     readonly property var openTasks: Desk.openTasks(t.tasks, 200).filter(x => !x.done)
     readonly property bool canDue: t.tasksDb !== "" && !!t.tasksMap.due
@@ -314,7 +316,8 @@ Item {
                     Repeater {
                         model: [
                             { key: "due", text: Lang.t("DUE SOON", "TENGGAT DEKAT"), n: t.deadlines.length },
-                            { key: "all", text: Lang.t("ALL TASKS", "SEMUA TUGAS"), n: root.openTasks.length }
+                            { key: "all", text: Lang.t("ALL TASKS", "SEMUA TUGAS"), n: root.openTasks.length },
+                            { key: "daily", text: Lang.t("DAILY", "HARIAN"), n: t.dailyToday.length ? `${t.dailyToday.filter(d => d.done).length}/${t.dailyToday.length}` : 0 }
                         ]
                         Text {
                             id: tab
@@ -412,6 +415,89 @@ Item {
                             Chip {
                                 text: due.modelData.label
                                 tint: root.urgencyColor(due.modelData.urgency)
+                            }
+                        }
+                    }
+                }
+                // Today's daily tasks: tick one for today, it's back on its next day.
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    visible: root.list === "daily"
+                    clip: true
+                    spacing: 2
+                    model: t.dailyToday
+                    boundsBehavior: Flickable.StopAtBounds
+                    Column {
+                        anchors.centerIn: parent
+                        width: parent.width - 16
+                        visible: parent.count === 0
+                        spacing: 8
+                        Text {
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            wrapMode: Text.WordWrap
+                            text: t.dailyDb !== "" ? Lang.t("Nothing for today. Add some in Notion: Hari is which days, none is every day.", "Tidak ada untuk hari ini. Tambahkan di Notion: Hari untuk harinya, kosong berarti setiap hari.") : Lang.t("Daily tasks live in a list of their own in Notion.", "Tugas harian ada di daftarnya sendiri di Notion.")
+                            color: Theme.subtext
+                            font.family: Theme.font
+                            font.pixelSize: 12
+                        }
+                        Button {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            visible: t.dailyDb === ""
+                            text: Lang.t("Make it in Notion", "Buat di Notion")
+                            onClicked: t.makeDaily()
+                        }
+                    }
+                    delegate: Rectangle {
+                        id: chore
+                        required property var modelData
+                        width: ListView.view.width
+                        height: 30
+                        radius: 10
+                        color: choreMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
+                        MouseArea {
+                            id: choreMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: t.tickDaily(chore.modelData.id, !chore.modelData.done)
+                        }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 2
+                            anchors.rightMargin: 6
+                            spacing: 8
+                            Rectangle {
+                                width: 16
+                                height: 16
+                                radius: 4
+                                color: chore.modelData.done ? Theme.primary : "transparent"
+                                border.width: 2
+                                border.color: chore.modelData.done || choreMouse.containsMouse ? Theme.primary : Theme.subtext
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: chore.modelData.done
+                                    text: "check"
+                                    color: Theme.onPrimary
+                                    font.family: Theme.iconFont
+                                    font.pixelSize: 13
+                                }
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: chore.modelData.title
+                                elide: Text.ElideRight
+                                opacity: chore.modelData.done ? 0.5 : 1
+                                font.strikeout: chore.modelData.done
+                                color: Theme.text
+                                font.family: Theme.font
+                                font.pixelSize: 13
+                            }
+                            Chip {
+                                visible: chore.modelData.time !== ""
+                                text: chore.modelData.time
+                                tint: chore.modelData.late ? Theme.danger : Theme.subtext
                             }
                         }
                     }
