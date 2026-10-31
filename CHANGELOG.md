@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.10.0 — 2026-10-31
 
 ### Added
 - **Daily tasks** in Hari ini (notch, DMS card and Islet tab): a third tab beside Due soon and All, with
