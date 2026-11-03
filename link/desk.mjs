@@ -74,8 +74,24 @@ export function pomodoroView(p, o = {}) {
     };
 }
 
-// The Hari ini tab for the DMS dashboard: today's lessons and events, close
-// deadlines, the lesson about to start — plain values that survive JSON.
+// A lesson or event in a day's schedule, plain values only.
+function scheduleSlot(s) {
+    return {
+        kind: s.kind,
+        key: s.key,
+        title: s.title,
+        time: s.time,
+        until: s.until ?? "",
+        now: !!s.now,
+        past: !!s.past,
+        clash: !!s.clash,
+        color: s.kind === "event" ? String(s.color ?? "") : ""
+    };
+}
+
+// The Hari ini tab for the DMS dashboard: today's and tomorrow's lessons and
+// events, close deadlines, the lesson about to start — plain values that
+// survive JSON.
 export function todayView(t) {
     return {
         enabled: !!t.enabled,
@@ -90,17 +106,8 @@ export function todayView(t) {
         dailyUrl: t.dailyDb ? `https://www.notion.so/${String(t.dailyDb).replace(/-/g, "")}` : "",
         daily: (t.daily ?? []).map(d => ({ id: d.id, title: d.title, time: d.time ?? "", done: !!d.done, late: !!d.late })),
         soon: t.soon ? { title: t.soon.title, startAt: t.soon.startAt } : null,
-        schedule: (t.schedule ?? []).map(s => ({
-            kind: s.kind,
-            key: s.key,
-            title: s.title,
-            time: s.time,
-            until: s.until ?? "",
-            now: !!s.now,
-            past: !!s.past,
-            clash: !!s.clash,
-            color: s.kind === "event" ? String(s.color ?? "") : ""
-        })),
+        schedule: (t.schedule ?? []).map(scheduleSlot),
+        tomorrow: (t.tomorrow ?? []).map(scheduleSlot),
         deadlines: (t.deadlines ?? []).map(d => ({
             id: d.pageId ?? "",
             key: d.key,

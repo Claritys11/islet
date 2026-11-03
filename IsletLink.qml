@@ -35,7 +35,7 @@ import "link/fill.mjs" as Fill
 //     "calendar-month" {year, month}
 //
 // For the DMS dashboard tab and card (Islet's notch inside DMS):
-//   → also "day" (link/desk.mjs todayView: schedule, deadlines, soon, sync,
+//   → also "day" (link/desk.mjs todayView: schedule, tomorrow, deadlines, soon, sync,
 //     canAdd, canDue, canDaily, dailyUrl, daily),
 //     "shelf" [{path, name, dir, image, missing}], "checklist" {source, items}
 //   ← {"cmd":"today-refresh"} | {"cmd":"shelf-open"|"shelf-remove","path":…}
@@ -119,7 +119,7 @@ Singleton {
             : T.syncStatus === "error" || T.syncStatus === "held" ? T.syncError
             : T.syncStatus === "syncing" ? Lang.t("Syncing…", "Menyinkronkan…")
             : T.lastSync ? Lang.t(`Synced ${ago(T.lastSync)}`, `Tersinkron ${ago(T.lastSync)}`) : "";
-        return Desk.todayView({ schedule: T.scheduleToday, deadlines: T.deadlines, soon: T.soon, enabled: o.todayEnabled, status: T.status, error: T.error || T.message, sync, tasksDb: T.tasksDb, dueColumn: T.tasksMap.due ?? "", dailyDb: T.dailyDb, daily: T.dailyToday });
+        return Desk.todayView({ schedule: T.scheduleToday, tomorrow: T.scheduleTomorrow, deadlines: T.deadlines, soon: T.soon, enabled: o.todayEnabled, status: T.status, error: T.error || T.message, sync, tasksDb: T.tasksDb, dueColumn: T.tasksMap.due ?? "", dailyDb: T.dailyDb, daily: T.dailyToday });
     }
     readonly property var shelfView: Desk.shelfView(ShelfService.items)
     readonly property var checklistView: Desk.checklistView(ChecklistService.items, ChecklistService.useNotion, ChecklistService.error)

@@ -82,6 +82,24 @@ export function eventsOn(events, day, now, calendars, lang = "id") {
     return out.sort((a, b) => a.start - b.start || b.allDay - a.allDay);
 }
 
+// A lesson's time: "07.00–08.30" in Indonesian, "07:00–08:30" in English.
+export function lessonTime(l, lang = "id") {
+    return lang === "en" ? `${l.start}–${l.end}` : `${l.start.replace(":", ".")}–${l.end.replace(":", ".")}`;
+}
+
+// A later day's schedule: that day's lessons (`lessons`, already its own) and
+// events from calendars you write to, by start time. Nothing on it is
+// happening yet, even an event already running that lasts until then.
+export function dayAhead(lessons, events, day, now, calendars, lang = "id", clashKeys = []) {
+    const at = t => {
+        const [h, m] = t.split(":").map(Number);
+        return new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m).getTime();
+    };
+    const rows = lessons.map(l => Object.assign({}, l, { kind: "lesson", key: "lesson:" + l.pageId, time: lessonTime(l, lang), until: "", sortAt: at(l.start), clash: clashKeys.includes("lesson:" + l.pageId) }));
+    const evs = eventsOn(events, day, now, calendars, lang).filter(e => !e.readOnly).map(e => Object.assign({}, e, { kind: "event", sortAt: e.start.getTime(), clash: false }));
+    return rows.concat(evs).sort((a, b) => a.sortAt - b.sortAt).map(r => Object.assign(r, { now: false, past: false }));
+}
+
 // Unfinished Notion tasks due on `day`: timed ones by time, then the ones
 // due "by the end of the day".
 export function tasksOn(tasks, day, lang = "id") {

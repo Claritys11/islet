@@ -163,3 +163,36 @@ test("eventsOn and parseEvent in English", () => {
     assert.equal(parseEvent("Holiday", day, 60, "en").label, "Fri 23 Oct · all day");
     assert.deepEqual(tasksOn([{ pageId: "a", title: "Essay", done: false, due: "2026-10-23", dueHasTime: false }], day, "en").map(t => t.time), ["due"]);
 });
+
+import { dayAhead, lessonTime } from "../today/agenda.mjs";
+
+const lesson = (pageId, start, end) => ({ pageId, title: pageId, start, end });
+const tomorrow = new Date(2026, 9, 24);
+
+test("a day ahead: lessons and events together by start, nothing happening yet", () => {
+    const rows = dayAhead([lesson("kka", "07:00", "08:30"), lesson("mtk", "10:00", "11:00")], [ev("rapat", "2026-10-24T02:00:00Z", "2026-10-24T02:30:00Z")], tomorrow, noon, cals);
+    assert.deepEqual(rows.map(r => r.title), ["kka", "rapat", "mtk"]);
+    assert.deepEqual(rows.map(r => r.kind), ["lesson", "event", "lesson"]);
+    assert.equal(rows[0].time, "07.00–08.30");
+    assert.equal(rows[0].key, "lesson:kka");
+    assert.equal(rows[1].time, "09.00–09.30");
+    assert.ok(rows.every(r => r.now === false && r.past === false));
+});
+
+test("a day ahead: an event running now isn't marked as happening tomorrow", () => {
+    const [e] = dayAhead([], [ev("trip", "2026-10-23T03:00:00Z", "2026-10-24T13:00:00Z")], tomorrow, noon, cals);
+    assert.equal(e.time, "→ 20.00");
+    assert.equal(e.now, false);
+    assert.equal(e.past, false);
+});
+
+test("a day ahead: read-only calendars stay out, as in today's schedule", () => {
+    assert.deepEqual(dayAhead([], [ev("tugas", "2026-10-24T02:00:00Z", "2026-10-24T03:00:00Z", { calendarId: "class" })], tomorrow, noon, cals), []);
+});
+
+test("a day ahead: lessons that overlap say so; English times", () => {
+    const rows = dayAhead([lesson("kka", "07:00", "08:30")], [], tomorrow, noon, cals, "en", ["lesson:kka"]);
+    assert.equal(rows[0].clash, true);
+    assert.equal(rows[0].time, "07:00–08:30");
+    assert.equal(lessonTime(lesson("x", "07:00", "08:30"), "id"), "07.00–08.30");
+});

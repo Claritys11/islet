@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.10.2 — 2026-11-03
+
+### Added
+- **Tomorrow's schedule** in Hari ini in DMS (the card and the Islet tab): a Tomorrow tab beside Schedule, with
+  how many things are on. Tomorrow's lessons and Google events by time, and lessons that clash say so.
+
 ## 1.10.1 — 2026-10-31
 
 ### Fixed

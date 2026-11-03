@@ -22,6 +22,9 @@ ColumnLayout {
     // The right column: close deadlines ("due"), every open task ("all") or
     // today's daily tasks ("daily", from their own list in Notion).
     property string list: "due"
+    // The left column: today's schedule ("today") or tomorrow's ("tomorrow").
+    property string scheduleDay: "today"
+    readonly property var tomorrow: root.day?.tomorrow ?? []
     readonly property var openTasks: (IsletClient.tasks?.items ?? []).filter(t => !t.done)
     readonly property bool canDue: root.day?.canDue ?? false
     readonly property var daily: root.day?.daily ?? []
@@ -127,22 +130,45 @@ ColumnLayout {
             Layout.fillHeight: true
             Layout.preferredWidth: 1
             spacing: Theme.spacingXS
-            StyledText {
-                text: IsletClient.t("SCHEDULE", "JADWAL")
-                color: Theme.surfaceVariantText
-                font.pixelSize: Theme.fontSizeSmall
-                font.weight: Theme.fontWeightMedium
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Theme.spacingM
+                Repeater {
+                    model: [
+                        { key: "today", text: IsletClient.t("SCHEDULE", "JADWAL") },
+                        { key: "tomorrow", text: IsletClient.t("TOMORROW", "BESOK") + (root.tomorrow.length ? ` · ${root.tomorrow.length}` : "") }
+                    ]
+                    StyledText {
+                        id: dayTab
+                        required property var modelData
+                        text: modelData.text
+                        color: root.scheduleDay === modelData.key ? Theme.primary : dayTabMouse.containsMouse ? Theme.surfaceText : Theme.surfaceVariantText
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.weight: Theme.fontWeightMedium
+                        MouseArea {
+                            id: dayTabMouse
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.scheduleDay = dayTab.modelData.key
+                        }
+                    }
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
             }
             ListView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
                 spacing: 2
-                model: root.day?.schedule ?? []
+                model: root.scheduleDay === "tomorrow" ? root.tomorrow : (root.day?.schedule ?? [])
                 StyledText {
                     anchors.centerIn: parent
                     visible: parent.count === 0
-                    text: IsletClient.t("Nothing on today", "Tidak ada jadwal")
+                    text: root.scheduleDay === "tomorrow" ? IsletClient.t("Nothing on tomorrow", "Tidak ada jadwal besok") : IsletClient.t("Nothing on today", "Tidak ada jadwal")
                     color: Theme.surfaceVariantText
                     font.pixelSize: Theme.fontSizeSmall
                 }

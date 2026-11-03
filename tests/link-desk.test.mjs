@@ -194,6 +194,8 @@ test("todayView: the day's schedule and deadlines, plain values only", () => {
     });
     assert.deepEqual(v.schedule[1], { kind: "event", key: "gcal:x", title: "CTF", time: "20.00 →", until: "s/d Min 20.00", now: true, past: false, clash: false, color: "#9fe1e7" });
     assert.equal(v.schedule[0].color, "");
+    const ahead = todayView({ tomorrow: [{ kind: "event", key: "gcal:y", title: "Rapat", time: "09.00–09.30", now: false, past: false, clash: false, color: "#9fe1e7", start: new Date() }] });
+    assert.deepEqual(ahead.tomorrow, [{ kind: "event", key: "gcal:y", title: "Rapat", time: "09.00–09.30", until: "", now: false, past: false, clash: false, color: "#9fe1e7" }]);
     assert.deepEqual(v.deadlines[0], { id: "p1", key: "notion:p1", title: "Essay", source: "notion", priority: "Tinggi", label: "hari ini 23.59", urgency: "today", tickable: true });
     assert.deepEqual(v.soon, { title: "KKA", startAt: Date.parse("2026-10-25T07:00:00+07:00") });
     assert.equal(v.canAdd, true);
@@ -210,7 +212,7 @@ test("todayView: the day's schedule and deadlines, plain values only", () => {
 
 test("todayView: off, or nothing yet", () => {
     const v = todayView({ schedule: [], deadlines: [], soon: null, enabled: false, status: "setup", error: "x", sync: "", tasksDb: "" });
-    assert.deepEqual(v, { enabled: false, status: "setup", error: "x", sync: "", canAdd: false, canDue: false, canDaily: false, dailyUrl: "", daily: [], soon: null, schedule: [], deadlines: [] });
+    assert.deepEqual(v, { enabled: false, status: "setup", error: "x", sync: "", canAdd: false, canDue: false, canDaily: false, dailyUrl: "", daily: [], soon: null, schedule: [], tomorrow: [], deadlines: [] });
 });
 
 test("shelfView: name, folder or picture, and whether it went missing", () => {

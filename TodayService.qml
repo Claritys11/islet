@@ -61,8 +61,8 @@ Singleton {
     }
     readonly property var deadlines: Deadlines.dueSoon(tasks, classroom, new Date(now), o.todayDays, Lang.code).map(d => Object.assign(d, { clash: clashKeys.includes("task:" + d.pageId) }))
     // Things that overlap today: lessons and timed task plans.
-    readonly property var clashKeys: {
-        const day = new Date(now);
+    readonly property var clashKeys: clashKeysOn(new Date(now))
+    function clashKeysOn(day) {
         const items = Timetable.lessonsOn(allLessons, day).map(l => {
             const [h1, m1] = l.start.split(":").map(Number), [h2, m2] = l.end.split(":").map(Number);
             return { key: "lesson:" + l.pageId, start: new Date(day.getFullYear(), day.getMonth(), day.getDate(), h1, m1), end: new Date(day.getFullYear(), day.getMonth(), day.getDate(), h2, m2) };
@@ -88,9 +88,15 @@ Singleton {
     readonly property var scheduleToday: {
         const day = new Date(now);
         const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
-        const lessons = lessonsToday.map(l => Object.assign({ kind: "lesson", key: "lesson:" + l.pageId, time: Lang.id ? `${l.start.replace(":", ".")}–${l.end.replace(":", ".")}` : `${l.start}–${l.end}`, until: "", sortAt: l.startAt }, l));
+        const lessons = lessonsToday.map(l => Object.assign({ kind: "lesson", key: "lesson:" + l.pageId, time: Agenda.lessonTime(l, Lang.code), until: "", sortAt: l.startAt }, l));
         const evs = agendaToday.map(e => Object.assign({ kind: "event", sortAt: e.start.getTime(), startAt: !e.allDay && e.start.getTime() >= dayStart ? e.start.getTime() : 0, clash: false }, e));
         return lessons.concat(evs).sort((a, b) => a.sortAt - b.sortAt);
+    }
+    // Tomorrow's lessons and events (DMS's Hari ini shows them beside today's).
+    readonly property var scheduleTomorrow: {
+        const n = new Date(now);
+        const day = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1);
+        return Agenda.dayAhead(Timetable.lessonsOn(allLessons, day), events, day, n, DcalService.calendars, Lang.code, clashKeysOn(day));
     }
     readonly property var nextLesson: scheduleToday.find(l => l.startAt && !l.past && !l.now) ?? null
     // A lesson or event starting within 5 minutes (for the pill).
