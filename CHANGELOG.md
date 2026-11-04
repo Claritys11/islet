@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Total pause time and Start over on the focus timer** (notch, DMS's Islet tab and Focus card, desktop widget):
+  while paused it shows all the pause time this sitting, and Start over runs the phase again from the top with
+  the pause time back to zero (`islet pomodoro restart`).
+- **Dux Calendar 2.1** works with Islet, DMS's calendar and quick add. Islet restarts a daemon still running from
+  an older version, without opening its window, and a new copy of DMS's UI takes over by itself.
+
+### Changed
+- **Add to Google Calendar from DMS's calendar** (with `islet dms notepad`): the field under a day makes an event
+  on that day from one line, like `Rapat 19.00-20.30` or, with no time, an all-day `Hari Guru`. It used to add a
+  Google Task, which failed without a word whenever Dank Calendar couldn't reach the Tasks API. If an event
+  fails, DMS says why and the text comes back.
+
+### Fixed
+- **New events in DMS's calendar** go to the account's main calendar. DMS picked the first writable one, and for
+  a Google account that can be a task list, which refuses events with a 404; task lists aren't offered any more.
+
 ## 1.10.2 — 2026-11-03
 
 ### Added

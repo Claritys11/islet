@@ -118,6 +118,12 @@ Singleton {
         _pausedAt = 0;
     }
 
+    // Start this phase over at once: a new sitting, its pause time at zero.
+    function restart() {
+        reset();
+        start();
+    }
+
     // Forget the pause time only: the timer and the rest of the session stay.
     // Still paused? The pause clock starts again from zero.
     function resetPause() {

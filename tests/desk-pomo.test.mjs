@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { clock, short, sitting, rounds, status } from "../integrations/dms/desk/common/pomo.mjs";
+import { clock, short, sitting, rounds, status, pausedTotal } from "../integrations/dms/desk/common/pomo.mjs";
 import { pomodoroView } from "../link/desk.mjs";
 
 test("clock and short: the notch's formats", () => {
@@ -30,6 +30,14 @@ test("status: the pause clock while paused", () => {
     const now = 1_000_000;
     assert.equal(status({ paused: true, pausedAt: now - 133_000 }, now, "id"), "Dijeda 2:13");
     assert.equal(status({ paused: false, label: "Short break" }, now), "Short break");
+});
+
+test("pausedTotal: earlier pauses and this one, only while paused", () => {
+    const now = 1_000_000;
+    assert.equal(pausedTotal({ paused: true, pausedAt: now - 133_000, pausedBefore: 207 }, now), "Total paused 5:40");
+    assert.equal(pausedTotal({ paused: true, pausedAt: now - 60_000, pausedBefore: 0 }, now, "id"), "Total jeda 1:00");
+    assert.equal(pausedTotal({ paused: false, pausedAt: 0, pausedBefore: 207 }, now), "");
+    assert.equal(pausedTotal(null, now), "");
 });
 
 test("pomodoroView: continuous, round, tip on breaks, the sitting as times", () => {

@@ -23,6 +23,7 @@ ColumnLayout {
     property real now: Date.now()
     readonly property var sit: Pomo.sitting(root.pomo, root.now)
     readonly property string status: Pomo.status(root.pomo, root.now, IsletClient.lang)
+    readonly property string pausedTotal: Pomo.pausedTotal(root.pomo, root.now, IsletClient.lang)
     Timer {
         interval: 1000
         repeat: true
@@ -55,7 +56,8 @@ ColumnLayout {
             }
             StyledText {
                 Layout.fillWidth: true
-                text: root.status
+                // Room for one line: paused, it's the total.
+                text: root.pausedTotal || root.status
                 elide: Text.ElideRight
                 wrapMode: Text.NoWrap
                 color: root.pomo?.paused ? Theme.error : root.accent
@@ -154,6 +156,14 @@ ColumnLayout {
                 font.pixelSize: Theme.fontSizeSmall
                 font.features: ({ tnum: 1 })
             }
+            StyledText {
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: text !== ""
+                text: root.pausedTotal
+                color: Theme.surfaceVariantText
+                font.pixelSize: Theme.fontSizeSmall
+                font.features: ({ tnum: 1 })
+            }
         }
     }
 
@@ -161,6 +171,15 @@ ColumnLayout {
         visible: !root.strip
         Layout.alignment: Qt.AlignHCenter
         big: true
+    }
+
+    // ── Paused: this phase again from the top, pause time back to zero ─
+    DButton {
+        visible: (root.pomo?.paused ?? false) && !root.compact && !root.strip
+        Layout.alignment: Qt.AlignHCenter
+        iconName: "replay"
+        text: IsletClient.t("Start over", "Ulang sesi")
+        onClicked: root.cmd("timer-restart")
     }
 
     // ── On a break: something good to do with it ─────────────────────
@@ -257,7 +276,7 @@ ColumnLayout {
         }
     }
 
-    // ⟳ reset · ▶/⏸ · ⏭ skip · ∞ continuous
+    // ⟳ reset · ▶/⏸ · ↻ start over (paused, no room for its button) · ⏭ skip · ∞ continuous
     component Controls: Row {
         property bool big: false
         spacing: big ? Theme.spacingS : 0
@@ -274,12 +293,21 @@ ColumnLayout {
             onClicked: root.cmd("timer-toggle")
         }
         DIconButton {
+            visible: (root.pomo?.paused ?? false) && (root.compact || root.strip)
+            anchors.verticalCenter: parent.verticalCenter
+            iconName: "replay"
+            onClicked: root.cmd("timer-restart")
+        }
+        DIconButton {
+            // One row, paused: room for the words on the pause.
+            visible: !(root.strip && (root.pomo?.paused ?? false))
             anchors.verticalCenter: parent.verticalCenter
             iconName: "skip_next"
             onClicked: root.cmd("timer-skip")
         }
         // Continuous: focus and breaks roll on by themselves.
         DIconButton {
+            visible: !(root.strip && (root.pomo?.paused ?? false))
             anchors.verticalCenter: parent.verticalCenter
             variant: root.pomo?.continuous ? "tonal" : "standard"
             iconName: "all_inclusive"

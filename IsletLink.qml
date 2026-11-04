@@ -29,6 +29,7 @@ import "link/fill.mjs" as Fill
 //   ← {"cmd":"timer-toggle"|"timer-start"|"timer-pause"|"timer-reset"|"timer-skip"}
 //     | {"cmd":"timer-mode","mode":"focus"|"short"|"long"}
 //     | {"cmd":"timer-continuous","on":bool} | {"cmd":"timer-reset-pause"}
+//     | {"cmd":"timer-restart"} (this phase again from the top, a new sitting)
 //   ← requests with an integer "req", answered to that client only with
 //     {"reply":req,"ok":bool,"data"|"error"}: "notes-list" {limit?, tipe?},
 //     "note-get" {id} → {blocks, cut}, "note-create" {markdown}, "task-delete" {id},
@@ -221,6 +222,9 @@ Singleton {
             break;
         case "timer-continuous":
             P.setContinuous(!!msg.on);
+            break;
+        case "timer-restart":
+            P.restart();
             break;
         case "timer-reset-pause":
             P.resetPause();

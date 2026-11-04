@@ -74,6 +74,16 @@ Item {
                     font.pixelSize: 12
                     font.features: ({ tnum: 1 })
                 }
+                // All the pause time this sitting.
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    visible: root.pomo.paused
+                    text: `${Lang.t("Total paused", "Total jeda")} ${root.pomo.format(root.pomo.pausedTotal)}`
+                    color: Theme.subtext
+                    font.family: Theme.font
+                    font.pixelSize: 11
+                    font.features: ({ tnum: 1 })
+                }
             }
         }
 
@@ -141,6 +151,30 @@ Item {
                     filled: root.pomo.continuous
                     tint: root.pomo.continuous ? root.accent : Theme.subtext
                     onClicked: root.pomo.setContinuous(!root.pomo.continuous)
+                }
+                // Paused: this phase again from the top, pause time back to zero.
+                Rectangle {
+                    visible: root.pomo.paused
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: overLabel.implicitWidth + 24
+                    height: 30
+                    radius: 15
+                    color: overMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.06)
+                    Text {
+                        id: overLabel
+                        anchors.centerIn: parent
+                        text: Lang.t("Start over", "Ulang sesi")
+                        color: Theme.text
+                        font.family: Theme.font
+                        font.pixelSize: 13
+                    }
+                    MouseArea {
+                        id: overMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.pomo.restart()
+                    }
                 }
             }
 

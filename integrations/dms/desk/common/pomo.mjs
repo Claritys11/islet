@@ -33,6 +33,13 @@ export function rounds(p) {
     return Array.from({ length: n }, (_, i) => i < done);
 }
 
+// While paused, all the pause time this sitting: "Total paused 5:40"; else "".
+export function pausedTotal(p, now = Date.now(), lang = "en") {
+    if (!p?.paused)
+        return "";
+    return `${lang === "id" ? "Total jeda" : "Total paused"} ${clock(sitting(p, now).pausedTotal)}`;
+}
+
 // Under the clock: "Paused 2:13" while paused, else what it's timing.
 export function status(p, now = Date.now(), lang = "en") {
     if (p?.paused)

@@ -255,6 +255,9 @@ ShellRoot {
         function skip(): void {
             PomodoroService.skip();
         }
+        function restart(): void {
+            PomodoroService.restart();
+        }
         function resetpause(): void {
             PomodoroService.resetPause();
         }

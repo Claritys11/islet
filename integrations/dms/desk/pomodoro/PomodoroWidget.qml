@@ -85,7 +85,7 @@ DesktopPluginComponent {
             // Ring + clock.
             Item {
                 id: ring
-                readonly property real size: Math.max(60, Math.min(parent.width, parent.height - modes.height - controls.height - today.height - 24))
+                readonly property real size: Math.max(60, Math.min(parent.width, parent.height - modes.height - controls.height - today.height - 32))
                 width: size
                 height: size
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -178,8 +178,47 @@ DesktopPluginComponent {
                 }
             }
 
+            // Paused: all the pause time, and this phase again from the top.
+            Row {
+                visible: root.p?.paused ?? false
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: controls.bottom
+                anchors.topMargin: 4
+                spacing: 8
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Pomo.pausedTotal(root.p, root.now, IsletClient.lang)
+                    color: Qt.alpha(Theme.onPrimaryContainer, 0.7)
+                    font.features: ({ tnum: 1 })
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                }
+                Rectangle {
+                    width: overText.implicitWidth + 16
+                    height: 24
+                    radius: 12
+                    color: overMouse.containsMouse ? Qt.alpha(Theme.primary, 0.25) : Qt.alpha(Theme.onPrimaryContainer, 0.1)
+                    Text {
+                        id: overText
+                        anchors.centerIn: parent
+                        text: IsletClient.t("Start over", "Ulang sesi")
+                        color: Theme.onPrimaryContainer
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                    }
+                    MouseArea {
+                        id: overMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.send("timer-restart")
+                    }
+                }
+            }
+
             Text {
                 id: today
+                visible: !(root.p?.paused ?? false)
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: controls.bottom
                 anchors.topMargin: 6

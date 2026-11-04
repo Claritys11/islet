@@ -241,7 +241,7 @@ islet find [text]                               Finder (also: --open/--copy text
 islet shelf [FILE…|paste|clear]                 put files on the shelf (paste: what you copied; no files = list)
 islet share [copy|save]                         share card of the song playing now
 islet toggle | show | hide                      the lyrics overlay
-islet pomodoro [toggle|reset|resetpause|skip|status]
+islet pomodoro [toggle|reset|restart|resetpause|skip|status]
 islet todo "Buy milk"                           add a task (no text = list them)
 islet set <key> <value> · islet get <key>
 islet dms [install|uninstall|status]            Islet in the DankMaterialShell bar
@@ -359,7 +359,8 @@ niri, KDE, Hyprland), with its opacity and a hairline border.
 
 Want the same toolbar in DMS's own notepad? `islet dms notepad` runs DMS from a patched copy of its UI,
 rebuilt by itself after each DMS update (and skipped if the patch doesn't fit); `islet dms notepad uninstall`
-puts DMS's own back. Remove the widgets with `islet dms widgets uninstall`.
+puts DMS's own back. The same copy lets the field under a day in DMS's calendar add a Google Calendar event from
+one line (`Rapat 19.00-20.30`, or no time for all day). Remove the widgets with `islet dms widgets uninstall`.
 
 ## 🌶 Spicy Lyrics integration
 

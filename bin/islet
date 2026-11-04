@@ -17,7 +17,7 @@ Usage: islet <command>
 
   notch [media|focus|checklist|shelf|today|calendar|viz]
                                   Toggle the notch, open a tab, or the visualizer
-  pomodoro [toggle|reset|resetpause|skip|status]
+  pomodoro [toggle|reset|restart|resetpause|skip|status]
   find [text]                     Find files and folders (Listary-style); also:
        --reindex | --print text | --open text | --copy text | --status | --bind
   today [status|list|add text|preview|confirm|sync|reload]
