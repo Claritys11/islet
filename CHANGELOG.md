@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.11.0 — 2026-11-04
 
 ### Added
 - **Total pause time and Start over on the focus timer** (notch, DMS's Islet tab and Focus card, desktop widget):
