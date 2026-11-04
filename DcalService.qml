@@ -73,6 +73,8 @@ Singleton {
     }
 
     function refresh() {
+        // A daemon left on the old version by an upgrade gets the new one.
+        Quickshell.execDetached(["sh", decodeURIComponent(Qt.resolvedUrl("today/dcal-heal.sh").toString().replace("file://", ""))]);
         call("accounts.list", {}, (ok, accounts) => {
             available = ok;
             if (!ok) {

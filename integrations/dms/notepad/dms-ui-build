@@ -2,10 +2,11 @@
 # Runs after DMS started (ExecStartPost): if it started from its embedded
 # UI, copy that UI (DMS unpacks it to $XDG_RUNTIME_DIR/dms-shell/<hash>),
 # patch it, and mark it .ok only if every patch anchor was found; dms-run-ui
-# uses it from the next start on. Never fails the service.
+# uses it from the next start on, which it asks for. Never fails the service.
 here=$(dirname "$(readlink -f "$0")")
 dms=$(command -v dms || echo /usr/bin/dms)
-key=$(sha256sum "$dms" | cut -c1-16)
+# A new copy for a new dms or new patches.
+key=$(cat "$dms" "$here"/patch-*.py | sha256sum | cut -c1-16)
 base="${XDG_DATA_HOME:-$HOME/.local/share}/islet-dms-ui"
 dir="$base/$key"
 [ -f "$dir/.ok" ] && exit 0
@@ -21,6 +22,8 @@ tmp="$base/.build-$key"
 rm -rf "$tmp"
 cp -r "$src" "$tmp" && chmod -R u+w "$tmp" || { rm -rf "$tmp"; exit 0; }
 if python3 -I "$here/patch-notepad.py" "$tmp" "$here/../desk/common"; then
+    # The calendar's patch not fitting leaves the notepad's.
+    python3 -I "$here/patch-calendar.py" "$tmp" "$here/../../../today"
     rm -rf "$dir"
     mv "$tmp" "$dir"
     touch "$dir/.ok"
@@ -28,6 +31,9 @@ if python3 -I "$here/patch-notepad.py" "$tmp" "$here/../desk/common"; then
     for old in "$base"/*/; do
         [ "${old%/}" = "$dir" ] || rm -rf "$old"
     done
+    # DMS is on its own UI for lack of this copy: move it over, once (the next
+    # start finds .ok and leaves above), so an update needs nothing else.
+    systemctl --user --no-block try-restart dms
 else
     rm -rf "$tmp"
 fi
