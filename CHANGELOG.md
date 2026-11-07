@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.11.2 — 2026-11-07
+
+### Changed
+- **Lighter while you're away**: visualizer mode used about 14% of a CPU core, now about 4%. The bars no longer
+  animate on their own (that redrew the notch at the screen's full refresh rate, 180 times a second on a 180 Hz
+  screen), the island's shadow is no longer blurred again whenever something inside moves, and cava runs at
+  30 frames a second instead of 50.
+- **On battery** visualizer mode stays off, and the lyric clock runs at most 30 times a second.
+- Paused music is checked once a second instead of four times; DMS's Islet tab and Focus card stop their
+  clock and animation while the dashboard is closed.
+
 ## 1.11.1 — 2026-11-07
 
 ### Fixed
