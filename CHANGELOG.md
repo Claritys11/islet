@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.11.1 — 2026-11-07
+
+### Fixed
+- **Dragging files out of the Shelf** into other apps works. An open DMS dashboard (and the notch when opened with its key)
+  covers the screen with a layer that catches clicks outside it, and that layer swallowed the drop, so no app ever
+  received the file. It now steps aside while a file is dragged out, and comes back after the drop.
+
 ## 1.11.0 — 2026-11-04
 
 ### Added
