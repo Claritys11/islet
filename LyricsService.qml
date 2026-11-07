@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Services.Mpris
+import Quickshell.Services.UPower
 import "link/fill.mjs" as Fill
 
 // Follows an MPRIS player, fetches lyrics from LRCLIB and tracks the
@@ -218,11 +219,12 @@ Singleton {
 
     // ── Clock ─────────────────────────────────────────────────────
     // MPRIS doesn't push its position, so poll it — unless the bridge is
-    // already sending Spotify's own, better clock for this track.
+    // already sending Spotify's own, better clock for this track. Paused,
+    // it only moves when you seek: once a second is plenty.
     Timer {
         running: root.player !== null && !root.demo
         repeat: true
-        interval: 250
+        interval: root.isPlaying ? 250 : 1000
         onTriggered: {
             if (SpicyBridge.sampleFor(root.spotifyId))
                 return;
@@ -257,6 +259,9 @@ Singleton {
     // Things drawing the fill as it moves (SmoothLyrics); with none, the
     // clock needn't run every frame, only wake as the next line starts.
     property int smoothUsers: 0
+    // On battery the fill moves at most 30 times a second: hard to tell
+    // apart from 60, and half the work.
+    readonly property int fpsCap: UPower.onBattery ? Math.min(30, Config.opts.maxFps) : Config.opts.maxFps
     readonly property bool smooth: smoothUsers > 0 || demo
 
     // The lyric time now, from the last measurement (whatever `position`
@@ -282,7 +287,7 @@ Singleton {
             const now = Date.now();
             // High-refresh monitors would otherwise redo every lyric binding
             // 144–240 times a second; the fill looks the same at 60.
-            if (now - root._frameAt < 1000 / Config.opts.maxFps - 2)
+            if (now - root._frameAt < 1000 / root.fpsCap - 2)
                 return;
             if (root.demo) {
                 root._frameAt = now;

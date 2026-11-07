@@ -32,7 +32,7 @@ Singleton {
     }
 
     readonly property string config: [
-        "[general]", `bars = ${bars}`, "framerate = 50",
+        "[general]", `bars = ${bars}`, "framerate = 30",
         "[input]", "method = pipewire", "source = auto",
         "[output]", "method = raw", "raw_target = /dev/stdout", "data_format = ascii",
         "ascii_max_range = 100", "bar_delimiter = 59", "frame_delimiter = 10",
@@ -57,16 +57,18 @@ Singleton {
         }
     }
 
-    // Fallback: each bar wanders toward a random target.
+    // Fallback: each bar wanders toward a random target, eased here (20
+    // steps a second) rather than by an animation on each bar, which would
+    // redraw the notch at the screen's full refresh rate.
     property var _targets: Array(bars).fill(0.3)
     Timer {
         running: root.active && !root.hasCava
         repeat: true
-        interval: 90
+        interval: 50
         onTriggered: {
             // Neighbouring bars move together a little, like a real spectrum.
-            root._targets = root._targets.map((t, i) => Math.random() < 0.35 ? Math.max(0.1, Math.min(1, 0.55 - i / root.bars * 0.35 + (Math.random() - 0.5) * 0.7)) : t);
-            root.values = root.values.map((v, i) => v + (root._targets[i] - v) * 0.45);
+            root._targets = root._targets.map((t, i) => Math.random() < 0.2 ? Math.max(0.1, Math.min(1, 0.55 - i / root.bars * 0.35 + (Math.random() - 0.5) * 0.7)) : t);
+            root.values = root.values.map((v, i) => v + (root._targets[i] - v) * 0.3);
         }
     }
 

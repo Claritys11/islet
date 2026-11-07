@@ -19,6 +19,11 @@ ColumnLayout {
     readonly property var pomo: IsletClient.pomodoro
     readonly property color accent: (root.pomo?.mode ?? "focus") === "focus" ? Theme.primary : Theme.tertiary
 
+    // Shown for real: an item keeps `visible` when DMS hides the window it's
+    // in (the dashboard closed), and its clock and the breathing tip icon
+    // would go on ticking for nobody.
+    readonly property bool onScreen: visible && (Window.window?.visible ?? false)
+
     // The pause and the sitting count here, a second at a time.
     property real now: Date.now()
     readonly property var sit: Pomo.sitting(root.pomo, root.now)
@@ -27,7 +32,7 @@ ColumnLayout {
     Timer {
         interval: 1000
         repeat: true
-        running: root.visible && ((root.pomo?.paused ?? false) || (root.pomo?.sessionStart ?? 0) > 0)
+        running: root.onScreen && ((root.pomo?.paused ?? false) || (root.pomo?.sessionStart ?? 0) > 0)
         triggeredOnStart: true
         onTriggered: root.now = Date.now()
     }
@@ -193,7 +198,7 @@ ColumnLayout {
             size: Theme.iconSize
             color: root.accent
             SequentialAnimation on scale {
-                running: parent.visible
+                running: parent.visible && root.onScreen
                 loops: Animation.Infinite
                 NumberAnimation {
                     from: 0.9

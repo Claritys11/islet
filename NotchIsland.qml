@@ -4,6 +4,7 @@ import QtQuick.Shapes
 import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Services.UPower
 
 // The dynamic island itself, independent of any window (NotchWindow puts it
 // at the top of the screen; the showcase renders it for screenshots).
@@ -190,7 +191,8 @@ Item {
         respectInhibitors: true
     }
     readonly property bool away: idleMonitor.isIdle
-    readonly property bool vizWanted: o.vizMode && away && hasMusic && LyricsService.isPlaying
+    // Not on battery: nobody is watching, and a laptop's charge matters more.
+    readonly property bool vizWanted: o.vizMode && away && hasMusic && LyricsService.isPlaying && !UPower.onBattery
     onVizWantedChanged: {
         if (vizWanted && mode === "closed")
             mode = "viz";
@@ -232,11 +234,14 @@ Item {
     }
 
     // ── Shape ─────────────────────────────────────────────────────
+    // The shadow comes from a blank copy of the island's outline, not from
+    // the island itself: as a layer over everything it was blurred again
+    // whenever anything inside moved (every visualizer frame, each second of
+    // the timer). The outline only changes while the island changes size.
     Item {
-        id: body
         anchors.fill: parent
-
-        layer.enabled: true
+        visible: shape.visible && shape.opacity > 0
+        layer.enabled: visible
         layer.effect: MultiEffect {
             shadowEnabled: true
             shadowColor: "#000000"
@@ -244,6 +249,23 @@ Item {
             shadowBlur: 0.8
             shadowVerticalOffset: 4
         }
+        Rectangle {
+            x: shape.x
+            y: shape.y
+            width: shape.width
+            height: shape.height
+            opacity: shape.opacity
+            color: Theme.surface
+            topLeftRadius: shape.topLeftRadius
+            topRightRadius: shape.topRightRadius
+            bottomLeftRadius: shape.bottomLeftRadius
+            bottomRightRadius: shape.bottomRightRadius
+        }
+    }
+
+    Item {
+        id: body
+        anchors.fill: parent
 
         Rectangle {
             id: shape
@@ -515,13 +537,10 @@ Item {
                                 height: Math.max(4, v * parent.height)
                                 radius: width / 2
                                 color: Theme.primary
+                                // No Behavior: an animation on each bar redrew the
+                                // island every frame of the screen (180 a second
+                                // on a 180 Hz one). The values arrive smoothed.
                                 opacity: 0.45 + v * 0.55
-                                Behavior on height {
-                                    enabled: vizBar.visible
-                                    NumberAnimation {
-                                        duration: 90
-                                    }
-                                }
                             }
                         }
                     }
@@ -835,12 +854,6 @@ Item {
                 height: Math.max(3, (CavaService.small[index] ?? 0) * parent.height)
                 radius: 1.5
                 color: Theme.primary
-                Behavior on height {
-                    enabled: bar.visible
-                    NumberAnimation {
-                        duration: 80
-                    }
-                }
             }
         }
     }
