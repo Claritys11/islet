@@ -1,4 +1,5 @@
 import QtQuick
+import QtQml
 import QtQuick.Layouts
 import qs.Common
 import qs.DCommon.Widgets
@@ -31,6 +32,33 @@ Item {
 
     Requester {
         id: requester
+    }
+
+    // An open DMS popout covers the screen with a surface that catches
+    // clicks outside it (to close), and that surface would catch a file
+    // dragged out too: no app under it ever sees the drop. While a file is
+    // being dragged out, the popouts open on any screen stop catching; the
+    // Binding gives each its own value (or binding) back afterwards.
+    property bool draggingOut: false
+    property var heldPopouts: []
+    function loosenPopouts() {
+        const open = PopoutManager.currentPopoutsByScreen ?? {};
+        heldPopouts = Object.keys(open).map(k => open[k]).filter(p => p && p.backgroundInteractive !== undefined);
+        draggingOut = true;
+    }
+    function restorePopouts() {
+        draggingOut = false;
+    }
+    Instantiator {
+        model: root.heldPopouts
+        delegate: Binding {
+            required property var modelData
+            target: modelData
+            property: "backgroundInteractive"
+            value: false
+            when: root.draggingOut
+            restoreMode: Binding.RestoreBindingOrValue
+        }
     }
 
     DropArea {
@@ -261,6 +289,13 @@ Item {
                     fileDrag.source.grabToImage(r => fileDrag.shot = r);
             }
         }
+        Connections {
+            target: fileDrag.area.drag
+            function onActiveChanged() {
+                if (fileDrag.area.drag.active)
+                    root.loosenPopouts();
+            }
+        }
         Drag.active: area.drag.active
         Drag.dragType: Drag.Automatic
         Drag.supportedActions: Qt.CopyAction | Qt.LinkAction | Qt.MoveAction
@@ -271,6 +306,9 @@ Item {
         Drag.imageSource: shot?.url ?? ""
         Drag.hotSpot.x: width / 2
         Drag.hotSpot.y: height / 2
-        Drag.onDragFinished: root.cmd("shelf-follow")
+        Drag.onDragFinished: {
+            root.restorePopouts();
+            root.cmd("shelf-follow");
+        }
     }
 }

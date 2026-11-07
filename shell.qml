@@ -319,9 +319,10 @@ ShellRoot {
     // While Finder has the keyboard, or the notch was opened by a click and
     // isn't pinned, a click anywhere else closes it (like a popup), so the
     // keyboard is never stuck in Islet.
-    // One per screen: a click on another monitor closes it too.
+    // One per screen: a click on another monitor closes it too. Gone while
+    // a Shelf file is dragged out, or it would catch the drop itself.
     Variants {
-        model: shell.notch?.closesOnClickOutside || (shell.notch?.mode === "open" && shell.notch?.hotkey) ? Quickshell.screens : []
+        model: !ShelfService.dragging && (shell.notch?.closesOnClickOutside || (shell.notch?.mode === "open" && shell.notch?.hotkey)) ? Quickshell.screens : []
         PanelWindow {
             required property var modelData
             screen: modelData
