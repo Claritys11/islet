@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.11.3 — 2026-11-09
 
 ### Changed
 - **Daily tasks come first**: today's unticked ones sit at the top of Due soon and All tasks (notch, DMS's Islet
