@@ -169,7 +169,7 @@ test("walkBlocks: a failing first page is an error", async () => {
     assert.deepEqual(out, { ok: false, data: "nope" });
 });
 
-import { todayView, shelfView, checklistView, validDue } from "../link/desk.mjs";
+import { todayView, shelfView, checklistView, validDue, todoItems } from "../link/desk.mjs";
 
 test("validDue: Notion dates and date-times pass, anything else is dropped", () => {
     assert.equal(validDue("2026-11-05"), "2026-11-05");
@@ -196,7 +196,7 @@ test("todayView: the day's schedule and deadlines, plain values only", () => {
     assert.equal(v.schedule[0].color, "");
     const ahead = todayView({ tomorrow: [{ kind: "event", key: "gcal:y", title: "Rapat", time: "09.00–09.30", now: false, past: false, clash: false, color: "#9fe1e7", start: new Date() }] });
     assert.deepEqual(ahead.tomorrow, [{ kind: "event", key: "gcal:y", title: "Rapat", time: "09.00–09.30", until: "", now: false, past: false, clash: false, color: "#9fe1e7" }]);
-    assert.deepEqual(v.deadlines[0], { id: "p1", key: "notion:p1", title: "Essay", source: "notion", priority: "Tinggi", label: "hari ini 23.59", urgency: "today", tickable: true });
+    assert.deepEqual(v.deadlines[0], { id: "p1", key: "notion:p1", title: "Essay", source: "notion", priority: "Tinggi", label: "hari ini 23.59", urgency: "today", tickable: true, clash: false });
     assert.deepEqual(v.soon, { title: "KKA", startAt: Date.parse("2026-10-25T07:00:00+07:00") });
     assert.equal(v.canAdd, true);
     assert.equal(v.canDue, false);
@@ -231,4 +231,27 @@ test("shelfView: name, folder or picture, and whether it went missing", () => {
 test("checklistView: its items and where they live", () => {
     assert.deepEqual(checklistView([{ id: "1", text: "Beli tinta", checked: true, extra: 1 }], true, ""), { source: "notion", error: "", items: [{ id: "1", text: "Beli tinta", checked: true }] });
     assert.deepEqual(checklistView(undefined, false, ""), { source: "local", error: "", items: [] });
+});
+
+test("todoItems: daily tasks first and marked, finished things after what's left", () => {
+    const daily = [
+        { id: "d1", title: "Olahraga", time: "05.00", done: false, late: true, label: "Terlambat 05.00" },
+        { id: "d2", title: "Sudah", time: "", done: true, late: false, label: "Harian" }
+    ];
+    const tasks = [
+        { id: "t1", title: "Essay", due: "2026-11-09", dueHasTime: false, priority: "", done: false, status: "" },
+        { id: "t2", title: "Lama", due: "", dueHasTime: false, priority: "", done: true, status: "" }
+    ];
+    const v = todoItems(daily, tasks);
+    assert.deepEqual(v.map(x => x.id), ["d1", "t1", "d2", "t2"]);
+    assert.deepEqual(v[0], { id: "d1", title: "Olahraga", due: "", dueHasTime: false, priority: "", done: false, status: "", daily: true, label: "Terlambat 05.00", late: true });
+    assert.equal(v[1].daily, undefined);
+    assert.deepEqual(todoItems(undefined, undefined), []);
+});
+
+test("todayView: a daily task in the deadlines can be ticked; a clash is told", () => {
+    const row = extra => ({ key: "k", pageId: "p", title: "x", source: "notion", label: "l", urgency: "today", ...extra });
+    const v = todayView({ deadlines: [row({ source: "daily" }), row({ source: "classroom" }), row({ clash: true })] });
+    assert.deepEqual(v.deadlines.map(d => d.tickable), [true, false, true]);
+    assert.deepEqual(v.deadlines.map(d => d.clash), [false, false, true]);
 });

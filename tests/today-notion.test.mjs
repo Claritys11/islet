@@ -83,7 +83,7 @@ test("retryable: what can be sent again after a dropped connection without doing
     assert.equal(retryable("PATCH", "blocks/abc/children"), false);
 });
 
-import { dailyFromRow, dailyToday, dailyStale, dailyPatch } from "../today/notion.mjs";
+import { dailyFromRow, dailyToday, dailyStale, dailyPatch, dailyNudges } from "../today/notion.mjs";
 import { databaseBody } from "../today/template.mjs";
 
 const typed = props => Object.fromEntries(Object.entries(props).map(([k, v]) => [k, Object.assign({ type: Object.keys(v)[0] }, v)]));
@@ -142,7 +142,7 @@ test("dailyToday: on its days only, done is a tick from today, what's left first
     ].map(r => dailyFromRow(r, dailyMap));
     const v = dailyToday(items, sat);
     assert.deepEqual(v.map(i => i.title), ["Pagi", "Kemarin", "Sore", "Tanpa jam", "Sudah"]);
-    assert.deepEqual(v[0], { id: "Pagi", title: "Pagi", time: "05.00", done: false, late: true });
+    assert.deepEqual(v[0], { id: "Pagi", title: "Pagi", time: "05.00", done: false, late: true, label: "Terlambat 05.00" });
     assert.equal(v[2].late, false);
     assert.equal(v[4].done, true);
     assert.equal(v[4].late, false);
@@ -167,4 +167,29 @@ test("dailyStale: ticks from an earlier day on any row, not today's or unticked 
 test("dailyPatch sets or takes off the tick", () => {
     assert.deepEqual(dailyPatch(dailyMap, true), { Selesai: { checkbox: true } });
     assert.deepEqual(dailyPatch(dailyMap, false), { Selesai: { checkbox: false } });
+});
+
+test("dailyToday: each says how it reads as a chip, in the language asked", () => {
+    const items = [dailyRow("Pagi", [], "05.00"), dailyRow("Malam", [], "23.30"), dailyRow("Kapan saja", [], "")].map(r => dailyFromRow(r, dailyMap));
+    const at = new Date(2026, 10, 7, 8);
+    const by = lang => Object.fromEntries(dailyToday(items, at, lang).map(d => [d.title, d.label]));
+    assert.deepEqual(by("id"), { Pagi: "Terlambat 05.00", Malam: "Harian 23.30", "Kapan saja": "Harian" });
+    assert.deepEqual(by("en"), { Pagi: "Late 05:00", Malam: "Daily 23:30", "Kapan saja": "Daily" });
+});
+
+test("dailyNudges: once a day, in the 15 minutes before its time, not when ticked or gone by", () => {
+    const at = (h, m) => new Date(2026, 10, 9, h, m);
+    const d = (id, time, done = false) => ({ id, title: id, time, done });
+    const list = [d("Duolingo", "19:00"), d("Baca", "19.10"), d("Tanpa jam", ""), d("Sudah", "19:00", true)];
+    assert.deepEqual(dailyNudges(list, at(18, 44), {}), []);
+    assert.deepEqual(dailyNudges(list, at(18, 45), {}).map(n => n.title), ["Duolingo"]);
+    assert.deepEqual(dailyNudges(list, at(19, 0), {}).map(n => n.title), ["Duolingo", "Baca"]);
+    assert.deepEqual(dailyNudges(list, at(19, 1), {}).map(n => n.title), ["Baca"]);
+    const [first] = dailyNudges(list, at(18, 50), {});
+    assert.equal(first.key, "daily:Duolingo:2026-11-09");
+    assert.equal(first.time, "19:00");
+    assert.deepEqual(dailyNudges(list, at(18, 51), { [first.key]: 1 }), []);
+    // Tomorrow is another day's nudge.
+    assert.equal(dailyNudges(list, new Date(2026, 10, 10, 18, 50), { [first.key]: 1 }).length, 1);
+    assert.deepEqual(dailyNudges(undefined, at(19, 0), {}), []);
 });

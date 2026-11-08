@@ -65,6 +65,24 @@ export function dueSoon(tasks, classroom, now, days, lang = "id") {
     return out.filter(d => d.due < until).sort((a, b) => a.due - b.due).map(d => Object.assign(d, { label: label(d.due, d.hasTime, now, lang), urgency: urgency(d.due, now) }));
 }
 
+// The day's daily tasks still to do, ahead of the deadlines (today/notion.mjs
+// dailyToday): they matter today, whatever else is coming. No `due`: nudges
+// are for deadlines with a time, and a tick here is a tick for today.
+export function withDaily(deadlines, daily) {
+    const left = (daily ?? []).filter(d => !d.done).map(d => ({
+        key: `daily:${d.id}`,
+        title: d.title,
+        source: "daily",
+        pageId: d.id,
+        hasTime: false,
+        priority: "",
+        clash: false,
+        label: d.label,
+        urgency: d.late ? "overdue" : "today"
+    }));
+    return [...left, ...deadlines];
+}
+
 // Keys of items whose time overlaps another's (back-to-back isn't a clash).
 export function clashes(items) {
     const out = new Set();

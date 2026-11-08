@@ -2318,7 +2318,7 @@ FloatingWindow {
                         SwitchSetting {
                             key: "todayNudges"
                             label: "Deadline reminders"
-                            hint: "A morning summary, and a nudge 3 hours before a deadline with a time."
+                            hint: "A morning summary, a nudge 3 hours before a deadline with a time, and 15 minutes before a daily task with one."
                         }
                     }
                     Card {

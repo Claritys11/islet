@@ -19,7 +19,7 @@ Item {
     // The right column: close deadlines ("due"), every open task ("all") or
     // today's daily tasks ("daily", from their own list in Notion).
     property string list: "due"
-    readonly property var openTasks: Desk.openTasks(t.tasks, 200).filter(x => !x.done)
+    readonly property var openTasks: Desk.todoItems(t.dailyToday, Desk.openTasks(t.tasks, 200)).filter(x => !x.done)
     readonly property bool canDue: t.tasksDb !== "" && !!t.tasksMap.due
     property string addError: ""
     // The calendar for the due date, shown where the lists are.
@@ -360,7 +360,8 @@ Item {
                     delegate: Rectangle {
                         id: due
                         required property var modelData
-                        readonly property bool notion: modelData.source === "notion"
+                        readonly property bool daily: modelData.source === "daily"
+                        readonly property bool notion: modelData.source === "notion" || daily
                         width: ListView.view.width
                         height: 30
                         radius: 10
@@ -370,7 +371,9 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: due.notion ? Qt.PointingHandCursor : Qt.ArrowCursor
-                            onClicked: if (due.notion)
+                            onClicked: if (due.daily)
+                                t.tickDaily(due.modelData.pageId, true)
+                            else if (due.notion)
                                 t.tick(due.modelData.pageId, true)
                         }
                         RowLayout {
@@ -382,7 +385,7 @@ Item {
                                 width: 3
                                 height: 16
                                 radius: 2
-                                color: root.priorityColor(due.modelData.priority)
+                                color: due.daily ? Theme.primary : root.priorityColor(due.modelData.priority)
                             }
                             // Tick it (Notion tasks), or Classroom's icon.
                             Rectangle {
@@ -526,7 +529,7 @@ Item {
                     delegate: Rectangle {
                         id: task
                         required property var modelData
-                        readonly property var chip: Due.dueChip(modelData.due, new Date(t.now), Lang.code)
+                        readonly property var chip: modelData.daily ? { text: modelData.label, late: modelData.late } : Due.dueChip(modelData.due, new Date(t.now), Lang.code)
                         width: ListView.view.width
                         height: 30
                         radius: 10
@@ -536,7 +539,7 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: t.tick(task.modelData.id, true)
+                            onClicked: task.modelData.daily ? t.tickDaily(task.modelData.id, true) : t.tick(task.modelData.id, true)
                         }
                         RowLayout {
                             anchors.fill: parent
@@ -547,7 +550,7 @@ Item {
                                 width: 3
                                 height: 16
                                 radius: 2
-                                color: root.priorityColor(task.modelData.priority)
+                                color: task.modelData.daily ? Theme.primary : root.priorityColor(task.modelData.priority)
                             }
                             Rectangle {
                                 width: 16

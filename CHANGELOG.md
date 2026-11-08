@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- **Daily tasks come first**: today's unticked ones sit at the top of Due soon and All tasks (notch, DMS's Islet
+  tab and Today card) and of the To-Do widget, with their time ("Daily 19:00", red once it's gone by). Tick one
+  from there; it's back on its next day. They count in "due today" on the pill. Delete them in Notion, as before.
+- **A reminder for daily tasks with a time**: a notification 15 minutes before, unless it's ticked already
+  (Settings → Calendar & Notion → Deadline reminders).
+
+### Fixed
+- **`islet notch today`** (or focus, shelf, checklist) opens that page of DMS's Islet tab; in DMS mode it opened
+  whichever page was last shown.
+- **"Today" and "Late" on due dates** in DMS's Islet tab and the To-Do widget keep up with the clock. They stayed
+  as drawn until the list changed, past midnight too.
+- DMS's Due soon says when a task clashes with a lesson, as the notch does.
+
 ## 1.11.2 — 2026-11-07
 
 ### Changed

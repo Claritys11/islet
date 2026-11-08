@@ -206,16 +206,38 @@ const doneOn = (item, today) => item.checked && isoDay(new Date(item.edited)) ==
 
 // What's on for `now`'s day (no days chosen: every day): what's left first,
 // by time, untimed after; plain values. `late`: its time has gone by.
+// `label`: how it reads next to tasks ("Harian 17.00", "Terlambat 05.00").
 export function dailyToday(items, now, lang = "id") {
     const today = isoDay(now), clock = `${pad(now.getHours())}.${pad(now.getMinutes())}`;
     return (items ?? [])
         .filter(i => !i.off && i.title !== "" && (i.days.length === 0 || i.days.includes(now.getDay())))
         .map(i => {
             const done = doneOn(i, today);
-            return { id: i.pageId, title: i.title, time: lang === "en" ? i.time.replace(".", ":") : i.time, sort: i.time, done, late: !done && i.time !== "" && i.time < clock };
+            const time = lang === "en" ? i.time.replace(".", ":") : i.time;
+            const late = !done && i.time !== "" && i.time < clock;
+            const word = late ? (lang === "en" ? "Late" : "Terlambat") : (lang === "en" ? "Daily" : "Harian");
+            return { id: i.pageId, title: i.title, time, sort: i.time, done, late, label: time ? `${word} ${time}` : word };
         })
         .sort((a, b) => (a.done - b.done) || ((a.sort === "") - (b.sort === "")) || a.sort.localeCompare(b.sort) || a.title.localeCompare(b.title))
-        .map(i => ({ id: i.id, title: i.title, time: i.time, done: i.done, late: i.late }));
+        .map(i => ({ id: i.id, title: i.title, time: i.time, done: i.done, late: i.late, label: i.label }));
+}
+
+// Today's unticked daily tasks (dailyToday) to remind of now: in the `before`
+// minutes up to their time, once a day each (`sent` holds the keys of those
+// already told). Past its time the lists say it's late; no nudge after the fact.
+export function dailyNudges(daily, now, sent, before = 15) {
+    const minutes = now.getHours() * 60 + now.getMinutes(), day = isoDay(now);
+    const out = [];
+    for (const d of daily ?? []) {
+        const t = /^(\d{2})[.:](\d{2})$/.exec(d.time ?? "");
+        const key = `daily:${d.id}:${day}`;
+        if (!t || d.done || sent?.[key])
+            continue;
+        const left = +t[1] * 60 + +t[2] - minutes;
+        if (left >= 0 && left <= before)
+            out.push({ key, title: d.title, time: d.time });
+    }
+    return out;
 }
 
 // Ticks left from an earlier day, on any row: these get taken off.

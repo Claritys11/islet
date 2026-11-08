@@ -98,8 +98,14 @@ Item {
     }
 
     function open(t) {
-        if (dmsMode)
+        if (dmsMode) {
+            // The Islet tab there has these pages (no Media or Calendar: DMS
+            // has its own).
+            const page = ["", "focus", "checklist", "shelf", "today", ""][t] ?? "";
+            if (page !== "")
+                IsletLink.showPanel(page);
             return dmsDash("open");
+        }
         if (t !== undefined)
             tab = t;
         mode = "open";

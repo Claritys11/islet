@@ -38,7 +38,8 @@ import "link/fill.mjs" as Fill
 // For the DMS dashboard tab and card (Islet's notch inside DMS):
 //   → also "day" (link/desk.mjs todayView: schedule, tomorrow, deadlines, soon, sync,
 //     canAdd, canDue, canDaily, dailyUrl, daily),
-//     "shelf" [{path, name, dir, image, missing}], "checklist" {source, items}
+//     "shelf" [{path, name, dir, image, missing}], "checklist" {source, items},
+//     and now and then {"panel":"today"}: the page the Islet tab should show
 //   ← {"cmd":"today-refresh"} | {"cmd":"shelf-open"|"shelf-remove","path":…}
 //     | {"cmd":"daily-done","id":…,"done":bool} | "daily-setup" (a request)
 //     | {"cmd":"shelf-follow"} (a shelf file was dragged away: look where it went)
@@ -126,7 +127,7 @@ Singleton {
     readonly property var checklistView: Desk.checklistView(ChecklistService.items, ChecklistService.useNotion, ChecklistService.error)
 
     readonly property var lyricsView: Object.assign(Desk.lyricWindow(LyricsService.lines, LyricsService.currentIndex), { status: LyricsService.status, synced: LyricsService.synced })
-    readonly property var tasksView: ({ status: TodayService.status, error: TodayService.error, message: TodayService.message, canDue: TodayService.tasksDb !== "" && !!TodayService.tasksMap.due, items: Desk.openTasks(TodayService.tasks) })
+    readonly property var tasksView: ({ status: TodayService.status, error: TodayService.error, message: TodayService.message, canDue: TodayService.tasksDb !== "" && !!TodayService.tasksMap.due, items: Desk.todoItems(TodayService.dailyToday, Desk.openTasks(TodayService.tasks)) })
 
     function broadcast(force) {
         const s = state();
@@ -137,6 +138,14 @@ Singleton {
             c.write(s + "\n");
             c.flush();
         }
+    }
+
+    // The page DMS's Islet tab should show (`islet notch today`). Then the
+    // state again: a client too old to know this takes any line for the state.
+    function showPanel(page) {
+        for (const c of clients)
+            c.write(JSON.stringify({ panel: page }) + "\n");
+        broadcast(true);
     }
 
     // An answer to one client's request (the desktop widgets).

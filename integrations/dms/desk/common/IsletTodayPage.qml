@@ -298,7 +298,7 @@ ColumnLayout {
                         hoverEnabled: true
                         cursorShape: due.modelData.tickable ? Qt.PointingHandCursor : Qt.ArrowCursor
                         onClicked: if (due.modelData.tickable)
-                            root.cmd("task-done", { id: due.modelData.id, done: true })
+                            root.cmd(due.modelData.source === "daily" ? "daily-done" : "task-done", { id: due.modelData.id, done: true })
                     }
                     RowLayout {
                         anchors.fill: parent
@@ -308,7 +308,7 @@ ColumnLayout {
                         DIcon {
                             name: due.modelData.tickable ? (dueMouse.containsMouse ? "check_circle" : "radio_button_unchecked") : "school"
                             size: Theme.iconSizeSmall ?? 16
-                            color: /tinggi|high/i.test(due.modelData.priority) ? Theme.error : Theme.surfaceVariantText
+                            color: due.modelData.source === "daily" ? Theme.primary : /tinggi|high/i.test(due.modelData.priority) ? Theme.error : Theme.surfaceVariantText
                         }
                         StyledText {
                             Layout.fillWidth: true
@@ -318,6 +318,12 @@ ColumnLayout {
                             wrapMode: Text.NoWrap
                             color: Theme.surfaceText
                             font.pixelSize: Theme.fontSizeMedium
+                        }
+                        StyledText {
+                            visible: due.modelData.clash
+                            text: IsletClient.t("clash", "bentrok")
+                            color: Theme.error
+                            font.pixelSize: Theme.fontSizeSmall
                         }
                         StyledText {
                             text: due.modelData.label
@@ -420,7 +426,7 @@ ColumnLayout {
                 delegate: Rectangle {
                     id: task
                     required property var modelData
-                    readonly property var chip: Due.dueChip(modelData.due, new Date(), IsletClient.lang)
+                    readonly property var chip: modelData.daily ? { text: modelData.label, late: modelData.late } : Due.dueChip(modelData.due, new Date(IsletClient.minute), IsletClient.lang)
                     width: ListView.view.width
                     height: 30
                     radius: Theme.cornerRadius
@@ -430,7 +436,7 @@ ColumnLayout {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.cmd("task-done", { id: task.modelData.id, done: true })
+                        onClicked: root.cmd(task.modelData.daily ? "daily-done" : "task-done", { id: task.modelData.id, done: true })
                     }
                     RowLayout {
                         anchors.fill: parent
@@ -440,7 +446,7 @@ ColumnLayout {
                         DIcon {
                             name: taskMouse.containsMouse ? "check_circle" : "radio_button_unchecked"
                             size: Theme.iconSizeSmall ?? 16
-                            color: /tinggi|high/i.test(task.modelData.priority) ? Theme.error : Theme.surfaceVariantText
+                            color: task.modelData.daily ? Theme.primary : /tinggi|high/i.test(task.modelData.priority) ? Theme.error : Theme.surfaceVariantText
                         }
                         StyledText {
                             Layout.fillWidth: true

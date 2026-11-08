@@ -59,7 +59,7 @@ Singleton {
             clash: clashKeys.includes("lesson:" + l.pageId)
         }));
     }
-    readonly property var deadlines: Deadlines.dueSoon(tasks, classroom, new Date(now), o.todayDays, Lang.code).map(d => Object.assign(d, { clash: clashKeys.includes("task:" + d.pageId) }))
+    readonly property var deadlines: Deadlines.withDaily(Deadlines.dueSoon(tasks, classroom, new Date(now), o.todayDays, Lang.code).map(d => Object.assign(d, { clash: clashKeys.includes("task:" + d.pageId) })), dailyToday)
     // Things that overlap today: lessons and timed task plans.
     readonly property var clashKeys: clashKeysOn(new Date(now))
     function clashKeysOn(day) {
@@ -115,7 +115,7 @@ Singleton {
     }
     // Due today, or overdue Notion tasks (Classroom items can't be ticked off
     // here, so an overdue one would nag forever).
-    readonly property int dueToday: deadlines.filter(d => d.urgency === "today" || (d.urgency === "overdue" && d.source === "notion")).length
+    readonly property int dueToday: deadlines.filter(d => d.urgency === "today" || (d.urgency === "overdue" && d.source !== "classroom")).length
 
     function dbTitle(id) {
         const db = databases.find(d => d.id.replace(/-/g, "") === id.replace(/-/g, ""));
@@ -429,6 +429,12 @@ Singleton {
             sent[d.key] = now;
             changedAny = true;
             notify(Lang.t(`Due ${d.label}`, `Tenggat ${d.label}`), d.title);
+        }
+        // And one 15 minutes before a daily task with a time.
+        for (const d of Notion.dailyNudges(dailyToday, new Date(now), sent)) {
+            sent[d.key] = now;
+            changedAny = true;
+            notify(Lang.t(`Daily at ${d.time}`, `Harian jam ${d.time}`), d.title);
         }
         // Forget nudges older than two weeks.
         for (const k in sent)

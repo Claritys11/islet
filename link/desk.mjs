@@ -37,6 +37,27 @@ export function openTasks(tasks, limit = 40) {
         }));
 }
 
+// The To-Do list: the day's daily tasks (today/notion.mjs dailyToday) above
+// the tasks (openTasks), and whatever's finished below what's left. Clients
+// tick a `daily` one with "daily-done", and can't delete it: it's arranged in
+// its own list in Notion.
+export function todoItems(daily, tasks) {
+    const chores = (daily ?? []).map(d => ({
+        id: d.id,
+        title: d.title,
+        due: "",
+        dueHasTime: false,
+        priority: "",
+        done: !!d.done,
+        status: "",
+        daily: true,
+        label: d.label ?? "",
+        late: !!d.late
+    }));
+    const all = tasks ?? [];
+    return [...chores.filter(x => !x.done), ...all.filter(x => !x.done), ...chores.filter(x => x.done), ...all.filter(x => x.done)];
+}
+
 // A due date sent with "task-add": Notion's date ("2026-11-05") or date and
 // time with an offset ("2026-11-05T14:00:00+07:00"); anything else is "".
 export function validDue(due) {
@@ -116,7 +137,8 @@ export function todayView(t) {
             priority: d.priority ?? "",
             label: d.label,
             urgency: d.urgency,
-            tickable: d.source === "notion"
+            tickable: d.source === "notion" || d.source === "daily",
+            clash: !!d.clash
         }))
     };
 }

@@ -6,9 +6,9 @@ import "common"
 import "common/due/due.mjs" as Due
 import "common/due"
 
-// end4-pC's To-Do, showing your Notion Tasks through islet: open tasks as
-// coloured pills (due date chip), tick to finish, "+" to add one with an
-// optional due date.
+// end4-pC's To-Do, showing your Notion Tasks through islet: the day's daily
+// tasks on top, then open tasks, as coloured pills (due date chip), tick to
+// finish, "+" to add one with an optional due date.
 DesktopPluginComponent {
     id: root
 
@@ -321,7 +321,7 @@ DesktopPluginComponent {
                             onClicked: {
                                 if (!pill.modelData.done)
                                     root.tickedHere = Object.assign({}, root.tickedHere, { [pill.modelData.id]: true });
-                                IsletClient.send({ cmd: "task-done", id: pill.modelData.id, done: !pill.modelData.done });
+                                IsletClient.send({ cmd: pill.modelData.daily ? "daily-done" : "task-done", id: pill.modelData.id, done: !pill.modelData.done });
                             }
                         }
                     }
@@ -349,7 +349,8 @@ DesktopPluginComponent {
                     Rectangle {
                         id: del
                         readonly property bool asking: root.confirmDelete === pill.modelData.id
-                        visible: pillHover.hovered || asking
+                        // A daily task is arranged in its own list in Notion.
+                        visible: (pillHover.hovered || asking) && !pill.modelData.daily
                         anchors.right: parent.right
                         anchors.rightMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
@@ -377,7 +378,7 @@ DesktopPluginComponent {
 
                     Rectangle {
                         id: due
-                        readonly property var chip: Due.dueChip(pill.modelData.due, new Date(), IsletClient.lang)
+                        readonly property var chip: pill.modelData.daily ? { text: pill.modelData.label, late: pill.modelData.late } : Due.dueChip(pill.modelData.due, new Date(IsletClient.minute), IsletClient.lang)
                         readonly property string label: chip.text
                         visible: label !== "" && !pill.modelData.done
                         anchors.right: del.left

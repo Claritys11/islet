@@ -61,6 +61,16 @@ Singleton {
         root._json = {};
     }
 
+    // The clock for "Today" and "Late" on due dates: without one they stay as
+    // they were drawn until the list changes, past midnight too. Once a minute.
+    property real minute: Date.now()
+    Timer {
+        interval: 60000
+        repeat: true
+        running: true
+        onTriggered: root.minute = Date.now()
+    }
+
     property int _next: 1
     property var _pending: ({})
 
@@ -124,6 +134,8 @@ Singleton {
                 }
                 if (typeof msg.reply === "number")
                     root._settle(msg.reply, msg.ok === true, msg.data ?? null, msg.error ?? "");
+                else if (typeof msg.panel === "string")
+                    root.panelPage = msg.panel;
                 else
                     root._take(msg);
             }
